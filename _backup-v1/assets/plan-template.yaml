@@ -1,0 +1,22 @@
+# 执行计划模板（阶段 3 落盘为 plan.yaml 用）
+# status 取值: todo / in_progress / done / blocked
+# deliverable: 该步骤的实际产出文件路径或结论位置； Anti-drop guard 按此对账
+meta:
+  task: ""            # 任务一句话概述（与任务确认表的目标一致）
+  created: ""         # YYYY-MM-DD HH:mm
+  confirmation: ""    # 任务确认表存放路径（如有）
+steps:
+  - id: 1
+    action: ""        # 本步做什么
+    input: ""         # 输入（文件/数据/来源）
+    expected: ""      # 预期产出
+    verify: ""        # 验证方式（怎样算完成）
+    status: todo
+    deliverable: ""
+  - id: 2
+    action: ""
+    input: ""
+    expected: ""
+    verify: ""
+    status: todo
+    deliverable: ""

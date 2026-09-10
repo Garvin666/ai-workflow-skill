@@ -1,0 +1,24 @@
+# 任务类型: 数据分析（示例模板，首次实际使用后按真实配置覆盖）
+task_type: 数据分析
+confirmed_at: ""            # 示例：2026-09-10
+goal: "对指定数据集完成清洗、分析并产出结论报告"
+inputs:
+  - "本地 csv/xlsx 或接口数据（路径待填）"
+  - "统计口径与时间范围待填"
+deliverable:
+  format: "docx / xlsx（待填）"
+  path: "tasks/数据分析-<YYYY-MM-DD>/"
+  naming: "<主题>-分析报告-<YYYY-MM-DD>.<ext>"
+  note: "报告需含数据完整性说明（行数/空值率/时间缺口）与结论"
+acceptance:
+  - "数据经交叉验证无误（抽样复算一致）"
+  - "报告含数据完整性说明与明确结论"
+  - "关键结论标来源（数据文件路径/接口）"
+constraints:
+  - "禁止改动原始数据文件"
+  - "依赖仅限 venv 内已装库"
+research:
+  - item: ""
+    decision: ""
+    date: ""
+flow: "确认口径 → 数据体检(行数/空值/时间连续) → 清洗 → 分析 → 报告 → Anti-drop 自检"

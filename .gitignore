@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+*.log
+pip_debug.log
+_smoke/
+tasks/*/plan.yaml
+tasks/*/tmp/
+.venv/
+venv/
