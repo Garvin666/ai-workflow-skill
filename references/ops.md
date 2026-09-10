@@ -121,6 +121,13 @@ grep -vE "api\.github\.com" all_urls.txt > check_urls.txt
 
 ## 七、变更日志
 
+- **v2.4.4（2026-09-10）工作区边界成为红线③**（用户指定：Agent 工作范围仅限所选文件夹）：
+  - SKILL.md 新增「**工作区边界**」硬性规则段（置于任务分层之后）：工作区根**按任务由用户指定**，写入确认表 `workspace` 字段与 plan.yaml `工作区根`；未指定则默认当前会话目录并显式标注。
+  - 越界（根目录之外任何路径）→ **先说明再申请当次授权**，上一任务的授权不延续；授权记录须写进交付说明。
+  - 基础设施例外白名单（不算越界，仅限工具用途、不得存用户数据）：`~/.workbuddy/skills/ai-workflow/`、`~/.workbuddy/binaries/python/envs/ai-workflow/`、`~/.workbuddy/cache/ai-workflow/`。
+  - 配套 schema 升级：7 个任务模板加 `workspace` 字段（**schema 8 → 9 字段**）；plan-template 的 meta 加 `工作区根`，`PLAN_META_REQUIRED` 同步（**缺失即对账 FAIL**）；`checks.py` 模板计数改动态输出。
+  - 阶段 1 五要素 → **六要素**（加工作区根）；阶段 4 产出前列路径清单须逐条确认落在工作区内；阶段 5 自检表加「产出全部落在工作区根内」。
+
 - **v2.4.3（2026-09-10）清理三项遗留**（任务 `tasks/技能增强-ai-workflow-v2.4.3-2026-09-10/`）：
   - **① `data_query.py big` 默认跳过依赖/缓存目录**：`BIG_SKIP_DIRS` 由 `{.git, __pycache__}` 扩为含 `.venv`/`venv`/`site-packages`/`node_modules`/`.conda`/`.mypy_cache`/`.pytest_cache`/`.ruff_cache`/`.tox`/`.nox`/`.ipynb_checkpoints`/`.cache`。**旧口径用 `--no-skip`（别名 `--legacy-skip`）复现**。实测（`E:\ChatGPT\量化分析与数据分析`，≥1MB）：旧口径 488 个（其中 115 行来自 `.venv`）→ 新口径 **328 个**；旧口径复现**逐字节一致（488 行全等）**。
   - **② GitHub 凭据解析扩为四来源**：`--token` → `GITHUB_TOKEN` → `GH_TOKEN` → **`gh auth token`（gh CLI 自动读取）**，新增 `_looks_like_token()` 形态校验（前缀/长度 ≥20/无空白），防把 gh 的提示文本当凭据发出。实测本机 `gh` 已有凭据：**core 60 → 5000/小时、search 10 → 30/分钟**，认证后 `--github-search` 端到端可用（"language:python stars:>60000" 命中 92 条）。凭据只读不落盘。

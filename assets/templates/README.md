@@ -2,7 +2,7 @@
 
 存放各任务类型的「任务确认表」YAML，文件名 = 任务类型（如 `数据分析.yaml`、`技术调研.yaml`）。
 
-## 统一 schema（v2，2026-09-10 起强制）
+## 统一 schema（v3，2026-09-10 起强制）
 
 所有模板**必须**遵守以下字段结构。字段缺失视为模板不合格（会导致快速通道误读配置）：
 
@@ -10,11 +10,12 @@
 | --- | --- | --- | --- |
 | task_type | str | ✅ | 任务类型，与文件名一致 |
 | confirmed_at | str(YYYY-MM-DD) | ✅ | 上次确认日期 |
+| workspace | str | ✅ | **本次任务的工作区根目录（绝对路径）——红线③依据**：读写与产出只允许落在此目录内，越界须先申请当次授权；未指定时默认当前会话目录 |
 | goal | str | ✅ | 目标：要解决什么 |
 | inputs | list[str] | ✅ | 输入：文件/数据/来源 |
 | deliverable | dict | ✅ | 交付物：`format`（格式）、`path`（路径规则）、`naming`（命名规则）、`length`（篇幅口径，可省）、`note`（补充约定，可省） |
 | acceptance | list[str] | ✅ | 验收标准：逐条可判定 |
-| constraints | list[str] | ✅ | 边界约束：禁做事项/依赖/时限 |
+| constraints | list[str] | ✅ | 边界约束：禁做事项/依赖/时限（含越界授权情况） |
 | research | list[dict] | ✅（可为空列表） | 缓存的查重结论：`item` / `decision` / `date` |
 | flow | str | ⭕ | 执行流程摘要（可选） |
 

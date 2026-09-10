@@ -15,7 +15,7 @@
 skill 子命令检查项:
     1. SKILL.md 存在且 frontmatter 含 name / description / agent_created
     2. 文档间引用完整性（SKILL.md 与 references/*.md 中 `路径.ext` 引用是否真实存在）
-    3. assets/templates/*.yaml 统一 schema 字段齐全（8 字段）
+    3. assets/templates/*.yaml 统一 schema 字段齐全（9 字段，含 workspace 工作区根）
     4. assets/plan-template.yaml 必填键存在
     5. scripts/*.py 语法编译通过（py_compile，检查后自动清理 __pycache__）
 
@@ -44,6 +44,7 @@ SKILLS_ROOT = Path.home() / ".workbuddy" / "skills"
 TEMPLATE_FIELDS = (
     "task_type",
     "confirmed_at",
+    "workspace",
     "goal",
     "inputs",
     "deliverable",
@@ -51,7 +52,7 @@ TEMPLATE_FIELDS = (
     "constraints",
     "research",
 )
-PLAN_META_REQUIRED = ("任务", "验证信号")
+PLAN_META_REQUIRED = ("任务", "验证信号", "工作区根")
 PLAN_STEP_REQUIRED = ("做什么", "验证方式", "状态", "交付物")
 VALID_STATUS = ("待办", "进行中", "完成", "受阻")
 # 业务性相对路径：不是技能内文件，跳过引用检查
@@ -117,7 +118,7 @@ def check_skill(skill_dir: Path) -> int:
     for t in tmpls:
         text = t.read_text(encoding="utf-8")
         miss = [f for f in TEMPLATE_FIELDS if not re.search(rf"^{f}:", text, re.M)]
-        (ok if not miss else fail)(f"模板 schema：{t.name}", ("缺 " + ",".join(miss)) if miss else "8/8")
+        (ok if not miss else fail)(f"模板 schema：{t.name}", ("缺 " + ",".join(miss)) if miss else f"{len(TEMPLATE_FIELDS) - len(miss)}/{len(TEMPLATE_FIELDS)}")
 
     pt = skill_dir / "assets" / "plan-template.yaml"
     if pt.exists():

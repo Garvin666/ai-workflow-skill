@@ -1,6 +1,7 @@
 # 学习资料生成类任务确认表模板（差异化要求见 references/playbook.md 第四节）
 task_type: 学习资料生成
 confirmed_at: ""
+workspace: ""          # 【必填】本次任务的工作区根目录（绝对路径）；产出只允许落在此目录内
 goal: "围绕指定知识范围产出可复习、可自测的学习资料（PDF/HTML 双格式）"
 inputs:
   - "知识范围与教材/论文出处（待填）"
