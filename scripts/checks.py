@@ -56,7 +56,7 @@ PLAN_META_REQUIRED = ("任务", "验证信号", "工作区根")
 PLAN_STEP_REQUIRED = ("做什么", "验证方式", "状态", "交付物")
 VALID_STATUS = ("待办", "进行中", "完成", "受阻")
 # 业务性相对路径：不是技能内文件，跳过引用检查
-REF_WHITELIST = {"plan.yaml", "memory/YYYY-MM-DD.md", "README.md"}
+REF_WHITELIST = {"plan.yaml", "Ledger.md", "memory/YYYY-MM-DD.md", "README.md"}
 # 命名占位符（如 第NNN章-标题.md、报告-YYYY-MM-DD.md、<主题>.md）不是真实文件路径，跳过
 REF_PLACEHOLDER = re.compile(r"N{2,}|Y{2,}|M{2,}|D{2,}|<|>|\{|\}|xxx|XXX")
 REF_PATTERN = re.compile(r"`([A-Za-z0-9_./\u4e00-\u9fff-]+\.(?:md|yaml|py|ps1))`")
