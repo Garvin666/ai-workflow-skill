@@ -1,0 +1,6 @@
+﻿# 链接存活检查：共 4 条，可达 2，受限 0（401/403/429），异常 2；并发 8，耗时 17.0s
+status	note	ms	bytes	url	final_url
+ERR	网络失败: <urlopen error _ssl.c:1015: The handshake operation timed ou	16980	-	https://academy.hackthebox.com/	https://academy.hackthebox.com/
+200	可达	1262	-	https://example.com/	https://example.com/
+404	不存在	1276	-	https://example.com/definitely-not-exist-404-xyz	https://example.com/definitely-not-exist-404-xyz
+200	可达	1468	80763	https://portswigger.net/web-security	https://portswigger.net/web-security

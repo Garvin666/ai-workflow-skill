@@ -1,0 +1,4 @@
+https://academy.hackthebox.com/
+https://example.com/
+https://example.com/definitely-not-exist-404-xyz
+https://portswigger.net/web-security

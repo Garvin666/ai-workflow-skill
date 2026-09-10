@@ -2,10 +2,10 @@
 name: ai-workflow
 description: AI 标准化多阶段工作方法论，适用于量化分析、跨境电商选品、小说写作、学习资料生成、技术调研等项目：任务分层（轻操作豁免 / 快速通道 / 全流程）→ 开工前查可用 Skill → 任务理解（一次性追问 + 任务确认表）→ 调研（开源查重 + 证据分级）→ AI 处理（计划先行、验证闭环、精检索、子智能体编排、质量门禁）→ Office 产出 → 自检交付（checks.py 自动对账）→ 复盘沉淀。内置 Token 纪律、评审防偏差与反模式清单。触发词：AI 工作流 / 按流程干活 / 标准流程 / 工作方法论 / ai-workflow。
 agent_created: true
-version: 2.4.2
+version: 2.4.3
 ---
 
-# AI 工作流 v2.4.2
+# AI 工作流 v2.4.3
 
 按阶段顺序执行任务。**两条不可豁免的红线**：① **用户确认前不执行** ② **计划先行**（未落盘 plan.yaml 不得开始处理）。其余按「任务分层」裁剪。**脚本用法、故障排查、变更日志见 `references/ops.md`。**
 
@@ -55,7 +55,7 @@ version: 2.4.2
 2. **验证闭环前置检查**：动手前回答"完成时用什么可判定信号证明它成了？"——有信号就写进「验证方式」；无信号**先补最小验证物**，补不了就显式登记「人审点」。交付前**出示证据而非声称成功**。各类任务的可判定信号参考：代码类＝测试/构建码/lint/断言；Office 类＝写回后用 `office_io` 读回校验；**调研类＝资源条目数达标且每条含链接 + 关键链接实测探活（`http_fetch --check-links`）+ 时效性说法经官方页复核 + 反例/过期信息已剔除**；改造类＝`checks.py skill` 全绿 + py_compile 通过；**性能类＝耗时下降「且」输出与旧版逐字节一致**（预热后多次取最小值，≥2 轮独立复现，禁用"冷基线 vs 热优化"的假加速）。
 3. **逐步执行**：每步前重述目标与判定标准，完成后更新状态；未达成先修正再推进。
 4. **进度汇报节奏**：每完成 2-3 步或切换阶段回报**一行**（`步骤 x/y 完成 → 下一步：…`）；只在受阻、需决策、完成时展开。预计 >5 分钟的任务先报一句预期与中间产出节点。
-5. **精确检索（先选对工具再搜）**：网页 → `http_fetch <URL> --grep --max-chars`（缓存自动兜底）；**GitHub 找项目 → `http_fetch --github-search "<query>"`**（限定符 `language:` `stars:` `topic:` `pushed:` `archived:`），**GitHub 找代码实现 → `--github-code-search "<代码片段> repo:owner/name"`**（⭐**强制 `GITHUB_TOKEN`**，返回"哪个仓库的哪个文件"+命中片段），取指标 → `--github-repo a/b,c/d`；两个搜索都支持 **`--dry-run`**（只打印将请求的 URL，不发请求，无 token 也能验证参数构造）；本地小目录 → 内置 `Grep`/`Glob`；**跨行/结构模式 → `ast-grep`**（"先 A 后 B 且中间无 try"这类；⚠️ 其 pattern **不支持正则**，且**复合语句必须写全**，文本匹配回 `Grep`；符号级用 `ast-grep outline`）；**大数据集/大目录 → `data_query.py files|sql|find`**（DuckDB 零导入直查 Parquet/JSON/CSV）。**交付物里的外部链接一律先用 `http_fetch.py --check-links <urls.txt>` 并发探活**（只取状态码，不下载正文）。引用标明来源。
+5. **精确检索（先选对工具再搜）**：网页 → `http_fetch <URL> --grep --max-chars`（缓存自动兜底）；**GitHub 找项目 → `http_fetch --github-search "<query>"`**（限定符 `language:` `stars:` `topic:` `pushed:` `archived:`），**GitHub 找代码实现 → `--github-code-search "<代码片段> repo:owner/name"`**（⭐**强制 `GITHUB_TOKEN`**，返回"哪个仓库的哪个文件"+命中片段），取指标 → `--github-repo a/b,c/d`（凭据按 `--token` → `GITHUB_TOKEN` → `GH_TOKEN` → `gh auth token` 自动解析，已登录 gh CLI 即免配置）；两个搜索都支持 **`--dry-run`**（只打印将请求的 URL，不发请求，无 token 也能验证参数构造）；本地小目录 → 内置 `Grep`/`Glob`；**跨行/结构模式 → `ast-grep`**（"先 A 后 B 且中间无 try"这类；⚠️ 其 pattern **不支持正则**，且**复合语句必须写全**，文本匹配回 `Grep`；符号级用 `ast-grep outline`）；**大数据集/大目录 → `data_query.py files|sql|find`**（DuckDB 零导入直查 Parquet/JSON/CSV；`big` 默认跳过 `.venv` 等依赖目录，旧口径加 `--no-skip`）。**交付物里的外部链接一律先用 `http_fetch.py --check-links <urls.txt>` 并发探活**（只取状态码，不下载正文）。引用标明来源。
 6. **Token 纪律**：稳定前缀在前吃 KV 缓存；上下文分热/温/冷三层、每层压缩 40-60%（**禁止 90%+**）；记忆只读索引与摘要；**项目上下文文件保持 30-60 行、只写模型推断不出的内容、禁止提交 `/init` 产物**（ETH Zurich 实测 -3% 成功率 / +20% 成本）；选型黑名单 RouteLLM/GPTCache/Memobase，LiteLLM 须 ≥1.83.7。
 7. 批量总结/生成用 `ai_call.py`（`--batch-file` + `--concurrency` 并发、`--model` 覆盖、`--stats` 用量回显）；项目差异化流程见 `references/playbook.md`（模板已就绪，可走 L1）。
 

@@ -10,10 +10,12 @@
     python data_query.py find  <目录> --pattern "关键词" [--glob "**/*.md"] [--ignore-case]
                               [--max-hits 50] [--context 0] [--files-only]
     python data_query.py sql "SELECT count(*) FROM read_json_auto('data/*.json')"
-    python data_query.py big   <目录> [--top 15] [--min-mb 50]
+    python data_query.py big   <目录> [--top 15] [--min-mb 50] [--no-skip]
 
 设计取舍:
     - `files` / `big` 用 os.scandir（只读元数据，不读内容）—— 对 20 万文件级别足够快
+    - `big` 默认跳过依赖/缓存目录（BIG_SKIP_DIRS：.venv/venv/node_modules/site-packages 等），
+      避免把 torch 之类的第三方大文件当成项目文件；需要旧口径加 --no-skip
     - `find` / `sql` 交给 DuckDB：`find` 走 read_text 一次性扫描，避免 Python 逐文件循环
     - 小文件、单文件检索仍应用内置 Grep/Glob，不必动用本脚本
 """
@@ -39,7 +41,15 @@ DEFAULT_EXTS = TEXT_EXTS
 DEFAULT_GLOBS = tuple(f"**/*.{e}" for e in DEFAULT_EXTS)
 MAX_ROWS_DEFAULT = 50
 SKIP_DIRS = frozenset({".git", "node_modules", "__pycache__", ".venv", "venv"})  # 与 v2.4 旧实现严格一致
-BIG_SKIP_DIRS = frozenset({".git", "__pycache__"})
+LEGACY_SKIP_DIRS = frozenset({".git", "__pycache__"})  # v2.4.2 旧口径
+
+BIG_SKIP_DIRS = frozenset({
+    # 版本控制 / 编译缓存
+    ".git", "__pycache__", ".mypy_cache", ".pytest_cache", ".ruff_cache",
+    ".tox", ".nox", ".ipynb_checkpoints", ".cache",
+    # 依赖安装目录（体积巨大且与项目无关，v2.4.3 起默认跳过）
+    ".venv", "venv", "site-packages", "node_modules", ".conda",
+})
 
 
 def _connect():
@@ -139,9 +149,11 @@ def cmd_big(args) -> int:
         print(f"[ERROR] 目录不存在：{root}", file=sys.stderr)
         return 2
     floor = args.min_mb * 1024 * 1024
-    hits = [(size, fp) for fp, size in _walk_stat(root, BIG_SKIP_DIRS) if size >= floor]
+    skip = LEGACY_SKIP_DIRS if getattr(args, "no_skip", False) else BIG_SKIP_DIRS
+    hits = [(size, fp) for fp, size in _walk_stat(root, skip) if size >= floor]
     hits.sort(reverse=True)
-    print(f"≥ {args.min_mb} MB 的文件共 {len(hits)} 个（目录 {root}）：")
+    note = "" if skip is BIG_SKIP_DIRS else "（--no-skip：v2.4.2 旧口径，含 .venv 等依赖目录）"
+    print(f"≥ {args.min_mb} MB 的文件共 {len(hits)} 个（目录 {root}）：{note}")
     for size, fp in hits[: args.top]:
         print(f"{_human(size):>12}  {fp}")
     return 0
@@ -257,6 +269,8 @@ def main() -> int:
     p.add_argument("path")
     p.add_argument("--top", type=int, default=15)
     p.add_argument("--min-mb", type=float, default=50, help="最小体积 MB（默认 50）")
+    p.add_argument("--no-skip", "--legacy-skip", dest="no_skip", action="store_true",
+                   help="按 v2.4.2 旧口径：只跳过 .git/__pycache__（即包含 .venv/node_modules 等依赖目录）")
 
     p = sub.add_parser("find", help="跨文件正则检索（DuckDB read_text，带行号）")
     p.add_argument("path")

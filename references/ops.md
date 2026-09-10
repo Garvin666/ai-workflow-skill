@@ -22,8 +22,8 @@ PY="C:/Users/26717/.workbuddy/binaries/python/envs/ai-workflow/Scripts/python.ex
 | **checks.py** | `skill` 技能自检（frontmatter/引用完整性/模板 schema/py_compile）；`plan` 计划校验 + Anti-drop 对账；`status` 工作区任务总览（交付物完成度 + 归档建议）；`mark` 更新步骤状态 | `checks.py plan tasks/x/plan.yaml --base "E:/ChatGPT/工作流"` |
 | setup_env.ps1 | 初始化 venv 与依赖（requests / openpyxl / python-docx / pypdf / pyyaml / **duckdb** / **ast-grep-cli**） | `powershell -File scripts\setup_env.ps1` |
 | ai_call.py | 调 AI 模型：`--model` 覆盖、`--system-file`、`--max-tokens`、`--temperature`、`--stats` 用量回显、`--batch-file` + `--concurrency` 批量并发（结果落 JSONL） | `ai_call.py --batch-file prompts.txt --concurrency 3` |
-| http_fetch.py | 联网抓取：`--github-repo a/b,c/d` 指标实测（并发 + 限流退避 + 缓存）、**`--github-search "<query>"` 按关键词搜仓库**（限定符 `language:` `stars:` `topic:` `pushed:`；`--search-sort stars,forks,updated`、`--search-limit`）、**`--github-code-search "<代码> repo:owner/name"` 按代码内容搜文件（⭐强制 token，返回仓库/路径/命中片段）**、**`--dry-run` 只打印将请求的 URL 与附加头（不发请求，无 token 也能验证参数构造）**、`--text` HTML→文本、`--grep`/`--max-chars` 定向提取、`--no-cache`/`--ttl` 控缓存、**`--check-links` 批量探活（只取状态码不下载正文，并发 8，交付外链前必跑）** | `http_fetch.py --github-search "code search language:rust stars:>500" --search-limit 20`<br>`http_fetch.py --github-code-search "read_parquet repo:duckdb/duckdb" --dry-run` |
-| **data_query.py** | **大数据集/大目录检索（DuckDB）**：`files` 目录概览（文件数/总大小/按扩展名/大文件）、`big` 列大文件、`find` 跨文件正则检索（带行号，DuckDB `read_text`）、`sql` 对 Parquet/JSON/CSV **零导入直接跑 SQL** | `data_query.py sql "SELECT count(*) FROM read_parquet('x.parquet')"` |
+| http_fetch.py | 联网抓取：`--github-repo a/b,c/d` 指标实测（并发 + 限流退避 + 缓存）、**`--github-search "<query>"` 按关键词搜仓库**（限定符 `language:` `stars:` `topic:` `pushed:`；`--search-sort stars,forks,updated`、`--search-limit`）、**`--github-code-search "<代码> repo:owner/name"` 按代码内容搜文件（⭐强制 token，返回仓库/路径/命中片段）**、**`--dry-run` 只打印将请求的 URL 与附加头（不发请求，无 token 也能验证参数构造）**、`--text` HTML→文本、`--grep`/`--max-chars` 定向提取、`--no-cache`/`--ttl` 控缓存、**`--check-links` 批量探活（只取状态码不下载正文，并发 8，交付外链前必跑；403 会换头重试并按 CDN/WAF 响应头分类）** | `http_fetch.py --github-search "code search language:rust stars:>500" --search-limit 20`<br>`http_fetch.py --github-code-search "read_parquet repo:duckdb/duckdb" --dry-run` |
+| **data_query.py** | **大数据集/大目录检索（DuckDB）**：`files` 目录概览（文件数/总大小/按扩展名/大文件）、`big` 列大文件（**默认跳过 `.venv`/`node_modules` 等依赖与缓存目录；旧口径加 `--no-skip`**）、`find` 跨文件正则检索（带行号，DuckDB `read_text`）、`sql` 对 Parquet/JSON/CSV **零导入直接跑 SQL** | `data_query.py big . --min-mb 100`<br>`data_query.py sql "SELECT count(*) FROM read_parquet('x.parquet')"` |
 | office_io.py | Office 读写：excel-read（xlsx/csv）、excel-write（单表/多表，默认表头加粗+冻结首行+自适应列宽）、word-read/write、pdf-extract/merge | `office_io.py excel-read data.csv --fmt json` |
 | run_stage.ps1 | 状态检查 + 一键调脚本 | `run_stage.ps1 http_fetch.py <URL>` |
 | **ast-grep**（`ast-grep-cli`，已装入 venv） | **跨行/结构模式检索 + 符号检索**。`run -p '<pattern>' -l py <路径>` 结构匹配；`outline <文件>` 列符号（替代 ctags 需求）；`scan` 跑规则文件。⚠️ pattern **不支持正则**（`\|`/`.*`/`\w` 无效），且**复合语句必须写全**（`except:` 单独不是合法 pattern，须写成 `try: $$$B except: pass`）。`sg` 命令**已废弃**，用 `ast-grep`。MIT / Windows 原生 / 离线 | `ast-grep run -p 'print($$$A, file=sys.stderr)' -l py scripts/` |
@@ -37,7 +37,7 @@ PY="C:/Users/26717/.workbuddy/binaries/python/envs/ai-workflow/Scripts/python.ex
 | AI_API_KEY | AI 调用凭据（必填，不落日志） | — |
 | AI_API_BASE / AI_MODEL | API 地址 / 模型 | https://api.deepseek.com/v1 ／ deepseek-chat |
 | AI_PRICE_IN / AI_PRICE_OUT | 成本估算单价（元/百万 token） | 未设则只报 token |
-| GITHUB_TOKEN | GitHub API 鉴权（匿名仅 60 次/小时，易 403 限流） | 未设则匿名 |
+| GITHUB_TOKEN | GitHub API 鉴权。**解析优先级：`--token` → `GITHUB_TOKEN` → `GH_TOKEN` → `gh auth token`（gh CLI 已登录则免配置，核心限额 60 → 5000/小时）**。做形态校验，非凭据文本会被忽略并告警 | 未设则匿名（60/小时） |
 | AIWF_HTTP_TTL | 抓取缓存有效秒数（0 = 关闭） | 3600 |
 | AIWF_CACHE_DIR | 缓存目录 | ~/.workbuddy/cache/ai-workflow/http |
 | AIWF_GH_CONCURRENCY | GitHub 多仓库并发数 | 5 |
@@ -70,6 +70,9 @@ powershell -ExecutionPolicy Bypass -File scripts\setup_env.ps1
 | 抓取失败但 `--out` 文件还在 | 脚本会打印告警（避免把旧内容当成新结果用）；确认后重跑或改用其它来源 |
 | 报告里的外链点开是 404 | 交付前必须跑 `--check-links` 探活；子代理转述的 URL 尤其容易错（实战中 OWASP ZAP 链接被转述成已 404 的旧路径，另有一次抓到**子代理编造的日期型假链接**：站点根 200、该文章路径 404、原文还带省略号） |
 | 链接返回 502 `Tunnel connection failed` | **本机出口隧道限制，不是站点失效**。已知稳定 502 的域名：`huggingface.co`、`jina.ai`、`console.cloud.google.com`。应标注「本机环境无法验证」，**不要判为站点挂了** |
+| 探活结果里 403 怎么读 | 403 **不等于失效**。脚本会换浏览器头重试一次，再按响应头分类：`403-CDN反爬(Cloudflare…)`、`403-WAF反爬(Akamai/Imperva…)`、`403-限流`、`403-拒绝(需授权或反爬，无法自动区分)`。前两类**人工可访问**，不得据此改链接；只有 404 才算失效 |
+| `academy.hackthebox.com` 探活失败 | 本机是 **SSL 握手超时（本地出口限制）**，不是反爬也不是站点下线；输出为 `ERR 网络失败: handshake operation timed out`。需与 403 反爬区分描述 |
+| 设了凭据但 GitHub 仍是匿名限额 | 检查是否用错解释器/子进程未继承环境变量；`gh auth status` 可能误报未登录，直接用 `gh auth token` 验证。凭据**只打印前缀掩码**，不要 print 完整 token |
 | GitHub 搜索/取数突然全 403 | 分清两套配额：core 为 **60 次/小时**（匿名），search 为 **10 次/分钟**（匿名）/ 30 次/分钟（认证）——search 每分钟自动重置，可等 1 分钟重试而不必等 1 小时 |
 | `data_query.py find` 报「glob 未匹配到任何文件」 | ⚠️ **DuckDB 的 glob 不支持 `{a,b}` 花括号展开，且是静默零命中**（曾因此误判"没有该内容"）。脚本已加防呆：先 `glob()` 计数，0 就报错。多个模式请用**逗号分隔** |
 | `data_query.py find` 命中 0 但确认有内容 | 检查 `--glob` 是否用了花括号；确认扩展名在默认文本清单内（默认扫 57 类文本扩展名，二进制会跳过） |
@@ -117,6 +120,13 @@ grep -vE "api\.github\.com" all_urls.txt > check_urls.txt
 **硬规则**：子代理产出的链接**必须全量探活后才可进交付物**。实战数据：140 条中查出 3 条 404，其中 1 条是**编造的日期型假链接**，且它正被用于支撑一条结论。
 
 ## 七、变更日志
+
+- **v2.4.3（2026-09-10）清理三项遗留**（任务 `tasks/技能增强-ai-workflow-v2.4.3-2026-09-10/`）：
+  - **① `data_query.py big` 默认跳过依赖/缓存目录**：`BIG_SKIP_DIRS` 由 `{.git, __pycache__}` 扩为含 `.venv`/`venv`/`site-packages`/`node_modules`/`.conda`/`.mypy_cache`/`.pytest_cache`/`.ruff_cache`/`.tox`/`.nox`/`.ipynb_checkpoints`/`.cache`。**旧口径用 `--no-skip`（别名 `--legacy-skip`）复现**。实测（`E:\ChatGPT\量化分析与数据分析`，≥1MB）：旧口径 488 个（其中 115 行来自 `.venv`）→ 新口径 **328 个**；旧口径复现**逐字节一致（488 行全等）**。
+  - **② GitHub 凭据解析扩为四来源**：`--token` → `GITHUB_TOKEN` → `GH_TOKEN` → **`gh auth token`（gh CLI 自动读取）**，新增 `_looks_like_token()` 形态校验（前缀/长度 ≥20/无空白），防把 gh 的提示文本当凭据发出。实测本机 `gh` 已有凭据：**core 60 → 5000/小时、search 10 → 30/分钟**，认证后 `--github-search` 端到端可用（"language:python stars:>60000" 命中 92 条）。凭据只读不落盘。
+  - **③ `--check-links` 403 分类与换头重试**：403/429 先用常规 UA 探测，失败后换一套浏览器头重试一次，仍失败才判定；新增 `_classify_403()` 按响应头分类——**CDN 反爬(Cloudflare，识别 `cf-ray`/`cf-mitigated`/`server: cloudflare`)**、**WAF 反爬(Akamai/Imperva/Sucuri/CloudFront)**、**限流**、**未知拒绝**。用本地测试服务器（`tasks/技能增强-ai-workflow-v2.4.3-2026-09-10/_test_server.py`，模拟 200/404/401/Cloudflare-403/Akamai-403/nginx-403）实测六种路径全部分类正确。
+  - 同类事实修正：`academy.hackthebox.com` 在本机的失败是 **SSL 握手超时（本机出口限制）**，不是 403 反爬——探活工具现可把二者分开，不再混为一谈。
+  - 反模式清单 30 → **34 条**（凭据形态/403≠404/口径回退/凭据不得打印）。
 
 - **v2.4.2（2026-09-10）清理 v2.4 遗留两项**（由 `tasks/技能增强-ai-workflow-v2.4.2-2026-09-10/` 驱动）：
   - **性能修复｜`data_query.py files/big` 在大目录上耗时 21s** → 遍历改为 **`os.scandir` + `DirEntry.stat()`**（新增 `_walk_stat()`）。原理：**Windows 上 `os.scandir` 列目录时已由 FindFirstFile 带回文件属性，`DirEntry.stat()` 直接复用**；旧写法 `os.walk` + `os.path.getsize` 会对每个文件**再发一次 stat 系统调用**（12 万文件 = 12 万次多余系统调用）。

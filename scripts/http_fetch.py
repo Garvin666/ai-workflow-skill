@@ -18,8 +18,9 @@
     python http_fetch.py --github-search "topic:static-analysis pushed:>2026-01-01" --search-sort updated
     python http_fetch.py --check-links links.txt --out check.tsv   # 批量探活（并发、不下载正文）
 
-GitHub 鉴权（可选，提高限额）:
-    设置环境变量 GITHUB_TOKEN=<PAT>；未设置则用匿名限额（60 次/小时/IP）。
+GitHub 鉴权（可选，提高限额；优先级从高到低）:
+    ① --token <PAT>  ② 环境变量 GITHUB_TOKEN  ③ 环境变量 GH_TOKEN  ④ gh CLI（gh auth login 后自动读取）
+    均无则用匿名限额（core 60 次/小时/IP，search 10 次/分钟/IP）。凭据只读不落盘。
 
 效率机制:
     - 本地缓存：默认 TTL 3600s（AIWF_HTTP_TTL 可调），同 URL 重复请求不发网络请求；--no-cache 强制刷新
@@ -126,6 +127,45 @@ def cache_put(url: str, data: bytes) -> None:
         print(f"[WARN] 缓存写入失败（不影响结果）：{e}", file=sys.stderr)
 
 
+def _looks_like_token(s: str) -> bool:
+    """粗校验凭据形态，避免把 gh 的提示文本/报错当成 token 发出去。
+
+    合法 GitHub 凭据为 ghp_/gho_/ghu_/ghs_/ghr_/github_pat_ 前缀，或经典 40 位十六进制，
+    均为无空白的字母数字下划线串且长度 >= 20。
+    """
+    s = s.strip()
+    if len(s) < 20 or any(c.isspace() for c in s):
+        return False
+    return all(c.isalnum() or c == "_" for c in s)
+
+
+def _resolve_token(cli_token: str | None = None) -> str | None:
+    """解析 GitHub 凭据，优先级：--token > GITHUB_TOKEN > GH_TOKEN > gh CLI（gh auth token）。
+
+    只读不写：不在磁盘落任何明文凭据（gh CLI 的凭据由其自身安全存储管理）。
+    返回值仅供内存中使用，任何情况下不得打印完整 token。
+    """
+    if cli_token:
+        return cli_token
+    for env_name in ("GITHUB_TOKEN", "GH_TOKEN"):
+        v = os.environ.get(env_name)
+        if v and v.strip():
+            return v.strip()
+    try:
+        import subprocess
+        r = subprocess.run(["gh", "auth", "token"], capture_output=True, text=True, timeout=10)
+        cand = (r.stdout or "").strip()
+        if r.returncode == 0 and cand:
+            if _looks_like_token(cand):
+                print("[INFO] 未设环境变量，改用 gh CLI 凭据（gh auth token）提高限额", file=sys.stderr)
+                return cand
+            print(f"[WARN] gh auth token 输出不像凭据（{len(cand)} 字符），已忽略；"
+                  "若需认证请设置 GITHUB_TOKEN 或运行 gh auth login", file=sys.stderr)
+    except (OSError, ValueError, subprocess.SubprocessError):
+        pass
+    return None
+
+
 def fetch(url: str, token: str | None = None, use_cache: bool = True, ttl: int = CACHE_TTL,
           headers_extra: dict | None = None) -> bytes:
     if use_cache:
@@ -139,8 +179,10 @@ def fetch(url: str, token: str | None = None, use_cache: bool = True, ttl: int =
         headers.update(headers_extra)
     if token:
         headers["Authorization"] = f"Bearer {token}"
-    elif "api.github.com" in url and os.environ.get("GITHUB_TOKEN"):
-        headers["Authorization"] = f"Bearer {os.environ['GITHUB_TOKEN']}"
+    elif "api.github.com" in url:
+        auto = _resolve_token()
+        if auto:
+            headers["Authorization"] = f"Bearer {auto}"
 
     last_err = None
     rl_waits = 0
@@ -165,7 +207,7 @@ def fetch(url: str, token: str | None = None, use_cache: bool = True, ttl: int =
                 if rl_waits >= RATE_LIMIT_MAX_RETRY:
                     print(
                         f"[ERROR] GitHub API 持续限流（已等待重试 {rl_waits} 次）。"
-                        "解决办法：设置环境变量 GITHUB_TOKEN=<PAT> 提高限额，或改用已有实测数据并标注『未实时校验』。",
+                        "解决办法：设置 GITHUB_TOKEN / GH_TOKEN，或 gh auth login 后用 gh CLI 凭据；否则改用已有实测数据并标注『未实时校验』。",
                         file=sys.stderr,
                     )
                     raise SystemExit(5)
@@ -345,12 +387,12 @@ def github_code_search(query: str, limit: int = 30, token: str | None = None,
     if dry_run:
         print(f"[DRY-RUN] 将请求：{url}")
         print(f"[DRY-RUN] 附加头：Accept: {CODE_SEARCH_ACCEPT}")
-        print(f"[DRY-RUN] 认证：{'已提供 token' if (token or os.environ.get('GITHUB_TOKEN')) else '缺失（该端点需要 token，否则 401）'}")
+        print(f"[DRY-RUN] 认证：{'已提供 token' if token else '缺失（该端点需要 token，否则 401）'}")
         return []
 
     if not token:
         print("[ERROR] /search/code 强制要求认证，当前没有 GITHUB_TOKEN —— 匿名请求会返回 401。", file=sys.stderr)
-        print("[HINT ] 设置环境变量 GITHUB_TOKEN=<PAT> 后重试；认证后该端点限流为 10 次/分钟。", file=sys.stderr)
+        print("[HINT ] 三选一：① 设置环境变量 GITHUB_TOKEN=<PAT>；② 设置 GH_TOKEN；③ 运行 gh auth login 后用 gh CLI 凭据（脚本自动读取）。", file=sys.stderr)
         print("[HINT ] 只想按仓库名/描述找项目，用 --github-search（匿名可用）。", file=sys.stderr)
         raise SystemExit(2)
 
@@ -388,33 +430,82 @@ def github_code_search(query: str, limit: int = 30, token: str | None = None,
     return rows
 
 
+def _classify_403(headers) -> str:
+    """按响应头判定 403 的性质：CDN 反爬 / 需授权 / 未知拒绝。
+
+    Cloudflare（cf-ray / cf-mitigated / server: cloudflare）与常见 WAF 的 403
+    多为反爬拦截——人工浏览器可访问，不代表链接失效；需与 404 区分对待。
+    """
+    h = {k.lower(): (v or "") for k, v in (headers.items() if headers else [])}
+    server = h.get("server", "")
+    low = server.lower()
+    if h.get("cf-ray") or h.get("cf-mitigated") or "cloudflare" in low:
+        return "403-CDN反爬(Cloudflare，人工可访问)"
+    if any(w in low for w in ("akamai", "imperva", "sucuri", "cloudfront", "waf")):
+        return f"403-WAF反爬({server.split('/')[0] or 'WAF'}，人工可访问)"
+    if h.get("x-ratelimit-remaining") == "0" or h.get("retry-after"):
+        return "403-限流"
+    return "403-拒绝(需授权或反爬，无法自动区分)"
+
+
+def _probe_once(url: str, timeout: int, headers: dict) -> tuple[dict | None, Exception | None]:
+    req = urllib.request.Request(url, headers=headers, method="GET")
+    t0 = time.time()
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            info = {
+                "url": url,
+                "status": resp.status,
+                "note": "可达",
+                "content_type": (resp.headers.get("Content-Type") or "").split(";")[0],
+                "bytes": resp.headers.get("Content-Length") or "-",
+                "final_url": resp.geturl(),
+                "ms": int((time.time() - t0) * 1000),
+            }
+        return info, None  # 立即关闭，不读取正文
+    except urllib.error.HTTPError as e:
+        return None, e
+    except (urllib.error.URLError, TimeoutError, OSError) as e:
+        return None, e
+
+
 def check_links(urls: list[str], concurrency: int, timeout: int) -> list[dict]:
-    """批量链接存活检查：只取状态与元信息，不下载正文（调研报告引用核验专用）。"""
+    """批量链接存活检查：只取状态与元信息，不下载正文（调研报告引用核验专用）。
+
+    403 处理：先用常规 UA 探测；若 403，则换一套更接近真实浏览器的头再试一次——
+    两次都 403 才判为反爬（CDN/WAF 特征头用于进一步分类），避免把"被反爬"误报成"失效"。
+    """
+    ALT_HEADERS = {
+        "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                       "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"),
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+        "Cache-Control": "no-cache",
+        "Upgrade-Insecure-Requests": "1",
+    }
+
     def probe(url: str) -> dict:
-        req = urllib.request.Request(url, headers=dict(HEADERS), method="GET")
         t0 = time.time()
-        try:
-            with urllib.request.urlopen(req, timeout=timeout) as resp:
-                info = {
-                    "url": url,
-                    "status": resp.status,
-                    "note": "可达",
-                    "content_type": (resp.headers.get("Content-Type") or "").split(";")[0],
-                    "bytes": resp.headers.get("Content-Length") or "-",
-                    "final_url": resp.geturl(),
-                    "ms": int((time.time() - t0) * 1000),
-                }
-            # 立即关闭，不读取正文
+        info, err = _probe_once(url, timeout, dict(HEADERS))
+        if info is not None:
             return info
-        except urllib.error.HTTPError as e:
-            note = {401: "可达但需登录", 403: "可达但被拒绝(反爬/需授权)", 404: "不存在", 429: "限流"}.get(
-                e.code, f"HTTP {e.code}"
-            )
-            return {"url": url, "status": e.code, "note": note, "content_type": "-", "bytes": "-",
+        # 403/429：换头重试一次
+        if isinstance(err, urllib.error.HTTPError) and err.code in (403, 429):
+            info2, err2 = _probe_once(url, timeout, dict(ALT_HEADERS))
+            if info2 is not None:
+                return info2
+            if isinstance(err2, urllib.error.HTTPError):
+                note = _classify_403(err2.headers) if err2.code == 403 else "429-限流"
+                return {"url": url, "status": err2.code, "note": note, "content_type": "-",
+                        "bytes": "-", "final_url": url, "ms": int((time.time() - t0) * 1000)}
+            err = err2
+        if isinstance(err, urllib.error.HTTPError):
+            note = {401: "可达但需登录", 403: "403-拒绝(需授权或反爬，无法自动区分)", 404: "不存在",
+                    429: "429-限流"}.get(err.code, f"HTTP {err.code}")
+            return {"url": url, "status": err.code, "note": note, "content_type": "-", "bytes": "-",
                     "final_url": url, "ms": int((time.time() - t0) * 1000)}
-        except (urllib.error.URLError, TimeoutError, OSError) as e:
-            return {"url": url, "status": "ERR", "note": f"网络失败: {str(e)[:60]}", "content_type": "-",
-                    "bytes": "-", "final_url": url, "ms": int((time.time() - t0) * 1000)}
+        return {"url": url, "status": "ERR", "note": f"网络失败: {str(err)[:60]}", "content_type": "-",
+                "bytes": "-", "final_url": url, "ms": int((time.time() - t0) * 1000)}
 
     if not urls:
         return []
@@ -491,7 +582,7 @@ def main() -> None:
         return
 
     if args.github_search:
-        token = args.token or os.environ.get("GITHUB_TOKEN")
+        token = _resolve_token(args.token)
         rows = github_search(args.github_search, args.search_sort, args.search_limit,
                              token=token, use_cache=use_cache, ttl=args.ttl, dry_run=args.dry_run)
         if args.dry_run:
@@ -514,7 +605,7 @@ def main() -> None:
         return
 
     if args.github_code_search:
-        token = args.token or os.environ.get("GITHUB_TOKEN")
+        token = _resolve_token(args.token)
         rows = github_code_search(args.github_code_search, args.search_limit,
                                   token=token, use_cache=use_cache, ttl=args.ttl,
                                   dry_run=args.dry_run)
@@ -538,7 +629,7 @@ def main() -> None:
         return
 
     if args.github_repo:
-        token = args.token or os.environ.get("GITHUB_TOKEN")
+        token = _resolve_token(args.token)
         slugs = [s for s in args.github_repo.split(",") if s.strip()]
         t0 = time.time()
         rows = collect_repo_rows(slugs, token, use_cache, args.ttl)
