@@ -1,0 +1,30 @@
+{
+  "_说明": "阶段感知模型路由档位配置。ai_call.py --tier <档位> 按此解析 base/key/model/price；档位名与 SKILL.md「阶段感知模型路由」表一致。价格为官方公开价目表（¥/百万 token，标准档、非缓存价；启用缓存后更便宜）。",
+  "strong": {
+    "model": "deepseek-reasoner",
+    "base": "https://api.deepseek.com/v1",
+    "base_env": "AI_API_BASE",
+    "key_env": "AI_API_KEY",
+    "price_in": 4.0,
+    "price_out": 16.0,
+    "适用": "规划 / 关键实现 / 安全相关（红线不可破，强模型 + 必要双审）"
+  },
+  "mid": {
+    "model": "deepseek-chat",
+    "base": "https://api.deepseek.com/v1",
+    "base_env": "AI_API_BASE",
+    "key_env": "AI_API_KEY",
+    "price_in": 1.0,
+    "price_out": 2.0,
+    "适用": "常规实现（容错中等，成本敏感）"
+  },
+  "cheap": {
+    "model": "qwen2.5:7b",
+    "base": "http://localhost:11434/v1",
+    "base_env": "OLLAMA_BASE",
+    "key_env": null,
+    "price_in": 0.0,
+    "price_out": 0.0,
+    "适用": "探索 / 调研 / 测试 / 文档 / 格式转换（本地 Ollama，近 0 成本）"
+  }
+}

@@ -40,6 +40,52 @@ DEFAULT_BASE = "https://api.deepseek.com/v1"
 DEFAULT_MODEL = "deepseek-chat"
 RETRY_DELAYS = (2, 4, 8)  # 秒，指数退避
 
+TIERS_PATH = Path(__file__).with_name("model_tiers.json")
+LEDGER_DEFAULT = Path.home() / ".workbuddy" / "cache" / "ai-workflow" / "usage_ledger.jsonl"
+
+
+def resolve_tier(tier: str) -> dict:
+    """按档位名从 model_tiers.json 解析调用配置；缺失/未知则退回全局变量。"""
+    if not TIERS_PATH.exists():
+        print(f"[WARN] 档位配置缺失 {TIERS_PATH}，退回全局 AI_MODEL", file=sys.stderr)
+        return {}
+    try:
+        tiers = json.loads(TIERS_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as e:
+        print(f"[WARN] 档位配置解析失败：{e}", file=sys.stderr)
+        return {}
+    cfg = tiers.get(tier)
+    if not cfg:
+        print(f"[WARN] 未知档位 '{tier}'，可选：{', '.join(tiers.keys())}", file=sys.stderr)
+        return {}
+    return cfg
+
+
+def _append_ledger(path: str, tier: str, model: str, usage: dict) -> None:
+    """把一次调用的档位/模型/token/成本追加到用量账本（JSONL），供阶段路由降本实测。"""
+    try:
+        pin = int(usage.get("prompt_tokens") or 0)
+        pout = int(usage.get("completion_tokens") or 0)
+        p_in = float(os.environ.get("AI_PRICE_IN", 0) or 0)
+        p_out = float(os.environ.get("AI_PRICE_OUT", 0) or 0)
+        cost = pin / 1e6 * p_in + pout / 1e6 * p_out
+        rec = {
+            "ts": time.strftime("%Y-%m-%dT%H:%M:%S"),
+            "tier": tier,
+            "model": model,
+            "prompt_tokens": pin,
+            "completion_tokens": pout,
+            "total_tokens": int(usage.get("total_tokens") or (pin + pout)),
+            "cost_yuan": round(cost, 6),
+        }
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+        print(f"[LEDGER] 已记录 -> {path}（tier={tier} cost=Y{cost:.4f}）", file=sys.stderr)
+    except Exception as e:  # noqa: BLE001
+        print(f"[WARN] 账本写入失败：{e}", file=sys.stderr)
+
+
 
 def _build_payload(model: str, prompt: str, system: str | None, args) -> bytes:
     messages = ([{"role": "system", "content": system}] if system else []) + [
@@ -138,6 +184,8 @@ def run_batch(args, system: str | None) -> None:
         try:
             answer, usage = call_api(prompt, system, args)
             record.update({"answer": answer, "usage": usage})
+            if args.ledger or args.tier:
+                _append_ledger(args.ledger or str(LEDGER_DEFAULT), args.tier or "default", model, usage)
         except SystemExit as e:
             record["error"] = f"call_failed(code={e.code})"
         return record
@@ -171,9 +219,32 @@ def main() -> None:
     ap.add_argument("--max-tokens", type=int, help="输出上限")
     ap.add_argument("--temperature", type=float, help="采样温度")
     ap.add_argument("--stats", action="store_true", help="回显 token 用量与成本估算（stderr）")
+    ap.add_argument("--tier", help="阶段路由档位：strong/mid/cheap（按 model_tiers.json 解析 base/key/model/price）")
+    ap.add_argument("--ledger", help="用量账本 JSONL 路径（缺省 ~/.workbuddy/cache/ai-workflow/usage_ledger.jsonl）；--tier 时自动写入")
     ap.add_argument("--batch-file", help="批量模式：每行一个 prompt 的文本文件")
     ap.add_argument("--concurrency", type=int, default=3, help="批量模式并发数（默认 3）")
     args = ap.parse_args()
+
+    # 阶段感知模型路由：--tier 覆盖 base/key/model/price（见 model_tiers.json）
+    if args.tier:
+        cfg = resolve_tier(args.tier)
+        if cfg:
+            base = cfg.get("base")
+            if cfg.get("base_env"):
+                base = os.environ.get(cfg["base_env"], base)
+            if base:
+                os.environ["AI_API_BASE"] = base
+            key = os.environ.get(cfg["key_env"], "") if cfg.get("key_env") else ""
+            os.environ["AI_API_KEY"] = key or "none"  # 本地档（Ollama）无需真实 key
+            if cfg.get("model"):
+                os.environ["AI_MODEL"] = cfg["model"]
+                args.model = cfg["model"]
+            if cfg.get("price_in") is not None:
+                os.environ["AI_PRICE_IN"] = str(cfg["price_in"])
+            if cfg.get("price_out") is not None:
+                os.environ["AI_PRICE_OUT"] = str(cfg["price_out"])
+            print(f"[ROUTE] 档位={args.tier} -> model={cfg.get('model')} base={os.environ['AI_API_BASE']}",
+                  file=sys.stderr)
 
     system = args.system
     if args.system_file:
@@ -197,6 +268,10 @@ def main() -> None:
 
     if args.stats:
         report_usage(args.model or os.environ.get("AI_MODEL", DEFAULT_MODEL), usage)
+
+    if args.ledger or args.tier:
+        _append_ledger(args.ledger or str(LEDGER_DEFAULT), args.tier or "default",
+                       args.model or os.environ.get("AI_MODEL", DEFAULT_MODEL), usage)
 
     if args.out:
         with open(args.out, "w", encoding="utf-8-sig") as f:

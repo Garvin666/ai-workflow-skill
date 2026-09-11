@@ -101,6 +101,8 @@ version: 2.6.0
 
 硬规则：① 探索段**默认**便宜模型，不得无理由升档；② 红线相关的产出（安全/资金/权限/凭据/不可逆动作）仍强模型 + 必要双审，不因降本放松查收；③ 模型档位在 plan.yaml 的「验证方式」或阶段 1 确认表注明，便于回溯与成本核对。
 
+**落地与实测**：调用侧用 `ai_call.py --tier <strong|mid|cheap>` 自动按 `scripts/model_tiers.json` 解析 base/key/model/price，并把每次调用的档位/token/成本写入 `~/.workbuddy/cache/ai-workflow/usage_ledger.jsonl` 账本（详见 `references/ops.md` 脚本表）。**降本% = (全部强模型成本 − 路由后成本) / 全部强模型成本**，按账本真实 token 用量 × 官方价目表折算（避免"感觉快了"幻觉，必须有可判定信号）。本机若未设 `AI_API_KEY` 或 Ollama 未起，则先用「真实 token 用量 × 官方价目表」做可复现测算（token 只取决于文本，与是否联网无关），配好凭据/本地模型后账本直接出真实账单口径降本%。
+
 7. 批量总结/生成用 `ai_call.py`（`--batch-file` + `--concurrency` 并发、`--model` 覆盖、`--stats` 用量回显）；项目差异化流程见 `references/playbook.md`（模板已就绪，可走 L1）。
 
 ### 子智能体编排
