@@ -1,0 +1,31 @@
+目录：E:\ChatGPT\量化分析与数据分析
+文件总数：121,146　总大小：11.16 GB
+
+按扩展名（前 12，按占用空间排序）：
+扩展名                  文件数            占用
+bin               92,373       5.68 GB
+csv                5,989       2.11 GB
+parquet               30       1.56 GB
+zip                  119     590.86 MB
+(无扩展名)             2,864     461.49 MB
+txt                8,006     286.90 MB
+png                6,700     191.50 MB
+exe                    3     113.71 MB
+tflite                18      83.43 MB
+wasm                   2      43.75 MB
+json                 631      34.58 MB
+db                    12      17.75 MB
+
+最大的 12 个文件：
+   470.42 MB  E:\ChatGPT\量化分析与数据分析\历史数据集\A股统一数据集\a_share_daily.parquet
+   346.11 MB  E:\ChatGPT\量化分析与数据分析\历史数据集\huggingface\stock-china-daily\daily.zip
+   341.15 MB  E:\ChatGPT\量化分析与数据分析\历史数据集\huggingface\financial-analyst-data-full\parquet\financial\tdx_financial.parquet
+   335.04 MB  E:\ChatGPT\量化分析与数据分析\历史数据集\huggingface\financial-analyst-data-full\parquet\financial\tdx_financial_temp.parquet
+   145.90 MB  E:\ChatGPT\量化分析与数据分析\历史数据集\huggingface\timeseries-daily-sp500\data\train-00000-of-00001.parquet
+   130.74 MB  E:\ChatGPT\量化分析与数据分析\历史数据集\huggingface\deepstock-stock-historical-prices\data\train-00000-of-00002.parquet
+   129.97 MB  E:\ChatGPT\量化分析与数据分析\历史数据集\huggingface\deepstock-stock-historical-prices\data\train-00001-of-00002.parquet
+    52.35 MB  E:\ChatGPT\量化分析与数据分析\.work\tools\cloudflared.exe
+    52.35 MB  E:\ChatGPT\量化分析与数据分析\.work\cloudflared.exe
+    35.07 MB  E:\ChatGPT\量化分析与数据分析\.work\chrome-profile\optimization_guide_model_store\43\63922A0C010C80A5\16C3A086ED40D0C5\model.tflite
+    35.07 MB  E:\ChatGPT\量化分析与数据分析\.scratch\cdp-profile\optimization_guide_model_store\43\63922A0C010C80A5\D708E503AC031CC9\model.tflite
+    23.84 MB  E:\ChatGPT\量化分析与数据分析\历史数据集\huggingface\financial-analyst-data-full\.cache\huggingface\trees\d16be984b73673c0db594cd33f777af1bff0babb.json
