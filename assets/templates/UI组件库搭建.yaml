@@ -42,4 +42,4 @@ research:
   - item: "google/model-viewer（8233★ Apache-2.0）"
     decision: "不采用（Web Component，与 React 集成需额外包装，且多一套 3D 栈）"
     date: "2026-09-10"
-flow: "阶段2 查重与方案评审 → 落盘 plan.yaml → 骨架 → 令牌 → 批次A(基础) → 批次B(CSS 3D) → 批次C(Three 场景) → 批次D(可视化) → 演示页 → 构建验证 → 独立审核 → 交付台账"
+flow: "阶段2 查重与方案评审 → 落盘 plan.yaml → 骨架 → 令牌 → 批次A(基础) → 批次B(CSS 3D) → 批次C(Three 场景) → 批次D(可视化) → 演示页 → 构建验证 → 单独送审或抽查豁免 → 交付台账"

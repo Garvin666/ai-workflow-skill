@@ -25,6 +25,9 @@ GitHub 鉴权（可选，提高限额；优先级从高到低）:
 效率机制:
     - 本地缓存：默认 TTL 3600s（AIWF_HTTP_TTL 可调），同 URL 重复请求不发网络请求；--no-cache 强制刷新
       缓存目录 ~/.workbuddy/cache/ai-workflow/http（AIWF_CACHE_DIR 可改）
+    - 链接探活持久缓存：--check-links 的探活结果按 URL 哈希落盘（~/.workbuddy/cache/ai-workflow/probe，
+      AIWF_LINKCHECK_CACHE 可改），默认 TTL 7 天（AIWF_LINKCHECK_TTL 可改），同 URL 跨任务/跨进程只探活一次；
+      --no-cache 强制刷新。复用进程内唯一 SSL context（避免逐请求重建 ~13ms/次）
     - 多仓库并发：--github-repo 传多个时按 AIWF_GH_CONCURRENCY（默认 5）并发取值
 
 403 处理规则（重要）:
@@ -38,6 +41,8 @@ import html
 import json
 import os
 import re
+import shutil
+import ssl
 import sys
 import time
 import urllib.error
@@ -55,6 +60,50 @@ RATE_LIMIT_MAX_RETRY = int(os.environ.get("AIWF_GITHUB_MAX_RETRY", "2"))  # 限�
 CACHE_TTL = int(os.environ.get("AIWF_HTTP_TTL", "3600"))  # 本地缓存有效秒数，0 = 关闭缓存
 CACHE_DIR = Path(os.environ.get("AIWF_CACHE_DIR", str(Path.home() / ".workbuddy" / "cache" / "ai-workflow" / "http")))
 GH_CONCURRENCY = int(os.environ.get("AIWF_GH_CONCURRENCY", "5"))
+
+# ---- 链接探活持久缓存（消除「验证税」：同 URL 跨任务/跨进程只探活一次）----
+# 缓存目录落在基础设施例外允许的 ~/.workbuddy/cache/ai-workflow/ 下，与正文缓存(http)分开
+LINKCHECK_TTL = int(os.environ.get("AIWF_LINKCHECK_TTL", str(7 * 86400)))  # 默认 7 天
+LINKCHECK_CACHE_DIR = Path(os.environ.get("AIWF_LINKCHECK_CACHE",
+                                          str(Path.home() / ".workbuddy" / "cache" / "ai-workflow" / "probe")))
+# 进程内复用同一 SSL context（逐请求创建 ~13ms/次，批量探活会白白烧纯计算，与网络无关）
+_SSL_CTX = ssl.create_default_context()
+# N5：进程内记忆已解析的 GitHub 凭据，避免无 env 时每次抓取都 spawn `gh auth token` 子进程
+_TOKEN_CACHE: str | None = None
+
+
+def _link_cache_key(url: str) -> str:
+    return hashlib.sha1(url.encode("utf-8")).hexdigest()[:16]
+
+
+def _link_cache_path(url: str) -> Path:
+    return LINKCHECK_CACHE_DIR / (_link_cache_key(url) + ".json")
+
+
+def _link_cache_get(url: str, ttl: int) -> dict | None:
+    """命中且未过期返回结果 dict；缺失/损坏/过期返回 None（损坏文件顺手删）。"""
+    if ttl <= 0:
+        return None
+    p = _link_cache_path(url)
+    try:
+        if p.exists() and (time.time() - p.stat().st_mtime) <= ttl:
+            return json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, ValueError):
+        try:
+            p.unlink()
+        except OSError:
+            pass
+    return None
+
+
+def _link_cache_put(url: str, info: dict) -> None:
+    try:
+        LINKCHECK_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        _link_cache_path(url).write_text(json.dumps(info, ensure_ascii=False), encoding="utf-8")
+    except OSError as e:
+        print(f"[WARN] 链接缓存写入失败（不影响结果）：{e}", file=sys.stderr)
+
+
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ai-workflow/2.4",
     "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
@@ -144,13 +193,20 @@ def _resolve_token(cli_token: str | None = None) -> str | None:
 
     只读不写：不在磁盘落任何明文凭据（gh CLI 的凭据由其自身安全存储管理）。
     返回值仅供内存中使用，任何情况下不得打印完整 token。
+
+    N5：进程内记忆已解析的凭据（含「无凭据」的 None），避免无 env 时每次抓取都
+    spawn `gh auth token` 子进程。cli_token 为调用方显式传入，不进缓存（可能每次不同）。
     """
     if cli_token:
         return cli_token
+    global _TOKEN_CACHE
+    if _TOKEN_CACHE is not None:  # 已解析过（含 None），直接复用，不 spawn 子进程
+        return _TOKEN_CACHE
     for env_name in ("GITHUB_TOKEN", "GH_TOKEN"):
         v = os.environ.get(env_name)
         if v and v.strip():
-            return v.strip()
+            _TOKEN_CACHE = v.strip()
+            return _TOKEN_CACHE
     try:
         import subprocess
         r = subprocess.run(["gh", "auth", "token"], capture_output=True, text=True, timeout=10)
@@ -158,17 +214,25 @@ def _resolve_token(cli_token: str | None = None) -> str | None:
         if r.returncode == 0 and cand:
             if _looks_like_token(cand):
                 print("[INFO] 未设环境变量，改用 gh CLI 凭据（gh auth token）提高限额", file=sys.stderr)
-                return cand
+                _TOKEN_CACHE = cand
+                return _TOKEN_CACHE
             print(f"[WARN] gh auth token 输出不像凭据（{len(cand)} 字符），已忽略；"
                   "若需认证请设置 GITHUB_TOKEN 或运行 gh auth login", file=sys.stderr)
     except (OSError, ValueError, subprocess.SubprocessError):
         pass
+    _TOKEN_CACHE = None  # 记忆「无凭据」，避免每次重试都 spawn 子进程
     return None
 
 
 def fetch(url: str, token: str | None = None, use_cache: bool = True, ttl: int = CACHE_TTL,
-          headers_extra: dict | None = None) -> bytes:
-    if use_cache:
+          headers_extra: dict | None = None, out_file: str | None = None) -> bytes | None:
+    """抓取 URL 返回字节体。
+
+    N4：`out_file` 给定时（原始二进制下载）走流式落盘——不把整响应读入内存，也不写入
+    内存缓存（避免大文件内存/磁盘翻倍），直接 shutil.copyfileobj 写盘后返回 None。
+    文本/grep/stdout/collect 等需整体的路径不传 out_file，照常返回 bytes。
+    """
+    if use_cache and out_file is None:
         cached = cache_get(url, ttl)
         if cached is not None:
             print(f"[INFO] 缓存命中（{len(cached)} 字节，TTL {ttl}s）：{url}", file=sys.stderr)
@@ -193,6 +257,12 @@ def fetch(url: str, token: str | None = None, use_cache: bool = True, ttl: int =
         req = urllib.request.Request(url, headers=headers)
         try:
             with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
+                if out_file is not None:  # N4：流式落盘，整响应不进内存、不进缓存
+                    with open(out_file, "wb") as f:
+                        shutil.copyfileobj(resp, f)
+                    size = os.path.getsize(out_file)
+                    print(f"[ OK ] 已流式写入 {out_file}（{size} 字节，未载入内存）", file=sys.stderr)
+                    return None
                 data = resp.read()
             if use_cache:
                 cache_put(url, data)
@@ -452,7 +522,7 @@ def _probe_once(url: str, timeout: int, headers: dict) -> tuple[dict | None, Exc
     req = urllib.request.Request(url, headers=headers, method="GET")
     t0 = time.time()
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        with urllib.request.urlopen(req, timeout=timeout, context=_SSL_CTX) as resp:
             info = {
                 "url": url,
                 "status": resp.status,
@@ -469,11 +539,15 @@ def _probe_once(url: str, timeout: int, headers: dict) -> tuple[dict | None, Exc
         return None, e
 
 
-def check_links(urls: list[str], concurrency: int, timeout: int) -> list[dict]:
+def check_links(urls: list[str], concurrency: int, timeout: int,
+                use_cache: bool = True) -> tuple[list[dict], int]:
     """批量链接存活检查：只取状态与元信息，不下载正文（调研报告引用核验专用）。
 
     403 处理：先用常规 UA 探测；若 403，则换一套更接近真实浏览器的头再试一次——
     两次都 403 才判为反爬（CDN/WAF 特征头用于进一步分类），避免把"被反爬"误报成"失效"。
+
+    持久缓存：命中缓存（未过期）直接返回，不发起网络请求——消除「验证税」（同 URL
+    跨任务/跨进程只探活一次）。--no-cache 可强制刷新。缓存读写失败不影响结果。
     """
     ALT_HEADERS = {
         "User-Agent": ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -484,7 +558,7 @@ def check_links(urls: list[str], concurrency: int, timeout: int) -> list[dict]:
         "Upgrade-Insecure-Requests": "1",
     }
 
-    def probe(url: str) -> dict:
+    def _probe_live(url: str) -> dict:
         t0 = time.time()
         info, err = _probe_once(url, timeout, dict(HEADERS))
         if info is not None:
@@ -507,10 +581,23 @@ def check_links(urls: list[str], concurrency: int, timeout: int) -> list[dict]:
         return {"url": url, "status": "ERR", "note": f"网络失败: {str(err)[:60]}", "content_type": "-",
                 "bytes": "-", "final_url": url, "ms": int((time.time() - t0) * 1000)}
 
+    def probe_cached(url: str) -> dict:
+        if use_cache:
+            hit = _link_cache_get(url, LINKCHECK_TTL)
+            if hit is not None:
+                hits.append(url)
+                print(f"[INFO] 链接缓存命中：{url}", file=sys.stderr)
+                return hit
+        info = _probe_live(url)
+        if use_cache:
+            _link_cache_put(url, info)
+        return info
+
     if not urls:
-        return []
+        return [], 0
+    hits: list = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, min(concurrency, len(urls)))) as pool:
-        return list(pool.map(probe, urls))
+        return list(pool.map(probe_cached, urls)), len(hits)
 
 
 def _run_check_links(args) -> None:
@@ -524,8 +611,9 @@ def _run_check_links(args) -> None:
         print("[ERROR] 链接清单为空", file=sys.stderr)
         raise SystemExit(1)
 
+    use_cache = not args.no_cache
     t0 = time.time()
-    rows = check_links(urls, args.concurrency, args.timeout)
+    rows, cached_n = check_links(urls, args.concurrency, args.timeout, use_cache)
     cost = time.time() - t0
     ok_n = sum(1 for r in rows if isinstance(r["status"], int) and r["status"] < 400)
     warn_n = sum(1 for r in rows if r["status"] in (401, 403, 429))
@@ -536,7 +624,7 @@ def _run_check_links(args) -> None:
         lines.append("\t".join([str(r["status"]), r["note"], str(r["ms"]), str(r["bytes"]),
                                 r["url"], r["final_url"]]))
     summary = (f"# 链接存活检查：共 {len(rows)} 条，可达 {ok_n}，受限 {warn_n}（401/403/429），异常 {bad_n}；"
-               f"并发 {args.concurrency}，耗时 {cost:.1f}s")
+               f"并发 {args.concurrency}，耗时 {cost:.1f}s，缓存命中 {cached_n} 条")
     text = summary + "\n" + "\n".join(lines) + "\n"
 
     if args.out:
@@ -658,12 +746,17 @@ def main() -> None:
     if not args.url:
         ap.error("必须提供 URL、--github-repo、--github-search 或 --github-code-search")
 
+    # N4：原始二进制下载（--out 且非文本/grep）走流式落盘，整响应不进内存
+    raw_out = bool(args.out) and not (args.text or args.grep)
     try:
-        content = fetch(args.url, use_cache=use_cache, ttl=args.ttl)
+        content = fetch(args.url, use_cache=use_cache, ttl=args.ttl,
+                        out_file=args.out if raw_out else None)
     except SystemExit:
         if args.out and Path(args.out).exists():
             print(f"[WARN] 抓取失败，{args.out} 未被更新（其中仍是上一次的旧结果），请勿误用", file=sys.stderr)
         raise
+    if content is None:
+        return  # 已流式写入 args.out，无需后续处理
     if args.grep and not args.text:
         args.text = True
         print("[INFO] 指定 --grep，自动启用 HTML→文本", file=sys.stderr)

@@ -93,14 +93,19 @@ def _write_sheet(ws, rows: list[list], fmt: bool, widths: list[int] | None) -> N
         cell.font = Font(bold=True, name=cell.font.name, size=cell.font.size)
     ws.freeze_panes = "A2"
     n_cols = max((len(r) for r in rows), default=0)
+    sample_n = min(len(rows), 200)  # N9：仅抽样前 200 行估算列宽，避免大表 O(rows*cols) 全列扫描
     for idx in range(1, n_cols + 1):
+        col_letter = ws.cell(row=1, column=idx).column_letter
         if widths:
             w = widths[idx - 1] if idx - 1 < len(widths) else widths[-1]
         else:
-            col_letter = ws.cell(row=1, column=idx).column_letter
-            w = max((_disp_width(str(c.value)) for c in ws[col_letter] if c.value is not None), default=8) + 2
+            w = 8
+            for r in range(1, sample_n + 1):
+                c = ws.cell(row=r, column=idx)
+                if c.value is not None:
+                    w = max(w, _disp_width(str(c.value)) + 2)
             w = min(max(w, 8), MAX_COL_WIDTH)
-        ws.column_dimensions[ws.cell(row=1, column=idx).column_letter].width = w
+        ws.column_dimensions[col_letter].width = w
 
 
 def cmd_excel_write(args) -> None:

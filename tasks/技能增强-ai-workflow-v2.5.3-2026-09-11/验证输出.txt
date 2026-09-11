@@ -1,0 +1,150 @@
+﻿# 验证原始输出 — ai-workflow v2.5.3（独立审核→抽查制 + checks.py status 两处回归修复）
+# 生成时间：2026-09-11 17:4x ｜ 解释器：C:\Users\26717\.workbuddy\binaries\python\envs\ai-workflow\Scripts\python.exe
+# 说明：本文件为 UTF-8，可直接阅读。修复前的两处输出见 §6（逐字复制，已注明原乱码原因）。
+
+## §1 checks.py skill（技能自检）
+=== ai-workflow 技能自检 ===
+[ OK ] SKILL.md 存在
+[ OK ] frontmatter 含 name
+[ OK ] frontmatter 含 description
+[ OK ] frontmatter 含 agent_created
+[ OK ] 文档引用完整性 — 检查 29 条引用
+[ OK ] 模板 schema：_示例-数据分析.yaml — 9/9
+[ OK ] 模板 schema：UI组件库搭建.yaml — 9/9
+[ OK ] 模板 schema：学习资料生成.yaml — 9/9
+[ OK ] 模板 schema：小说写作.yaml — 9/9
+[ OK ] 模板 schema：技术调研.yaml — 9/9
+[ OK ] 模板 schema：调研报告.yaml — 9/9
+[ OK ] 模板 schema：选品分析.yaml — 9/9
+[ OK ] 模板 schema：量化分析.yaml — 9/9
+[ OK ] plan-template 必填键 — 齐全
+[ OK ] py_compile：ai_call.py
+[ OK ] py_compile：checks.py
+[ OK ] py_compile：data_query.py
+[ OK ] py_compile：http_fetch.py
+[ OK ] py_compile：office_io.py
+=== 结果：19/19 通过，FAIL=0 ===
+RC=0
+## §2 checks.py plan（本任务 Anti-drop 对账 + 熔断门禁）
+=== ai-workflow 计划对账 ===
+[ OK ] plan.yaml 存在 — C:\Users\26717\.workbuddy\skills\ai-workflow\tasks\技能增强-ai-workflow-v2.5.3-2026-09-11\plan.yaml
+[ OK ] plan.yaml 可解析
+[ OK ] meta.任务
+[ OK ] meta.验证信号
+[ OK ] meta.工作区根
+[ OK ] steps 非空 — 7 步
+[ OK ] Anti-drop 对账 — 已完成步骤 7 个，交付物确认 7 个
+[ OK ] 熔断状态 — 正常（未声明）
+=== 结果：8/8 通过，FAIL=0 ===
+RC=0
+## §3 旧口径残留扫描（主干+references+assets，排除 tasks/_backup 历史）
+0 命中：上述旧口径已从主干/references/assets 清零
+## §4 checks.py status（修复后，技能工作区）
+任务目录                                      层级   步骤完成   交付物     最后修改
+--------------------------------------------------------------------------------------
+UI组件库搭建-2026-09-10                       L2     12/12      12/12         1 天
+估值快照源接入-2026-09-10                     L2     7/7        7/7           1 天
+估值残余限制完善-2026-09-10                   L2     7/7        7/7           1 天
+体验评估-ai-workflow-v2.5.0-2026-09-10        L2     6/6        8/8           1 天
+对抗互审-ai-workflow-v2.5.1-2026-09-11        L2     6/7        7/7           0 天
+市场扫描扩展-2026-09-10                       L2     7/7        7/7           1 天
+技能增强-ai-workflow-v2.4.3-2026-09-10        L2     6/6        6/6           1 天
+技能增强-ai-workflow-v2.4.4-2026-09-10        L2     6/6        6/6           1 天
+技能增强-ai-workflow-v2.5.0-2026-09-10        L2     8/8        8/8           1 天
+技能增强-ai-workflow-v2.5.1-2026-09-10        L2     8/8        11/11         1 天
+技能增强-ai-workflow-v2.5.2-2026-09-11        L2     7/8        15/15         0 天
+技能增强-ai-workflow-v2.5.3-2026-09-11        L2     7/7        12/12         0 天
+
+[WARN] 任务目录 12 个 > 阈值 10，建议归档最旧的若干个（参考 SKILL.md 阶段 6 归档规则）
+
+[ OK ] 无超过 30 天的陈旧任务
+[ OK ] 任务总览 — 12 个任务目录
+## §5 checks.py status（交叉验证：本会话工作区 E:\ChatGPT\工作流）
+任务目录                                      层级   步骤完成   交付物     最后修改
+--------------------------------------------------------------------------------------
+技术调研-工作流检索能力-2026-09-10            L1（命中 assets/templates/技术调研.yaml，主题字段更新为「工作流检索能力」） 5/5        7/7           1 天
+技术调研-网络安全学习-2026-09-10              L1（命中 assets/templates/技术调研.yaml） 5/5        7/7           1 天
+技能增强-ai-workflow-v2.1-2026-09-10          L2     8/8        1/12 ⚠        1 天
+技能增强-ai-workflow-v2.2-2026-09-10          L2     6/6        1/8 ⚠         1 天
+技能增强-ai-workflow-v2.4-2026-09-10          L2（跨文件改造） 8/8        6/10 ⚠        1 天
+技能增强-ai-workflow-v2.4.2-2026-09-10        L2（脚本改造） 5/5        2/5 ⚠         1 天
+技能改造-ai-workflow-2026-09-10               L2     7/7        1/16 ⚠        1 天
+
+[ OK ] 无超过 30 天的陈旧任务
+[ OK ] 任务总览 — 7 个任务目录
+## §6 修复前原始输出（逐字复制；原文件因控制台代码页 936 而乱码，此处按语义还原为可读文本）
+
+### §6-1 首轮 `checks.py skill`（FAIL=1 —— 机器门禁抓到我自己写坏的引用）
+```
+[ OK ] SKILL.md 存在
+[ OK ] frontmatter 含 name / description / agent_created
+[FAIL] 文档引用完整性 — 缺失：工作流瓶颈分析与优化方案-2026-09-11.md（来自 ops.md）；改动对照表-v2.5.3.md（来自 ops.md）
+[ OK ] 模板 schema ×8 — 9/9
+[ OK ] plan-template 必填键 — 齐全
+[ OK ] py_compile ×5
+=== 结果：18/19 通过，FAIL=1 ===
+RC=1
+```
+处置：前者是**工作区**文件被反引号写成技能内相对路径 → 改为反引号内绝对路径；后者是尚未创建 → 随后创建。
+
+### §6-2 `checks.py status` 修复前（第①处未修：12/12 任务全报 NameError）
+```
+任务目录                                      层级   步骤完成   交付物     最后修改
+--------------------------------------------------------------------------------------
+UI组件库搭建-2026-09-10                       L2     解析失败(NameError) —            1 天
+估值快照源接入-2026-09-10                     L2     解析失败(NameError) —            1 天
+估值残余限制完善-2026-09-10                   L2     解析失败(NameError) —            1 天
+体验评估-ai-workflow-v2.5.0-2026-09-10        L2     解析失败(NameError) —            1 天
+对抗互审-ai-workflow-v2.5.1-2026-09-11        L2     解析失败(NameError) —            0 天
+市场扫描扩展-2026-09-10                       L2     解析失败(NameError) —            1 天
+技能增强-ai-workflow-v2.4.3-2026-09-10        L2     解析失败(NameError) —            1 天
+技能增强-ai-workflow-v2.4.4-2026-09-10        L2     解析失败(NameError) —            1 天
+技能增强-ai-workflow-v2.5.0-2026-09-10        L2     解析失败(NameError) —            1 天
+技能增强-ai-workflow-v2.5.1-2026-09-10        L2     解析失败(NameError) —            1 天
+技能增强-ai-workflow-v2.5.2-2026-09-11        L2     解析失败(NameError) —            0 天
+技能增强-ai-workflow-v2.5.3-2026-09-11        L2     解析失败(NameError) —            0 天
+```
+根因：`checks.py:272` `if args.light:` —— `args` 是 `main()` 的局部变量（`:550`）。
+
+### §6-3 `checks.py status` 修①后（第②处暴露：全报 KeyError）
+```
+UI组件库搭建-2026-09-10                       L2     解析失败(KeyError) 12/12         1 天
+估值快照源接入-2026-09-10                     L2     解析失败(KeyError) 7/7           1 天
+估值残余限制完善-2026-09-10                   L2     解析失败(KeyError) 7/7           1 天
+体验评估-ai-workflow-v2.5.0-2026-09-10        L2     解析失败(KeyError) 8/8           1 天
+对抗互审-ai-workflow-v2.5.1-2026-09-11        L2     解析失败(KeyError) 7/7           0 天
+市场扫描扩展-2026-09-10                       L2     解析失败(KeyError) 7/7           1 天
+技能增强-ai-workflow-v2.4.3-2026-09-10        L2     解析失败(KeyError) 6/6           1 天
+技能增强-ai-workflow-v2.4.4-2026-09-10        L2     解析失败(KeyError) 6/6           1 天
+技能增强-ai-workflow-v2.5.0-2026-09-10        L2     解析失败(KeyError) 8/8           1 天
+技能增强-ai-workflow-v2.5.1-2026-09-10        L2     解析失败(KeyError) 11/11         1 天
+技能增强-ai-workflow-v2.5.2-2026-09-11        L2     解析失败(KeyError) 15/15         0 天
+技能增强-ai-workflow-v2.5.3-2026-09-11        L2     解析失败(KeyError) 11/11         0 天
+```
+根因：`checks.py:279` `any(a["缺失"] for a in done)` —— `done` 是步骤 dict 列表，却取审计结果字典的键。
+⭐ **此输出是「修好一处就以为收工」的物证**：ⓐ① 修完后如果不看输出、只凭「我改了那行」判断，就会把 ② 带进交付。
+
+### §6-4 `status --light`（修复后，轻量模式生效）
+```
+UI组件库搭建-2026-09-10                       L2     12/12      —             1 天
+估值快照源接入-2026-09-10                     L2     7/7        —             1 天
+估值残余限制完善-2026-09-10                   L2     7/7        —             1 天
+体验评估-ai-workflow-v2.5.0-2026-09-10        L2     6/6        —             1 天
+```
+
+## §7 git 状态（技能目录；本次改动**未提交**，与既有未提交改动同列）
+```
+ M Ledger.md
+ M SKILL.md
+ M assets/ledger-template.md
+ M assets/templates/UI组件库搭建.yaml
+ M references/ops.md
+ M references/quality-gates.md
+ M scripts/checks.py
+ M scripts/data_query.py     ← 早前会话的 N1/N2/N3 加固，本次未动
+ M scripts/http_fetch.py     ← 早前会话的链接探活缓存接入，本次未动
+ M scripts/office_io.py      ← 早前会话，本次未动
+ M scripts/setup_env.ps1     ← 早前会话，本次未动
+?? tasks/技能增强-ai-workflow-v2.5.3-2026-09-11/
+```
+

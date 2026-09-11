@@ -198,7 +198,7 @@ def load_plan(path: Path) -> dict:
 
     if path.is_dir():
         path = path / "plan.yaml"
-    return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    return yaml.safe_load(path.read_text(encoding="utf-8-sig")) or {}
 
 
 def _clean_token(token: str) -> str:
@@ -234,7 +234,7 @@ def _pad(text: str, width: int) -> str:
     return text + " " * max(1, width - disp)
 
 
-def cmd_status(workspace: Path, archive_days: int, max_tasks: int) -> int:
+def cmd_status(workspace: Path, archive_days: int, max_tasks: int, light: bool = False) -> int:
     tasks_root = workspace / "tasks"
     if not tasks_root.exists():
         fail("tasks/ 目录存在", str(tasks_root))
@@ -267,14 +267,21 @@ def cmd_status(workspace: Path, archive_days: int, max_tasks: int) -> int:
                 ):
                     fuse_mark = " ⚡已熔断"
                     tripped_tasks.append(d.name)
-                audited = [audit_step(s, workspace) for s in steps]
-                done = [a for a in audited if a["状态"] == "完成"]
-                total_deliv = sum(a["交付物总数"] for a in audited)
-                exist = sum(a["存在数"] for a in audited)
+                done = [s for s in steps if str(s.get("状态", "")).strip() == "完成"]
                 steps_txt = f"{len(done)}/{len(steps)}"
-                deliv_txt = f"{exist}/{total_deliv}" if total_deliv else "0"
-                if any(a["缺失"] for a in done):
-                    deliv_txt += " ⚠"
+                if light:
+                    deliv_txt = "—"  # 轻量模式不核对交付物存在性（跳过逐文件 exists 检查，N6）
+                else:
+                    audited = [audit_step(s, workspace) for s in steps]
+                    total_deliv = sum(a["交付物总数"] for a in audited)
+                    exist = sum(a["存在数"] for a in audited)
+                    deliv_txt = f"{exist}/{total_deliv}" if total_deliv else "0"
+                    # 已完成步骤中若有交付物缺失 → 打 ⚠（v2.5.3 修复：原写法 `for a in done` 拿
+                    # 「步骤 dict」去取审计结果键 `缺失`，必抛 KeyError 并被外层宽 except 吞成
+                    # 「解析失败(KeyError)」，导致总览的完成度列长期失真）
+                    if any(a["缺失"] for a, s in zip(audited, steps)
+                           if str(s.get("状态", "")).strip() == "完成"):
+                        deliv_txt += " ⚠"
                 if not any("状态" in s for s in steps):  # v2 之前的计划结构，仅统计步数
                     steps_txt = f"旧格式 {len(steps)} 步"
             except Exception as e:  # noqa: BLE001 - 单个任务解析失败不应中断总览
@@ -330,52 +337,94 @@ def _set_meta_fuse(plan_path: Path, value: str) -> bool:
     return True
 
 
+def _load_batch(path: str) -> list[tuple[str, str]]:
+    """解析批量文件：每行 `<step_id> <status>`（空白分隔），# 开头或空行忽略。"""
+    p = Path(path)
+    if not p.exists():
+        fail("批量文件存在", str(p))
+        raise SystemExit(1)
+    pairs = []
+    # utf-8-sig: Windows 侧用 Out-File/记事本写出的文件常带 BOM，带 BOM 时首个 step_id 会变成
+    # 『\ufeff1』而恒匹配不上（v2.5.3 实测：`mark --batch` 报「找到该步骤的『状态』行 — id=1」）。
+    for ln in p.read_text(encoding="utf-8-sig").splitlines():
+        s = ln.strip()
+        if not s or s.startswith("#"):
+            continue
+        parts = s.split()
+        if len(parts) < 2:
+            fail("批量文件行格式", f"『{s}』应为『<step_id> <status>』")
+            raise SystemExit(1)
+        sid, st = parts[0], parts[1]
+        if st not in VALID_STATUS:
+            fail("状态合法", f"『{st}』不在 {VALID_STATUS}")
+            raise SystemExit(1)
+        pairs.append((sid, st))
+    if not pairs:
+        fail("批量文件非空", str(p))
+        raise SystemExit(1)
+    return pairs
+
+
 def cmd_mark(plan_path: Path, step_id: str | None, status: str | None,
-             fuse: str | None = None) -> int:
+             fuse: str | None = None, batch: str | None = None) -> int:
     if status is not None and status not in VALID_STATUS:
         fail("状态合法", f"『{status}』不在 {VALID_STATUS}")
         return 1
     if fuse is not None and fuse not in VALID_FUSE:
         fail("熔断状态合法", f"『{fuse}』不在 {VALID_FUSE}")
         return 1
-    if step_id is None and fuse is None:
-        fail("参数", "至少给出 ` <step_id> <状态>` 或 `--fuse <正常|已熔断>`")
-        return 1
-    if step_id is not None and status is None:
-        fail("参数", "给出 <step_id> 时必须同时给出 <状态>")
-        return 1
+    # 收集本次要改的步骤：(step_id, status)；batch 与单步二选一来源
+    if batch is not None:
+        pairs = _load_batch(batch)
+    else:
+        if step_id is None and fuse is None:
+            fail("参数", "至少给出 ` <step_id> <状态>` 或 `--fuse <正常|已熔断>` 或 `--batch <文件>`")
+            return 1
+        if step_id is not None and status is None:
+            fail("参数", "给出 <step_id> 时必须同时给出 <状态>")
+            return 1
+        pairs = [(step_id, status)] if step_id is not None else []
     if plan_path.is_dir():
         plan_path = plan_path / "plan.yaml"
     if not plan_path.exists():
         fail("plan.yaml 存在", str(plan_path))
         return 1
 
+    # 先处理 fuse（一次性写 meta）
     if fuse is not None:
         if not _set_meta_fuse(plan_path, fuse):
             fail("meta.熔断状态 写入", "未找到 `meta:` 块，请手工添加该键")
             return 1
         ok("meta.熔断状态已更新", f"→ {fuse}")
-        if step_id is None:
+        if not pairs:
             return 0
 
+    # N7：一次性读盘，定位所有目标行；任一缺失则整体失败、不落盘（信任但验证）
     lines = plan_path.read_text(encoding="utf-8").splitlines(keepends=True)
-    cur = None
-    target = None
-    for i, ln in enumerate(lines):
-        m = re.match(r"^\s*-\s*id:\s*(\S+)\s*$", ln)
-        if m:
-            cur = m.group(1)
-        elif re.match(r"^\s*状态:", ln) and cur == str(step_id):
-            target = i
-            break
-    if target is None:
-        fail("找到该步骤的『状态』行", f"id={step_id}")
-        return 1
-    old = lines[target].strip()
-    indent = re.match(r"^(\s*)", lines[target]).group(1)
-    lines[target] = f"{indent}状态: {status}\n"
+    targets: dict[str, int] = {}
+    for sid, _ in pairs:
+        cur = None
+        target = None
+        for i, ln in enumerate(lines):
+            m = re.match(r"^\s*-\s*id:\s*(\S+)\s*$", ln)
+            if m:
+                cur = m.group(1)
+            elif re.match(r"^\s*状态:", ln) and cur == str(sid):
+                target = i
+                break
+        if target is None:
+            fail("找到该步骤的『状态』行", f"id={sid}")
+            return 1
+        targets[sid] = target
+    changes = []
+    for sid, st in pairs:
+        i = targets[sid]
+        old = lines[i].strip()
+        indent = re.match(r"^(\s*)", lines[i]).group(1)
+        lines[i] = f"{indent}状态: {st}\n"
+        changes.append(f"{sid}: {old} → 状态: {st}")
     plan_path.write_text("".join(lines), encoding="utf-8")
-    ok("步骤状态已更新", f"id={step_id}：{old} → 状态: {status}")
+    ok("步骤状态已更新", f"{len(pairs)} 个：" + "; ".join(changes))
     return 0
 
 
@@ -494,6 +543,7 @@ def main() -> None:
     p.add_argument("--workspace", default=str(Path.cwd()), help="工作区根目录（含 tasks/）")
     p.add_argument("--archive-days", type=int, default=30, help="超过该天数未改动则建议归档（默认 30）")
     p.add_argument("--max-tasks", type=int, default=10, help="任务目录数超过该值则提示归档（默认 10）")
+    p.add_argument("--light", action="store_true", help="轻量模式：仅统计 meta/步数/状态，跳过逐交付物 exists 检查（N6）")
 
     p = sub.add_parser("mark", help="更新 plan.yaml 的步骤状态与/或 meta 熔断状态（替代手工编辑）")
     p.add_argument("plan", help="plan.yaml 路径或任务目录")
@@ -501,6 +551,7 @@ def main() -> None:
     p.add_argument("status", nargs="?", choices=VALID_STATUS, help="该步骤的新状态")
     p.add_argument("--fuse", choices=VALID_FUSE,
                    help="设置 meta.熔断状态；复位填『正常』（须与步骤状态一并复位，见 _check_fuse）")
+    p.add_argument("--batch", help="批量文件：每行 `<step_id> <status>`（空行/# 忽略）；一次性落盘，避免 N 步 N 次重写（N7）")
 
     args = ap.parse_args()
     if args.cmd == "skill":
@@ -510,10 +561,10 @@ def main() -> None:
         code = check_plan(Path(args.target), Path(args.base))
         name = "计划对账"
     elif args.cmd == "status":
-        code = cmd_status(Path(args.workspace), args.archive_days, args.max_tasks)
+        code = cmd_status(Path(args.workspace), args.archive_days, args.max_tasks, args.light)
         name = "任务总览"
     else:
-        code = cmd_mark(Path(args.plan), args.step_id, args.status, args.fuse)
+        code = cmd_mark(Path(args.plan), args.step_id, args.status, args.fuse, args.batch)
         name = "状态更新"
 
     if args.cmd in ("skill", "plan"):

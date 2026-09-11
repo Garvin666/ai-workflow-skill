@@ -8,7 +8,8 @@
 用法:
     python data_query.py files <目录> [--glob "**/*.json"] [--top 20]
     python data_query.py find  <目录> --pattern "关键词" [--glob "**/*.md"] [--ignore-case]
-                              [--max-hits 50] [--context 0] [--files-only]
+                              [--max-hits 50] [--files-only] [--with-line]
+                              [--max-object-size 33554432] [--max-files 1000000]
     python data_query.py sql "SELECT count(*) FROM read_json_auto('data/*.json')"
     python data_query.py big   <目录> [--top 15] [--min-mb 50] [--no-skip]
 
@@ -16,12 +17,15 @@
     - `files` / `big` 用 os.scandir（只读元数据，不读内容）—— 对 20 万文件级别足够快
     - `big` 默认跳过依赖/缓存目录（BIG_SKIP_DIRS：.venv/venv/node_modules/site-packages 等），
       避免把 torch 之类的第三方大文件当成项目文件；需要旧口径加 --no-skip
-    - `find` / `sql` 交给 DuckDB：`find` 走 read_text 一次性扫描，避免 Python 逐文件循环
+    - `find` 交给 DuckDB `read_text`，但**先单遍扫描按大小预过滤**（默认跳过 >32MB 文件，`--max-object-size` 可调/关闭），
+      避免把大文件整读进内存导致 OOM（N1）；默认仅返回命中文件名（内存有界），`--with-line` 才展开行号。
+      同时消除旧版「先 `count(*)` 再读」的二次目录遍历（N2）。
     - 小文件、单文件检索仍应用内置 Grep/Glob，不必动用本脚本
 """
 import argparse
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -108,6 +112,42 @@ def _walk_stat(root: Path, skip_dirs: frozenset[str]):
             continue
 
 
+def _glob_to_regex(glob: str) -> "re.Pattern":
+    """把 DuckDB 风格 glob 转成正则（仅用于 Python 端预过滤，避免依赖 read_text 的命名参数）。
+
+    逐字符分词，避免「先插入带 `?` 的 `(?:.*/)?` 再被后续 `?`→`[^/]` 替换误伤」的坑。
+    支持 `**/`(可选多级目录)、`**`(任意)、`*`(单段)、`?`(单字符)；`.` 与路径中的正则特殊符均转义。
+    匹配目标为文件的绝对路径（已统一成 `/`）。
+    """
+    g = glob.replace("\\", "/")
+    out = ["^"]
+    i, n = 0, len(g)
+    while i < n:
+        c = g[i]
+        if c == "*":
+            if i + 1 < n and g[i + 1] == "*":
+                if i + 2 < n and g[i + 2] == "/":
+                    out.append("(?:.*/)?")  # **/ 可选多级目录
+                    i += 3
+                else:
+                    out.append(".*")  # 末尾 ** 任意
+                    i += 2
+            else:
+                out.append("[^/]*")  # 单段通配
+                i += 1
+        elif c == "?":
+            out.append("[^/]")
+            i += 1
+        elif c == ".":
+            out.append(r"\.")
+            i += 1
+        else:
+            out.append(re.escape(c))
+            i += 1
+    out.append("$")
+    return re.compile("".join(out))
+
+
 # ---------------------------------------------------------------- files
 def cmd_files(args) -> int:
     root = Path(args.path)
@@ -125,7 +165,8 @@ def cmd_files(args) -> int:
         slot = by_ext.setdefault(ext, [0, 0])
         slot[0] += 1
         slot[1] += size
-        biggest.append((size, fp))
+        if args.top:  # N3：仅当要展示 top-N 大文件时才驻留全部 (size,path) 元组，否则 O(N) 内存浪费
+            biggest.append((size, fp))
     print(f"目录：{root}")
     print(f"文件总数：{total_files:,}　总大小：{_human(total_bytes)}")
     rows = sorted(by_ext.items(), key=lambda kv: -kv[1][1])[: args.top]
@@ -172,42 +213,67 @@ def cmd_find(args) -> int:
     # glob 必须相对 --path 解析：DuckDB 按 CWD 解析相对路径，否则从别处调用会静默零命中（实测踩过）
     base = os.path.abspath(str(root)).replace("\\", "/")
     glob_abs = [g if os.path.isabs(g) else f"{base}/{g}" for g in globs]
-    glob_lit = "[" + ", ".join(_sql_str(g) for g in glob_abs) + "]"
+
+    cap = args.max_object_size
+    max_files = args.max_files
+    # --- 大小预过滤（N1，防 OOM）：单遍扫描，只对 <=cap 的文件交给 DuckDB，大文件直接跳过（不读其内容）。
+    #     同时消除旧版「先 count(*) 再读」的二次遍历（N2）；显式文件清单交给 read_text，DuckDB 不再做 glob 枚举。
+    sel, skipped_big = None, 0
+    if cap > 0 or max_files > 0:
+        regexes = [_glob_to_regex(g) for g in glob_abs]
+        sel = []
+        for fp, size in _walk_stat(root, SKIP_DIRS):
+            if not any(rx.match(fp.replace("\\", "/")) for rx in regexes):
+                continue
+            if cap > 0 and size > cap:
+                skipped_big += 1
+                continue
+            sel.append(fp.replace("\\", "/"))
+            if max_files > 0 and len(sel) >= max_files:
+                break
+        if not sel:
+            print(f"[ERROR] 无匹配文件（glob {len(glob_abs)} 条；跳过 >{cap}B 大文件 {skipped_big} 个）", file=sys.stderr)
+            print("[HINT ] 若确需扫描大文件，调大 --max-object-size（0=不限制）；注意超大文件整读仍有 OOM 风险", file=sys.stderr)
+            return 2
+        src_lit = "[" + ", ".join(_sql_str(f) for f in sel) + "]"
+        scanned = len(sel)
+    else:
+        # 用户显式关闭两道护栏：走旧版原始 glob 路径（最快，但大文件有 OOM 风险）
+        src_lit = "[" + ", ".join(_sql_str(g) for g in glob_abs) + "]"
+        scanned = None
+
     pattern = args.pattern
     if args.ignore_case:
         pattern = f"(?i){pattern}"
-
-    # 防呆：先确认 glob 能匹配到文件。DuckDB 语法不支持时是静默 0 命中，极易误判成"没有该内容"
-    try:
-        n_files = con.execute(f"SELECT count(*) FROM glob({glob_lit})").fetchone()[0]
-    except Exception as e:
-        print(f"[ERROR] glob 语法有误：{str(e).splitlines()[0][:160]}", file=sys.stderr)
-        return 2
-    if n_files == 0:
-        print(f"[ERROR] glob 未匹配到任何文件（共 {len(glob_abs)} 条模式，示例 {glob_abs[0]}）", file=sys.stderr)
-        print("[HINT ] 注意 DuckDB 不支持 `{a,b}` 花括号；请用逗号分隔多个 glob，或检查目录路径", file=sys.stderr)
-        return 2
 
     if args.files_only:
         sql = f"""
             SELECT filename, count(*) AS hits
             FROM (
                 SELECT filename, unnest(string_split(content, chr(10))) AS line
-                FROM read_text({glob_lit})
+                FROM read_text({src_lit})
             )
             WHERE regexp_matches(line, ?)
             GROUP BY filename ORDER BY hits DESC LIMIT {int(args.max_hits)}
         """
-    else:
+    elif args.with_line:
+        # 行级展开（旧默认）：内存随文件行数增长，仅对 <=cap 的预筛选文件执行
         sql = f"""
             SELECT filename, lineno, line FROM (
                 SELECT filename, i AS lineno, lines[i] AS line
                 FROM (
                     SELECT filename, string_split(content, chr(10)) AS lines
-                    FROM read_text({glob_lit})
+                    FROM read_text({src_lit})
                 ), range(1, len(lines) + 1) AS t(i)
             )
             WHERE regexp_matches(line, ?)
+            LIMIT {int(args.max_hits)}
+        """
+    else:
+        # 默认：仅文件级命中（不展开行），内存有界 —— 对应方案 A 的轻路径
+        sql = f"""
+            SELECT filename FROM read_text({src_lit})
+            WHERE regexp_matches(content, ?)
             LIMIT {int(args.max_hits)}
         """
     try:
@@ -216,16 +282,21 @@ def cmd_find(args) -> int:
         print(f"[ERROR] 检索失败：{str(e).splitlines()[0][:200]}", file=sys.stderr)
         return 2
 
+    scanned_msg = (f"扫描 {scanned} 个文件" if scanned is not None else "glob 匹配文件")
+    skip_msg = f"；跳过 >{cap}B 大文件 {skipped_big} 个" if skipped_big else ""
     if not rows:
-        print(f"[WARN] 扫了 {n_files} 个文件，无命中。pattern={pattern}", file=sys.stderr)
+        print(f"[WARN] {scanned_msg}{skip_msg}，无命中。pattern={pattern}", file=sys.stderr)
         return 0
-    print(f"# 命中 {len(rows)} 条（扫描 {n_files} 个文件）")
+    print(f"# 命中 {len(rows)} 条（{scanned_msg}{skip_msg}）")
     if args.files_only:
         for fn, cnt in rows:
             print(f"{cnt:>6}  {fn}")
-    else:
+    elif args.with_line:
         for fn, lineno, line in rows:
             print(f"{fn}:{lineno}: {line.strip()[:200]}")
+    else:
+        for (fn,) in rows:
+            print(fn)
     return 0
 
 
@@ -273,13 +344,19 @@ def main() -> int:
     p.add_argument("--no-skip", "--legacy-skip", dest="no_skip", action="store_true",
                    help="按 v2.4.2 旧口径：只跳过 .git/__pycache__（即包含 .venv/node_modules 等依赖目录）")
 
-    p = sub.add_parser("find", help="跨文件正则检索（DuckDB read_text，带行号）")
+    p = sub.add_parser("find", help="跨文件正则检索（DuckDB read_text，防 OOM 预过滤）")
     p.add_argument("path")
     p.add_argument("--pattern", required=True, help="正则（DuckDB regexp_matches 语法）")
     p.add_argument("--glob", help="glob 模式，逗号分隔多个；默认扫全部文本扩展名。注意 DuckDB 不支持 {a,b} 花括号")
     p.add_argument("--ignore-case", action="store_true")
     p.add_argument("--max-hits", type=int, default=MAX_ROWS_DEFAULT)
-    p.add_argument("--files-only", action="store_true", help="只列命中文件与命中数")
+    p.add_argument("--files-only", action="store_true", help="只列命中文件与命中数（仍受 --max-object-size 约束）")
+    p.add_argument("--with-line", action="store_true",
+                   help="展开到「文件:行号:内容」（旧默认，内存随行数增长）；默认仅返回命中文件名（内存有界）")
+    p.add_argument("--max-object-size", type=int, default=33_554_432,
+                   help="单文件大小上限字节，超过则跳过不读（防 OOM，对应 N1）；0=不限制单文件大小（仍受 --max-files 约束）")
+    p.add_argument("--max-files", type=int, default=1_000_000,
+                   help="最多扫描文件数，超过截断；0=不限制（--max-object-size 0 与 --max-files 0 同时设置才回到旧版 glob 路径）")
 
     p = sub.add_parser("sql", help="对 JSON/CSV/Parquet 直接跑 SQL（零导入）")
     p.add_argument("query")

@@ -1,0 +1,104 @@
+﻿### numstat（全部）
+4	0	Ledger.md
+27	18	SKILL.md
+2	1	assets/ledger-template.md
+1	1	"assets/templates/UI\347\273\204\344\273\266\345\272\223\346\220\255\345\273\272.yaml"
+9	0	references/ops.md
+2	2	references/quality-gates.md
+83	34	scripts/checks.py
+100	23	scripts/data_query.py
+105	12	scripts/http_fetch.py
+8	3	scripts/office_io.py
+29	16	scripts/setup_env.ps1
+### 忽略空白后 stat（判断是否换行符/空白噪音）
+ Ledger.md                                          |   4 +
+ SKILL.md                                           |  45 +++++---
+ assets/ledger-template.md                          |   3 +-
+ ...3\266\345\272\223\346\220\255\345\273\272.yaml" |   2 +-
+ references/ops.md                                  |   9 ++
+ references/quality-gates.md                        |   4 +-
+ scripts/checks.py                                  |  79 +++++++++++---
+ scripts/data_query.py                              | 121 +++++++++++++++++----
+ scripts/http_fetch.py                              | 117 ++++++++++++++++++--
+ scripts/office_io.py                               |  11 +-
+ scripts/setup_env.ps1                              |  31 ++++--
+ 11 files changed, 343 insertions(+), 83 deletions(-)
+### office_io.py 完整 diff
+diff --git a/scripts/office_io.py b/scripts/office_io.py
+index 48526ea..73b1ac5 100644
+--- a/scripts/office_io.py
++++ b/scripts/office_io.py
+@@ -95,3 +95,5 @@ def _write_sheet(ws, rows: list[list], fmt: bool, widths: list[int] | None) -> N
+     n_cols = max((len(r) for r in rows), default=0)
++    sample_n = min(len(rows), 200)  # N9锛氫粎鎶芥牱鍓?200 琛屼及绠楀垪瀹斤紝閬垮厤澶ц〃 O(rows*cols) 鍏ㄥ垪鎵弿
+     for idx in range(1, n_cols + 1):
++        col_letter = ws.cell(row=1, column=idx).column_letter
+         if widths:
+@@ -99,6 +101,9 @@ def _write_sheet(ws, rows: list[list], fmt: bool, widths: list[int] | None) -> N
+         else:
+-            col_letter = ws.cell(row=1, column=idx).column_letter
+-            w = max((_disp_width(str(c.value)) for c in ws[col_letter] if c.value is not None), default=8) + 2
++            w = 8
++            for r in range(1, sample_n + 1):
++                c = ws.cell(row=r, column=idx)
++                if c.value is not None:
++                    w = max(w, _disp_width(str(c.value)) + 2)
+             w = min(max(w, 8), MAX_COL_WIDTH)
+-        ws.column_dimensions[ws.cell(row=1, column=idx).column_letter].width = w
++        ws.column_dimensions[col_letter].width = w
+ 
+### setup_env.ps1 完整 diff
+diff --git a/scripts/setup_env.ps1 b/scripts/setup_env.ps1
+index b6dd260..32a1d87 100644
+--- a/scripts/setup_env.ps1
++++ b/scripts/setup_env.ps1
+@@ -9,2 +9,9 @@ $deps          = @("requests", "openpyxl", "python-docx", "pypdf", "pyyaml", "du
+ 
++# Marker 瀹氫箟锛圢8锛氫緵銆屼緷璧栧凡灏变綅鍒欒烦杩?pip銆嶄笌鏈熬 import 鏍￠獙鍏辩敤锛岄伩鍏嶉噸澶嶅畾涔夛級
++$sitePkgs = Join-Path $venvDir "Lib\site-packages"
++# 瀵煎叆鍨嬪寘鐩稿 site-packages 鐨勭洰褰曪紱CLI-only 鍖呯浉瀵?venv 鏍圭殑鍙墽琛屾枃浠躲€?+$pkgDir = @{ "requests" = "requests"; "openpyxl" = "openpyxl"; "python-docx" = "docx"; "pypdf" = "pypdf"; "pyyaml" = "yaml"; "duckdb" = "duckdb" }
++# ast-grep-cli 鍙彂 Scripts\ast-grep.exe锛坉ist-info 鍙兘鍦ㄩ儴鍒嗗嵏杞藉悗娈嬬暀锛屾晠鐢ㄥ彲鎵ц鏂囦欢鍋氭洿寮哄垽瀹氾級銆?+$cliDir = @{ "ast-grep-cli" = "Scripts\ast-grep.exe" }
++
+ Write-Host "=== AI Workflow env setup ==="
+@@ -27,21 +34,27 @@ if (-not (Test-Path $venvPython)) {
+ 
+-# 3. install deps (idempotent). Success is judged by the import check below,
++# 3. install deps (idempotent). Success is judged by the import check below (step 4),
+ #    not by pip exit code (exit codes are unreliable in some hosted shells).
+-Write-Host "[....] pip install $($deps -join ' ')"
+-$pipLog = Join-Path $PSScriptRoot "pip_debug.log"
+-& $venvPython -m pip install --disable-pip-version-check $deps 1> $pipLog 2>&1
+-if (Test-Path $pipLog) {
+-    $errLines = (Get-Content $pipLog) | Where-Object { $_ -match "error|ERROR|Traceback" }
+-    if ($errLines) { Write-Host "[WARN] pip reported issues, see $pipLog" -ForegroundColor Yellow }
+-    Remove-Item $pipLog -ErrorAction SilentlyContinue
++# N8锛氬厛蹇鎵€鏈?marker 鏄惁宸插氨浣嶏紱鍏ㄩ儴瀛樺湪鍒欒烦杩?pip install锛堢渷鍘绘瘡娆″繀璺戠殑鎱㈠瓙杩涚▼锛夈€?+$allPresent = $true
++foreach ($d in $deps) {
++    $marker = $null
++    if (-not [string]::IsNullOrEmpty($pkgDir[$d]))     { $marker = Join-Path $sitePkgs $pkgDir[$d] }
++    elseif (-not [string]::IsNullOrEmpty($cliDir[$d])) { $marker = Join-Path $venvDir  $cliDir[$d] }
++    if ([string]::IsNullOrEmpty($marker) -or -not (Test-Path $marker)) { $allPresent = $false; break }
++}
++if ($allPresent) {
++    Write-Host "[ OK ] 鍏ㄩ儴渚濊禆宸插氨浣嶏紝璺宠繃 pip install" -ForegroundColor Green
++} else {
++    Write-Host "[....] pip install $($deps -join ' ')"
++    $pipLog = Join-Path $PSScriptRoot "pip_debug.log"
++    & $venvPython -m pip install --disable-pip-version-check $deps 1> $pipLog 2>&1
++    if (Test-Path $pipLog) {
++        $errLines = (Get-Content $pipLog) | Where-Object { $_ -match "error|ERROR|Traceback" }
++        if ($errLines) { Write-Host "[WARN] pip reported issues, see $pipLog" -ForegroundColor Yellow }
++        Remove-Item $pipLog -ErrorActionSilentlyContinue
++    }
+ }
+ 
+-# 4. import check via site-packages dirs (no child process needed, host-proof)
+-$sitePkgs = Join-Path $venvDir "Lib\site-packages"
+-# Markers for packages shipping an importable module, relative to site-packages.
+-$pkgDir = @{ "requests" = "requests"; "openpyxl" = "openpyxl"; "python-docx" = "docx"; "pypdf" = "pypdf"; "pyyaml" = "yaml"; "duckdb" = "duckdb" }
+-# Markers for CLI-only packages (no importable module), relative to the venv root.
+-# ast-grep-cli ships Scripts\ast-grep.exe only; the executable is a stronger marker than
+-# its dist-info (a dist-info can survive a partial/broken uninstall).
+-$cliDir = @{ "ast-grep-cli" = "Scripts\ast-grep.exe" }
++# 4. import check via site-packages dirs (no child process needed, host-proof).
++#    marker 瀹氫箟宸蹭笂绉诲埌鑴氭湰椤堕儴锛圢8 涓庢湰鑺傚叡鐢級銆? $failedList = @()
