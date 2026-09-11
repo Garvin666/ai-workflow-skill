@@ -1,0 +1,13 @@
+[INFO] 10 个仓库并发取值完成，耗时 2.5s
+full_name	stargazers_count	forks_count	license_spdx	pushed_at	archived	error
+ast-grep/ast-grep	15829	444	MIT	2026-09-09T20:31:04Z	否	—
+Genivia/ugrep	3284	141	BSD-3-Clause	2026-08-31T01:04:29Z	否	—
+BurntSushi/ripgrep	68134	2753	Unlicense	2026-08-04T13:59:44Z	否	—
+duckdb/duckdb	41114	3743	MIT	2026-09-10T03:40:20Z	否	—
+quickwit-oss/tantivy	16056	985	MIT	2026-09-09T16:08:32Z	否	—
+sourcegraph/zoekt	1880	238	Apache-2.0	2026-09-09T12:04:30Z	否	—
+comby-tools/comby	2673	74	Apache-2.0	2026-06-08T07:27:09Z	否	—
+semgrep/semgrep	16572	1051	LGPL-2.1	2026-09-10T04:05:48Z	否	—
+lancedb/lancedb	11389	1047	Apache-2.0	2026-09-10T04:06:11Z	否	—
+AnswerDotAI/ghapi	685	70	Apache-2.0	2026-09-09T03:42:43Z	否	—
+
