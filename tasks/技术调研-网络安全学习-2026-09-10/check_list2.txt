@@ -1,0 +1,8 @@
+https://www.zaproxy.org/
+https://owasp.org/www-project-top-ten/
+https://portswigger.net/web-security/api-testing
+https://www.isc2.org/certifications/cc
+https://cyberdefenders.org/
+https://letsdefend.io/
+https://pwn.college/
+https://overthewire.org/wargames/bandit/
