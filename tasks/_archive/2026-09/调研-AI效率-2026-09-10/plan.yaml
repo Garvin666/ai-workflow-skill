@@ -1,0 +1,34 @@
+task: 调研-AI工作效率与质量提升
+type: 调研报告
+date: 2026-09-10
+goal: 调研提升 AI 工作效率与质量的可落地内容，覆盖方法论/开源工具/编排实践/质量评估四方向
+deliverable: tasks/调研-AI效率-2026-09-10/调研-AI工作效率与质量提升-2026-09-10.md
+steps:
+  - id: 1
+    do: 并行派发 4 个子代理分方向检索（方法论/工具/编排实践/质量评估），各自落盘 findings 文件
+    input: WebSearch + GitHub API
+    expect: tasks/调研-AI效率-2026-09-10/findings-*.md × 4，每份含来源链接与实测数据
+    verify: 主代理抽查文件存在性与关键数据
+    status: 完成
+  - id: 2
+    do: GitHub API 复核关键项目 star/许可证/活跃度
+    input: 子代理给出的候选项目清单
+    expect: 复核记录
+    verify: 与 findings 数据交叉一致
+    status: 完成
+  - id: 3
+    do: 汇总撰写最终调研报告（既有资料盘点表 + 项目对比表 + 落地建议 + 避坑清单）
+    input: findings-*.md
+    expect: 最终 .md 报告
+    verify: 对照验收标准逐项核对
+    status: 完成
+  - id: 4
+    do: 自检交付（Anti-drop guard 对账 + present_files）
+    input: 最终报告
+    expect: 交付完成
+    verify: 自检清单全通过
+    status: 完成
+constraints:
+  - 只调研不写代码；中文；引用标明来源
+  - 与今日已有两份调研（路由编排/Token优化）划界不重复
+  - 黑名单项目只参考思路不推荐为依赖
