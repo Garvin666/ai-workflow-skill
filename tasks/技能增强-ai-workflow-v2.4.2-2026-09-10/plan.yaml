@@ -1,0 +1,42 @@
+meta:
+  任务: 清理 v2.4 遗留的两项——① data_query.py 的 files/big 在大目录上耗时 24 秒（Windows 重复 stat 系统调用）② 实现 GitHub /search/code（按代码内容找仓库）
+  创建时间: "2026-09-10 15:25"
+  任务层级: L2（脚本改造）
+  确认表: tasks/技能增强-ai-workflow-v2.4-2026-09-10/改动对照表-v2.4.md 第八节「残留与下一步」
+  验证信号: ① files 在 12 万文件目录上耗时较 23.7s 显著下降，且**统计结果与旧实现完全一致**（文件数/总大小/分类逐项比对）；② --github-code-search 无 token 时给出可执行报错（非裸 401 堆栈）；③ 新增 --dry-run 可在无 token 下验证 URL 参数构造正确；④ checks.py skill 全绿；⑤ checks.py plan 对账全绿
+steps:
+  - id: 1
+    做什么: 记录旧实现基准（同目录、同口径多次取最小值），并保存优化前输出用于逐项比对
+    输入: E:/ChatGPT/量化分析与数据分析（121,146 文件 / 11.16 GB）
+    预期产出: 基准数据与对照快照
+    验证方式: 至少 2 次取最小值，输出落盘
+    状态: 完成
+    交付物: tasks/技能增强-ai-workflow-v2.4.2-2026-09-10/基准-优化前.txt
+  - id: 2
+    做什么: 优化 data_query.py 的 files/big——改用 os.scandir 直接消费 DirEntry（Windows 上 DirEntry.stat() 复用 FindFirstFile 已返回的数据，免去每个文件一次额外 stat 系统调用）
+    输入: 基准数据
+    预期产出: 加速后的 files/big
+    验证方式: 同目录复测耗时下降；输出与「基准-优化前.txt」逐项一致
+    状态: 完成
+    交付物: scripts/data_query.py
+  - id: 3
+    做什么: 实现 http_fetch.py 的 --github-code-search（/search/code，官方强制认证，需 text-match 头），并在无 token 时给出可执行报错；同时为两个 GitHub 搜索加 --dry-run（只打印将请求的 URL，不发请求）
+    输入: 官方端点规格（需认证；text-match 需 Accept 头）
+    预期产出: code search 能力 + 可离线验证的参数构造
+    验证方式: 无 token 走 401 分支时报错清晰；--dry-run 输出 URL 参数正确且与官方文档一致
+    状态: 完成
+    交付物: scripts/http_fetch.py
+  - id: 4
+    做什么: 更新文档：SKILL.md 决策清单补 code search 与 dry-run、ops.md 脚本速查/排障/变更日志 v2.4.2、版本号同步
+    输入: 本轮改动
+    预期产出: 文档与实现一致
+    验证方式: checks.py skill 全绿（引用完整性）
+    状态: 完成
+    交付物: references/ops.md
+  - id: 5
+    做什么: 产出改动对照表并做 Anti-drop 对账
+    输入: 本轮全部改动与实测数据
+    预期产出: 对照表 + 对账结果
+    验证方式: checks.py plan 全绿
+    状态: 完成
+    交付物: tasks/技能增强-ai-workflow-v2.4.2-2026-09-10/改动对照表-v2.4.2.md
