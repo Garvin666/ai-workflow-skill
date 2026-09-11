@@ -21,5 +21,16 @@ Write-Host ("[ {0} ] AI_API_KEY (only needed for AI calls)" -f $(if ($keyOk) {"O
 if (-not $venvOk)   { Write-Host "venv not ready, run setup_env.ps1 first" -ForegroundColor Red; exit 1 }
 if (-not $scriptOk) { Write-Host "script not found: $target" -ForegroundColor Red; exit 1 }
 
+# Execute with a post-flight check. In some hosts a native child process never runs,
+# and $LASTEXITCODE keeps a stale value -> the wrapper would report success for a no-op.
+# Clear it first, then treat "still empty after the call" as a hard failure.
+$global:LASTEXITCODE = $null
 & $venvPython $target @ScriptArgs
-exit $LASTEXITCODE
+$code = $LASTEXITCODE
+if ($null -eq $code) {
+    Write-Host "[FAIL] child produced no exit code - the native process probably did not run." -ForegroundColor Red
+    Write-Host "       Do NOT trust this run. Call the venv interpreter directly instead (ops.md section 1)." -ForegroundColor Red
+    exit 1
+}
+if ($code -ne 0) { Write-Host "[FAIL] $target exited with code $code" -ForegroundColor Red }
+exit $code

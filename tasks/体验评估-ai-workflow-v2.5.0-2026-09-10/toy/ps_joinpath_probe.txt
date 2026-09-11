@@ -1,0 +1,4 @@
+﻿--- 复刻 setup_env.ps1 第41-51行的检查逻辑 ---
+dep=requests  dirName=[requests]  joined=[C:\Users\26717\.workbuddy\binaries\python\envs\ai-workflow\Lib\site-packages\requests]  TestPath=True  -> prints [ OK ] requests
+dep=definitely-not-a-real-package-xyz  dirName=[]  joined=[C:\Users\26717\.workbuddy\binaries\python\envs\ai-workflow\Lib\site-packages\]  TestPath=True  -> prints [ OK ] definitely-not-a-real-package-xyz
+dep=duckdb  dirName=[]  joined=[C:\Users\26717\.workbuddy\binaries\python\envs\ai-workflow\Lib\site-packages\]  TestPath=True  -> prints [ OK ] duckdb

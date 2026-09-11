@@ -203,6 +203,24 @@ def cmd_pdf_merge(args) -> None:
     print(f"[ OK ] 已合并 {len(args.inputs)} 个文件到 {args.out}")
 
 
+def _require(mods: tuple, hint: str) -> None:
+    """按子命令前置检查依赖；缺失时给 [ERROR]+[HINT] 并以 2 退出（避免裸 traceback）。"""
+    import importlib
+    missing = []
+    for m in mods:
+        try:
+            importlib.import_module(m)
+        except ImportError:
+            missing.append(m)
+    if missing:
+        print(f"[ERROR] 缺少依赖：{', '.join(missing)}", file=sys.stderr)
+        print(f"[HINT] {hint}", file=sys.stderr)
+        print("[HINT] 或用 venv 解释器："
+              r"C:\Users\26717\.workbuddy\binaries\python\envs\ai-workflow\Scripts\python.exe",
+              file=sys.stderr)
+        raise SystemExit(2)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Office 文件读写统一入口")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -245,6 +263,17 @@ def main() -> None:
     p.set_defaults(func=cmd_pdf_merge)
 
     args = ap.parse_args()
+    _NEED = {
+        "excel-read": (("openpyxl",), "pip install openpyxl（或先跑 scripts/setup_env.ps1 初始化 venv）"),
+        "excel-write": (("openpyxl",), "pip install openpyxl（或先跑 scripts/setup_env.ps1 初始化 venv）"),
+        "word-read": (("docx",), "pip install python-docx（或先跑 scripts/setup_env.ps1）"),
+        "word-write": (("docx",), "pip install python-docx（或先跑 scripts/setup_env.ps1）"),
+        "pdf-extract": (("pypdf",), "pip install pypdf（或先跑 scripts/setup_env.ps1）"),
+        "pdf-merge": (("pypdf",), "pip install pypdf（或先跑 scripts/setup_env.ps1）"),
+    }
+    need = _NEED.get(args.cmd)
+    if need:
+        _require(*need)
     args.func(args)
 
 

@@ -38,14 +38,30 @@ if (Test-Path $pipLog) {
 
 # 4. import check via site-packages dirs (no child process needed, host-proof)
 $sitePkgs = Join-Path $venvDir "Lib\site-packages"
-$pkgDir = @{ "requests" = "requests"; "openpyxl" = "openpyxl"; "python-docx" = "docx"; "pypdf" = "pypdf"; "pyyaml" = "yaml" }
+# Markers for packages shipping an importable module, relative to site-packages.
+$pkgDir = @{ "requests" = "requests"; "openpyxl" = "openpyxl"; "python-docx" = "docx"; "pypdf" = "pypdf"; "pyyaml" = "yaml"; "duckdb" = "duckdb" }
+# Markers for CLI-only packages (no importable module), relative to the venv root.
+# ast-grep-cli ships Scripts\ast-grep.exe only; the executable is a stronger marker than
+# its dist-info (a dist-info can survive a partial/broken uninstall).
+$cliDir = @{ "ast-grep-cli" = "Scripts\ast-grep.exe" }
 $failedList = @()
 foreach ($d in $deps) {
-    $dirName = $pkgDir[$d]
-    if (Test-Path (Join-Path $sitePkgs $dirName)) {
+    $marker = $null
+    if (-not [string]::IsNullOrEmpty($pkgDir[$d]))     { $marker = Join-Path $sitePkgs $pkgDir[$d] }
+    elseif (-not [string]::IsNullOrEmpty($cliDir[$d])) { $marker = Join-Path $venvDir  $cliDir[$d] }
+    # A dependency with no marker must fail loudly. Previously duckdb / ast-grep-cli had no
+    # mapping, so the child path was empty; Join-Path returns the PARENT path when the child
+    # path is empty, making Test-Path always True -> a fake [ OK ].
+    # [v2.5.1] Fixed: unmapped entries are a hard failure, never a silent pass.
+    if ([string]::IsNullOrEmpty($marker)) {
+        Write-Host "[FAIL] $d has no marker in pkgDir/cliDir (add one; silent pass is forbidden)" -ForegroundColor Red
+        $failedList += $d
+        continue
+    }
+    if (Test-Path $marker) {
         Write-Host "[ OK ] $d"
     } else {
-        Write-Host "[FAIL] $d not found under $sitePkgs" -ForegroundColor Red
+        Write-Host "[FAIL] $d not found: $marker" -ForegroundColor Red
         $failedList += $d
     }
 }

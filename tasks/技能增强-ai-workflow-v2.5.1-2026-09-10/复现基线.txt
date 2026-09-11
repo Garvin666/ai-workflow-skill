@@ -1,0 +1,32 @@
+﻿=== 负向基线（修复前）— 2026-09-10 23:50 ===
+
+## R5：setup_env.ps1 依赖自检对未映射项恒报 OK（复现 setup_env.ps1:8 vs :41 的判定逻辑）
+sitePkgs 是否存在: True
+[ OK ] requests       映射=[requests]  joined=[C:\Users\26717\.workbuddy\binaries\python\envs\ai-workflow\Lib\site-packages\requests]  Test-Path=True
+[ OK ] openpyxl       映射=[openpyxl]  joined=[C:\Users\26717\.workbuddy\binaries\python\envs\ai-workflow\Lib\site-packages\openpyxl]  Test-Path=True
+[ OK ] python-docx    映射=[docx]  joined=[C:\Users\26717\.workbuddy\binaries\python\envs\ai-workflow\Lib\site-packages\docx]  Test-Path=True
+[ OK ] pypdf          映射=[pypdf]  joined=[C:\Users\26717\.workbuddy\binaries\python\envs\ai-workflow\Lib\site-packages\pypdf]  Test-Path=True
+[ OK ] pyyaml         映射=[yaml]  joined=[C:\Users\26717\.workbuddy\binaries\python\envs\ai-workflow\Lib\site-packages\yaml]  Test-Path=True
+[ OK ] duckdb         映射=[]  joined=[C:\Users\26717\.workbuddy\binaries\python\envs\ai-workflow\Lib\site-packages\]  Test-Path=True
+[ OK ] ast-grep-cli   映射=[]  joined=[C:\Users\26717\.workbuddy\binaries\python\envs\ai-workflow\Lib\site-packages\]  Test-Path=True
+
+结论：duckdb / ast-grep-cli 的映射为空 -> Join-Path 返回父目录本身 -> Test-Path 恒为 True -> 缺失也报 [ OK ]。
+
+
+## R6：checks.py 跨技能兜底导致假 PASS
+场景：在 tmp/unrelated/ 下建 plan.yaml，其交付物写 references/quality-gates.md，
+      但该目录真实内容只有 plan.yaml（无 references/ 子目录）。
+命令：checks.py plan plan.yaml --base <unrelated 目录>
+实际输出：
+  === ai-workflow 计划对账 ===
+  [ OK ] plan.yaml 存在 — plan.yaml
+  [ OK ] plan.yaml 可解析
+  [ OK ] meta.任务
+  [ OK ] meta.验证信号
+  [ OK ] meta.工作区根
+  [ OK ] steps 非空 — 1 步
+  [ OK ] Anti-drop 对账 — 已完成步骤 1 个，交付物确认 1 个
+  === 结果：7/7 通过，FAIL=0 ===
+结论：交付物在工作区内并不存在，对账却确认通过 —— 假 PASS。
+根因：_candidate_paths() 把 SKILLS_ROOT 下每个技能目录都并入候选，
+      于是技能目录里的 references/quality-gates.md 被当成该交付物命中。

@@ -13,13 +13,15 @@ PY="C:/Users/26717/.workbuddy/binaries/python/envs/ai-workflow/Scripts/python.ex
 "$PY" "$SK/scripts/checks.py" skill
 ```
 
-也可用 `scripts/run_stage.ps1 <脚本名> [参数...]`（自带状态检查）。
+也可用 `scripts/run_stage.ps1 <脚本名> [参数...]`（自带状态检查 + **执行后自检**）。
+
+> **优先级（重要）**：**首选**上面这种「venv 解释器绝对路径 + 脚本」的直接调用；`run_stage.ps1` 只作为**交互式终端**里的便捷入口。原因：在本机的某些宿主通道下，ps1 内启动的**原生子进程根本不会执行**（表现为只打印状态检查、退出码 0、产物不生成）。自 v2.5.1 起脚本已把「子进程未跑起来」判为 `[FAIL]` 并以 1 退出，但这只是防呆，不是修复宿主差异。
 
 ## 二、脚本速查
 
 | 脚本 | 用途 | 示例 |
 | --- | --- | --- |
-| **checks.py** | `skill` 技能自检（frontmatter/引用完整性/模板 schema/py_compile）；`plan` 计划校验 + Anti-drop 对账；`status` 工作区任务总览（交付物完成度 + 归档建议）；`mark` 更新步骤状态 | `checks.py plan tasks/x/plan.yaml --base "E:/ChatGPT/工作流"` |
+| **checks.py** | `skill` 技能自检（frontmatter/引用完整性/模板 schema/py_compile）；`plan` 计划校验 + Anti-drop 对账 + **熔断门禁**（`熔断状态: 已熔断` 或步骤状态 `熔断` → 直接 FAIL）；`status` 工作区任务总览（交付物完成度 + 归档建议 + **已熔断任务 ⚡ 标记与 WARN 汇总**）；`mark` 更新步骤状态（含 `熔断`）与 **meta 熔断状态**（`--fuse 正常\|已熔断`，复位用 `--fuse 正常`，不必手改 YAML） | `checks.py plan tasks/x/plan.yaml --base "E:/ChatGPT/工作流"` |
 | setup_env.ps1 | 初始化 venv 与依赖（requests / openpyxl / python-docx / pypdf / pyyaml / **duckdb** / **ast-grep-cli**） | `powershell -File scripts\setup_env.ps1` |
 | ai_call.py | 调 AI 模型：`--model` 覆盖、`--system-file`、`--max-tokens`、`--temperature`、`--stats` 用量回显、`--batch-file` + `--concurrency` 批量并发（结果落 JSONL） | `ai_call.py --batch-file prompts.txt --concurrency 3` |
 | http_fetch.py | 联网抓取：`--github-repo a/b,c/d` 指标实测（并发 + 限流退避 + 缓存）、**`--github-search "<query>"` 按关键词搜仓库**（限定符 `language:` `stars:` `topic:` `pushed:`；`--search-sort stars,forks,updated`、`--search-limit`）、**`--github-code-search "<代码> repo:owner/name"` 按代码内容搜文件（⭐强制 token，返回仓库/路径/命中片段）**、**`--dry-run` 只打印将请求的 URL 与附加头（不发请求，无 token 也能验证参数构造）**、`--text` HTML→文本、`--grep`/`--max-chars` 定向提取、`--no-cache`/`--ttl` 控缓存、**`--check-links` 批量探活（只取状态码不下载正文，并发 8，交付外链前必跑；403 会换头重试并按 CDN/WAF 响应头分类）** | `http_fetch.py --github-search "code search language:rust stars:>500" --search-limit 20`<br>`http_fetch.py --github-code-search "read_parquet repo:duckdb/duckdb" --dry-run` |
@@ -45,13 +47,33 @@ PY="C:/Users/26717/.workbuddy/binaries/python/envs/ai-workflow/Scripts/python.ex
 
 ## 四、环境检测
 
-首次使用或报错时：
+**执行顺序（与 §一 的优先级一致，勿颠倒）**：① 先跑下面的**最小探测命令**（Bash 可直接照抄）；
+② 只有在需要**创建 venv / 安装依赖**时，才去**真实交互式终端**跑 `setup_env.ps1`。
+
+⚠️ `setup_env.ps1` 的两个环境坑：a) **不能从 Bash 工具调用**（命令文本命中"从 Bash 调用 PowerShell"会被安全策略整条拦截）；b) 在本机沙箱下它启动的**原生子进程 stdout 会丢、退出码读不到** —— 需要它的输出时请**先重定向落盘、再用读文件的工具读**，不要依赖回显。
+
+**最小探测命令（推荐先跑这条；不依赖 ps1，任何环境都能照抄）**：
+
+```bash
+PY="C:/Users/26717/.workbuddy/binaries/python/envs/ai-workflow/Scripts/python.exe"
+AST="C:/Users/26717/.workbuddy/binaries/python/envs/ai-workflow/Scripts/ast-grep.exe"
+"$PY" -c "import requests, openpyxl, docx, pypdf, yaml, duckdb; print('deps OK')"
+"$AST" --version
+```
+
+> ⚠️ **v2.5.2 更正**：本节原先把 `"$PY" -m ast_grep_cli --version` 标为「首选」，该命令**恒失败**——
+> `ast_grep_cli` 包**没有可执行的模块入口**（`import ast_grep_cli` → `ModuleNotFoundError`，
+> `find_spec` → `None`），能出结果全靠后半段的 `||` 兜底。已改为**直接调用 `Scripts/ast-grep.exe`**。
+
+**首次使用或需要建环境时（真实交互式终端）**：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\setup_env.ps1
 ```
 
-检查项：managed python 存在 → venv 存在（否则创建）→ 依赖可 import（按 site-packages 目录判定，不依赖 pip 退出码）→ AI_API_KEY 是否设置（仅提示）。
+检查项：managed python 存在 → venv 存在（否则创建）→ **依赖标记检查**（`$pkgDir` 按 site-packages 目录判定；**CLI-only 包**如 `ast-grep-cli` 按 venv `Scripts/` 下的**可执行文件**判定，比 dist-info 更可靠；**未映射项显式 FAIL**；不依赖 pip 退出码）→ AI_API_KEY 是否设置（仅提示）。
+
+> ⚠️ **依赖自检的两条纪律**（v2.5.1 修复的真实缺陷教训）：① **未映射的依赖必须显式 FAIL**，不得静默通过——历史上 `duckdb`/`ast-grep-cli` 因缺映射取到空值，而 `Join-Path` 遇空子路径会**返回父目录本身**，使 `Test-Path` 恒为 True，缺失也报 `[ OK ]`；② **改写过的存在性检查必须配一次负向测试**（故意移除目标，确认它真的报 FAIL）。
 
 依赖全量：`requests` / `openpyxl` / `python-docx` / `pypdf` / `pyyaml` / `duckdb` / `ast-grep-cli`。
 装完后可直接用 venv 内的可执行文件：`<venv>/Scripts/ast-grep.exe`（`sg.exe` 同在，但**已废弃**）。
@@ -66,7 +88,7 @@ powershell -ExecutionPolicy Bypass -File scripts\setup_env.ps1
 | 抓取结果疑似旧数据 | 缓存导致——加 `--no-cache`，或调小 `AIWF_HTTP_TTL` |
 | `checks.py` 报缺 pyyaml | 用错解释器了——必须用 venv：`C:\Users\26717\.workbuddy\binaries\python\envs\ai-workflow\Scripts\python.exe`。脚本会**以退出码 2 中止**并给出该提示（早期版本会继续输出 `FAIL=0` 造成假绿，v2.3 已修） |
 | `checks.py plan` 报 `mapping values are not allowed here` | **plan.yaml 某个未加引号的值里出现了 ASCII 冒号 `: `**（如 `（A: GitHub API…）`），YAML 会把它当成嵌套映射。改用全角 `：`/`－`，或整段加双引号。此错由对账当场拦下，**不要手工编辑后再忘跑对账** |
-| `checks.py plan` 报交付物缺失 | 检查路径是否写全（缩写如「选品分析.yaml」无法定位）、括号注释是否多余；skill 内相对路径会逐技能目录尝试 |
+| `checks.py plan` 报交付物缺失 | 逐项查：① 路径是否写全（缩写如「选品分析.yaml」无法定位）；② 括号注释是否多余；③ `--base` 是否用了 Windows 字面路径（**相对路径只以 `--base` 为基准**，Git Bash 的 `$(pwd)` 会给出 `/c/...` 这种 pathlib 解析不了的形态）；④ **交付物是否在工作区根之外** —— v2.5.2 起候选**只有 `base/<p>`**，跨根引用（如改技能本体的 `skills/ai-workflow/...`）**必须写绝对路径**。旧的 `~/.workbuddy/<p>` 与 `base.parent/<p>` 两条兜底通道已移除：前者让工作区内不存在的交付物被同名文件"救活"（假 PASS），后者让落在工作区根之外的交付物也判通过（撞红线③） |
 | 抓取失败但 `--out` 文件还在 | 脚本会打印告警（避免把旧内容当成新结果用）；确认后重跑或改用其它来源 |
 | 报告里的外链点开是 404 | 交付前必须跑 `--check-links` 探活；子代理转述的 URL 尤其容易错（实战中 OWASP ZAP 链接被转述成已 404 的旧路径，另有一次抓到**子代理编造的日期型假链接**：站点根 200、该文章路径 404、原文还带省略号） |
 | 链接返回 502 `Tunnel connection failed` | **本机出口隧道限制，不是站点失效**。已知稳定 502 的域名：`huggingface.co`、`jina.ai`、`console.cloud.google.com`。应标注「本机环境无法验证」，**不要判为站点挂了** |
@@ -88,9 +110,22 @@ powershell -ExecutionPolicy Bypass -File scripts\setup_env.ps1
 | `--github-code-search` 结果没有命中片段 | 缺 `Accept: application/vnd.github.text-match+json` 头——脚本已内置；若裸 curl 调用需自行加上 |
 | 想确认请求参数对不对但不想消耗配额 | 加 `--dry-run`：打印完整 URL + 附加头 + 认证状态后即返回，两个搜索端点都支持 |
 | `--dry-run` 没输出 URL | 它只对 `--github-search` / `--github-code-search` 生效，脚本会打印告警提示本次忽略 |
+| ps1 包装器只打印状态检查、产物没生成 | 本宿主通道下**原生子进程未执行**（`$LASTEXITCODE` 残留为 0，看起来"成功"）。v2.5.1 起会判为 `[FAIL]` 并退出 1。**改用 §一 的首选方式（直接调 venv 解释器）** |
+| 从 Bash 工具执行 `powershell -File xxx.ps1` 被拒 | 报 `Command blocked for security`（Bash 里禁止调 ps1）。改用 §一 的直接调用；确需 ps1 时改用本工具链的 **PowerShell 工具**，并注意**其 stdout 可能不回显，需落盘再读** |
+| `office_io.py excel-write` 直接喂 CSV 报 `JSONDecodeError: Expecting value: line 1 column 1` | `excel-write` **只接受 `--rows` 的 JSON**。先 `excel-read <csv> --fmt json > rows.json`，再 `excel-write <out.xlsx> --rows rows.json`（见 SKILL.md 阶段 4 第 2 条） |
+| `checks.py status` 报 `[FAIL] tasks/ 目录存在` 但目录确实有 | 它按**当前目录**找 `tasks/`。加 `--workspace <工作区根>`；任务目录应建在工作区根下的 `tasks/`（v2.5.1 起 FAIL 文案会附带此提示） |
+| 依赖自检报 `[ OK ]` 但实际 `import` 失败 | 早期的空映射缺陷：`Join-Path` 遇空子路径**返回父目录本身**，`Test-Path` 恒为 True → 缺失也报 OK（`duckdb`/`ast-grep-cli` 曾如此）。v2.5.1 已修（未映射项显式 FAIL）。若怀疑环境，用 §四 的 `import` 探测命令直接验证 |
+| `checks.py plan` 报**所有**交付物都缺失，但文件确实存在 | 多半是 `--base` 传了 **Git Bash 风格的 POSIX 路径**：`$(pwd)` 返回 `/c/Users/...`，Windows 下 `pathlib` 解析不了，于是全部判缺失（**假 FAIL**）。改用字面 Windows 路径或 `C:/...` 形式 |
+| `checks.py plan` 报 `meta.工作区根 — 为空` | 该计划建于 **v2.4.4 之前**（该版本才把「工作区根」列为必填）。**属历史遗留，不是新引入的回归**：给旧计划补上 `工作区根` 即可，或按废弃处理 |
+| `checks.py plan` 从不报 FAIL，文件明明不存在 | 早期路径候选过宽：相对路径会在别处再试一遍，把同名文件当成交付物命中（假 PASS）。**v2.5.2 已把候选收敛为仅 `base/<p>`**（v2.5.1 只收窄到「本任务基准／`~/.workbuddy/<p>`／基准的上级」三处，后两条仍属同型缺陷）；技能内部文件请写**绝对路径** |
+| 出现 `[FAIL] 已熔断：不得作为可交付物` | 该任务已熔断（meta `熔断状态: 已熔断` 或存在步骤状态 `熔断`）——**这是设计意图，不是 bug**。产出并补全《熔断报告》后交用户决策；**只有用户能复位**，且复位是**两步**（都得做，只改 meta 仍会被"步骤状态=熔断"阻断）：`checks.py mark <plan> --fuse 正常` + `checks.py mark <plan> <id> <非熔断状态>`，随后重跑 `plan` 确认 FAIL 清零并留痕 |
 | PowerShell 报"无法识别" | 用 `&` 加引号完整路径调用 |
 | Excel 打开乱码 | 确认写文件用默认 `utf-8-sig` |
 | 批量 AI 调用全部失败 | 多为 API key 无效/欠费，检查 JSONL 里的 error 字段 |
+| `npm install` 跑十几分钟不动 | 本机到 `registry.npmjs.org` 单次 packument RTT **2~16s**，`node_modules` 迟迟不生成属**正常但极慢**（实测 18 分钟未完成）。**不要切 npmmirror**：本机走代理时 `registry.npmmirror.com` 只返回空的 `200 Connection Established` 隧道，无响应体；`registry.npm.taobao.org` 直接超时。正确解法是项目内 `.npmrc` 设 `maxsockets=64` + `fetch-retries=5`（实测 18 分钟 → 4 分钟） |
+| `npm install` 报 `ETARGET No matching version found for X@=1.2.3`，但该版本确实存在 | ⚠️ `.npmrc` 里的 **`prefer-offline=true` 用的是旧 packument 缓存**，新发布的版本不在其中，于是误报"版本不存在"（实测 `@oxc-project/types@0.149.0` 明明就是 latest 却解析不到）。**去掉 `prefer-offline`**，只保留 `maxsockets` |
+| 用 curl 取 `registry.npmjs.org/<pkg>` 后 `json.load` 报 `Unterminated string` | 全量文档太大，**经管道/head 会被截断**（react-dom 可达 8MB+）。加头 `-H "Accept: application/vnd.npm.install-v1+json"` 取精简元数据；只要单版本就用 `/<pkg>/<version>` 或 `/<pkg>/latest` 这类小文档 |
+| `agent-browser open` 无任何输出即被 SIGTERM | 本机沙箱**拦截浏览器启动**（Chromium 已装在 `%LOCALAPPDATA%\ms-playwright`，但 `open` 连一行日志都不给就死）。环境变量里的 `HTTP_PROXY=http://127.0.0.1:54912` 会让 localhost 也走代理，即便 `unset` 全部 proxy 变量 + 设 `NO_PROXY` 仍无效。**不要在无头浏览器上反复重试**：改派可判定的静态信号（如 `vite build` 全量构建过一遍模块），并把"运行时渲染"显式登记为人审点交用户确认 |
 
 ## 六、链接收集与核验 SOP（调研类任务交付前必跑）
 
@@ -104,7 +139,8 @@ grep -ohE "https?://[A-Za-z0-9._~:/?#@!$&'*+,;=%()-]+" findings-*.md \
 # 2. 去重后剔除不可直接验证的（模板 URL、纯 API 端点会误导）
 grep -vE "api\.github\.com" all_urls.txt > check_urls.txt
 
-# 3. 探活（只取状态码，不下载正文；实测 140 条平均 227ms/条）
+# 3. 探活（只取状态码，不下载正文；并发 8。单条耗时受超时条数影响极大：
+#    正常条 ~150-260ms，遇超时条可达数秒——不要把它当固定基线）
 "$PY" scripts/http_fetch.py --check-links check_urls.txt --concurrency 8
 
 # 4. 分类标注 —— 四类含义完全不同，禁止混为一谈
@@ -122,6 +158,24 @@ grep -vE "api\.github\.com" all_urls.txt > check_urls.txt
 **硬规则**：子代理产出的链接**必须全量探活后才可进交付物**。实战数据：140 条中查出 3 条 404，其中 1 条是**编造的日期型假链接**，且它正被用于支撑一条结论。
 
 ## 七、变更日志
+
+- **v2.5.2（2026-09-11）新增流程末梢「熔断机制」+ 收敛交付物路径候选 + 清 v2.5.1 记录类遗留**（由 `tasks/技能增强-ai-workflow-v2.5.2-2026-09-11/` 驱动）：
+  - **新增熔断机制（两个存储态 + 一次复位迁移 + F1–F5 触发 + 五步动作 + 复位条件）**：存储态为 `正常` / `已熔断`，**「复位」是一次迁移动作、不是第三个存储态**（`VALID_FUSE` 只有前两项）；**只有用户能复位**，且复位**两步缺一不可**、两步都由 `mark` 支持（`--fuse 正常` + 改步骤状态）。触发条件分质量（F1 审核链触顶、F2 同类缺陷 ≥3 次复发）与环境（F3 验证信号不可得、F4 越界未授权、F5 配额硬阻断）两类，**每条都必须有硬证据**。动作固定为 **停 / 冻 / 证 / 拦 / 报**。设计依据：工业界断路器三态，以及"**写在提示里的熔断不是熔断，是建议**"——故本机制**由 `checks.py plan` 强制执行**，不是文档约定。
+  - **`checks.py` 新增熔断门禁**：`plan` 子命令新增 `_check_fuse()` —— meta `熔断状态` 取值须为 `正常`/`已熔断`（留空即正常）；一旦为 `已熔断` 或存在步骤状态 `熔断`，**直接 `[FAIL] 已熔断：不得作为可交付物`**，并要求同目录产出**熔断报告**（格式模板 `assets/熔断报告模板.md`）且含五个必填节。`VALID_STATUS` 增加 `熔断`。
+  - **`checks.py` 交付物路径候选收敛为仅 `base/<p>`**：移除 `~/.workbuddy/<p>`（固定前缀兜底，使工作区内不存在的交付物被同名文件"救活"）与 `base.parent/<p>`（使交付物落在**工作区根之外**也判 PASS，撞红线③）两条通道；绝对路径直通。**跨根引用必须写绝对路径**。⚠️ 实测影响（口径：两个工作区 `tasks/` 下**全部** plan.yaml，递归含 `_archive/`、排除 `tmp/` 夹具；时点 2026-09-11 14:23）：文件型交付物 token 合计 **156**，其中 **20 个**为"相对技能目录"的历史写法（全在 `E:\ChatGPT\工作流` 的历史任务里），旧 PASS → 新 FAIL —— 属应然行为（它们的交付物确实不在各自工作区根内）。**注意口径陷阱**：改动生效后再"跑一遍现状"数 PASS→FAIL 必然得 0，必须用同一脚本复刻旧候选对照。是否迁移这 20 条写法见 `tasks/技能增强-ai-workflow-v2.5.2-2026-09-11/` 目录内的改动对照表（该表在本任务收尾时生成）。
+  - **新增 `assets/熔断报告模板.md`**；`assets/plan-template.yaml` 增可选 meta `熔断状态`；反模式 39 → **46 条**（新增熔断类 6 条 + 路径候选 1 条）；`SKILL.md` 在阶段 6 之后新增「熔断机制」独立小节，并在阶段 0 / 阶段 3 返修复查 / 阶段 5 / 阶段 6 四处加接缝。
+  - **清 v2.5.1 记录类遗留（对抗互审裁决 §5 必改项 2/3/4/5/6）**：`回归证据.txt` **整份重写**（原版 `回归 8/9` 各重复 6 次、2 处安全策略拦截回执被当成命令输出、算式 `7+6+1` 有误）；`plan.yaml` 的两处不实措辞与 2 对重复交付物更正；本节 R6 条目口径更正（见下）；§四原「首选」恒失败命令改为直调 `ast-grep.exe`；`Ledger.md` 的虚假自述补注更正。
+  - **教训（已入反模式 40–46）**：熔断必须是机器门禁；熔断后不得再当交付物；复位只能由用户做且须留痕；交付物跨根必须写绝对路径（**假 PASS 与假 FAIL 同样有害**）。
+- **v2.5.1（2026-09-10）修复体验评估发现的 2 处真实代码缺陷 + 4 处主干部问题 + 10 项文档收口**（入口类型=**Bug/缺陷**，走「复现→根因→修复→回归」；由 `tasks/技能增强-ai-workflow-v2.5.1-2026-09-10/` 驱动，复现基线见该目录 `复现基线.txt`）：
+  - **R5 真缺陷｜`setup_env.ps1` 依赖自检恒报 OK**：`deps` 列 7 包但 `$pkgDir` 只映射 5 个 → 未映射项取到空值，而 `Join-Path` 遇**空子路径会返回父目录本身**，使 `Test-Path` **恒为 True**，`duckdb`/`ast-grep-cli` **从未被真正校验**（缺失也报 `[ OK ]`）。修复：补全映射并**用双表区分包形态**——`$pkgDir`（可导入模块，按 site-packages）补 `duckdb`；CLI-only 的 `ast-grep-cli` 改由新增的 `$cliDir` 按 venv `Scripts\ast-grep.exe` 判定（**比用 dist-info 作标记更可靠**：dist-info 在部分卸载后可能残留）；**未映射项显式 `[FAIL]`，禁止静默通过**。
+  - **R6 真缺陷｜`checks.py` 路径候选过宽致假 PASS**：`_candidate_paths()` 曾把 `SKILLS_ROOT` 下每个技能目录都并入候选，使**工作区里并不存在**的交付物被别的技能目录同名文件"救活"。复现（最极端形态）：目录内**只有 plan.yaml**、连 `references/` 都没有，对账仍报「交付物确认 1 个 / 7/7 通过」。⚠️ **v2.5.1 的修复并未真正闭合**：当时只把候选"收窄为固定三处"（`基准／~/.workbuddy/<p>／基准的上级`），而这两条附加通道与 R6 属**同型缺陷** —— 前者同样能救活工作区内不存在的交付物，后者让落在工作区根之外的交付物判通过。该结论由 2026-09-11 的**对抗式互审**（两个子代理独立发现 + 主代理复现）坐实，详见 `tasks/对抗互审-ai-workflow-v2.5.1-2026-09-11/裁决.md` §4。**真正的收敛（候选仅为 `base/<p>`）在 v2.5.2 完成**（见上一条）。
+  - **R1 主干自相矛盾**：红线①"未确认前禁止执行任何脚本" vs 阶段 0 要求跑 `checks.py status`。修复：红线①限定为"**处理类**脚本与产出文件"，显式豁免 `status`／`skill`／`Read`／`Grep`／`Glob` 等只读检查。
+  - **R2 `tasks/` 口径三套并存（已被现场复现，红线③当场失守）**：修复：明确"**任务目录一律建在工作区根下的 `tasks/`**"（写入工作区边界段与阶段 3 第 1 条）；例外表把技能目录的"写 `tasks/` 记录"限缩为"**仅技能自身演进类任务**"。
+  - **R3 冷启动缺「数据分析」验证信号**：主干信号清单（`:85` 附近）补「数据分析类＝交叉校验脚本（总额对账／行数一致／空值率）+ 抽样复算」，并注明完整信号表在 `quality-gates.md`。
+  - **R4 独立审核缺粒度规则**：新增第 7 条**优先级**（豁免仅在未命中四类关键产出时适用）与第 8 条**批次规则**（同任务多交付物可合并为一次送审，单批 ≤5 文件，审核者须拿到全部产出物 + 统一验收标准，**不得以合并为由减少覆盖面**）。
+  - **R7（原 N1）`report-template.md` 确认表缺「工作区根」**：已补第 6 行——与 R2 构成"漏字段 → 交付物落错位置"的因果链，故提升优先级。
+  - **P1 文档收口**：阶段 4 明确「非 Office 交付跳过本阶段」+ 阶段 5 交付前自检处**也**给出 `assets/report-template.md` 指针（两者都指，避免跳过阶段 4 的任务看不到模板）+ `excel-write` **只吃 `--rows` JSON**（CSV 须先 `excel-read --fmt json`，直接喂会抛 `JSONDecodeError`）；L1 判定**排除 `_` 开头示例文件**且注明"需待阶段 0 查模板后确认"；阶段 0「列本地 skill」给出可执行做法（`Glob */SKILL.md` + `find-skills`）；阶段 5 对账命令补 `--base <工作区根>`；阶段 2 方案对比补非工程类维度；`run_stage.ps1` 加**执行后自检**（先清空 `$LASTEXITCODE`，调用后仍为空 ⇒ 判 `[FAIL]` 退出 1，不再把宿主的静默 no-op 当成功）；ops.md §一 明确**首选直接调 venv 解释器**、ps1 包装器仅作交互式终端备选；§四 增**不依赖 ps1 的 `import` 探测命令**与"未映射必须 FAIL + 改写检查必配负向测试"两条纪律；排障表 **+8 行**（ps1 静默 no-op、Bash 拒调 ps1、excel-write CSV、status 无 `--workspace`、依赖自检假 OK、对账假 PASS、旧计划 `meta.工作区根` 为空、`--base` 传 POSIX 路径致假 FAIL）；`--check-links` 均值改为**区间并标注不可当基线**；`office_io.py` 按子命令前置依赖检查（`[ERROR]`+`[HINT]` 退出 2，替代裸 traceback；**`ai_call.py` 经核为纯标准库，无需守卫**——原体验报告该项不成立）；`data_query.py files` 的 `[提示]` 改走 **stdout**（原先走 stderr，`2>&1` 下因缓冲差异插到正文之前）。
+  - **回归**：`checks.py skill` 全绿 + `py_compile` 通过 + **两处负向测试**（移除 venv 中 `duckdb` 目录后 `setup_env.ps1` 必须报 `[FAIL]`；无关目录下引用 `references/` 的假交付物对账必须 `FAIL`）。详见 `回归证据.txt`。
 
 - **v2.5.0（2026-09-10）按用户给定流程图补齐四个缺失环节**（用户提供标准流程：入口 → 上下文收集/材料理解/代码调查 → 方案评审 → 人工确认与授权 → 任务编排/执行/独立审核 → 返修复查 → 测试交付/验收与发布协作 → 结果核验与履历归档）。**保留原有 0-6 编号，只补缺口不重排**：
   - **入口分型**（阶段 0）：新增「消息 / 正式需求 / Bug」三型判定表；**Bug 类必须走「复现 → 根因 → 修复 → 回归」**，禁止未复现就改。
@@ -177,7 +231,7 @@ grep -vE "api\.github\.com" all_urls.txt > check_urls.txt
   - SKILL.md 版本号 2.2 → 2.3 → **2.4**（前两轮漏改头部，已补齐）。
 - **v2.3（2026-09-10）实战修复**（由真实任务 `tasks/技术调研-网络安全学习-2026-09-10/` 驱动）：
   - `checks.py` **修假绿**：缺 pyyaml 时原会先报错、再打印 `结果：0/0 通过，FAIL=0` 并返回 0，调用方（含 CI/子代理）会误判为通过。现改为 `_require_yaml()` 统一守卫，**以退出码 2 中止**并给出 venv 绝对路径提示；`main()` 不再吞掉非零 `code`（`return 1 if n_fail else code`），未跑起来时输出「未执行」而非「全绿」。同一守卫也修掉 `load_plan` 在 `status` 子命令下的裸 traceback。
-  - `http_fetch.py` 新增 **`--check-links`** 批量探活：只取状态码不下载正文。实战量化——12 条链接串行探活 41.2s 且白下载 3.5MB；新工具并发 8 实测 1.9s（≈40× 加速，平均 156ms/条 vs 3400ms/条）。
+  - `http_fetch.py` 新增 **`--check-links`** 批量探活：只取状态码不下载正文。实战量化——12 条链接串行探活 41.2s 且白下载 3.5MB；新工具并发 8 实测 1.9s（≈40× 加速）。⚠️ 当时记录的"平均 156ms/条"取自 12 条小样本，**均值受超时条数影响极大**（另有实测 1 条 502 超时即把均值拉到 2573ms/条），**不可当基线引用**。
   - `http_fetch.py fetch` 在 `--out` 目标已存在但抓取失败时打印告警（防旧内容被误用）。
   - 交付前置动作确立：**外部链接必须探活后才可写进交付物**（实战中拦下 1 条 404 死链并修正）。
 - **v2.2（2026-09-10）**：效率增强——SKILL.md 瘦身（脚本速查/排障/日志移入本文件）；`http_fetch.py` 增加本地缓存（TTL + `--no-cache`）与 GitHub 多仓库并发；`ai_call.py` 增加 `--batch-file` 批量并发（JSONL 输出）；`checks.py` 增加 `status`（任务总览 + 归档建议）与 `mark`（安全更新步骤状态）；阶段 1 追问轮次上限 2 轮、阶段 0 用 `status` 替代逐个翻历史任务。

@@ -21,10 +21,15 @@ skill 子命令检查项:
 
 plan 子命令检查项:
     1. YAML 可解析（需 pyyaml：setup_env.ps1 已纳入依赖）
-    2. meta 必填（任务 / 验证信号）；steps 必填（做什么 / 验证方式 / 状态 / 交付物）
-    3. 状态取值合法（待办 / 进行中 / 完成 / 受阻）
+    2. meta 必填（任务 / 验证信号 / 工作区根）；steps 必填（做什么 / 验证方式 / 状态 / 交付物）
+    3. 状态取值合法（待办 / 进行中 / 完成 / 受阻 / 熔断）
     4. Anti-drop 对账：状态=完成的步骤，其「交付物」必须真实存在（不接受"应该生成了"）
        —— 非文件型交付物（如「本次对话记录」）标记为 SKIP，需人工确认
+    5. 熔断门禁（v2.5.2）：meta「熔断状态」取值合法（正常 / 已熔断，留空视为正常）；
+       已熔断（或存在状态为「熔断」的步骤）时——必须存在《熔断报告》且含 5 个必填字段，
+       并直接判 FAIL：**已熔断的任务不得作为可交付物**（见 SKILL.md 熔断机制）
+    6. 交付物路径解析口径（v2.5.2）：相对路径**只**以 --base（工作区根）为基准；
+       工作区根之外的文件必须写绝对路径（旧的跨目录兜底通道已移除）
 
 退出码: 0 = 全部通过；1 = 有 FAIL（不可交付）；2 = 用法错误
 """
@@ -40,7 +45,6 @@ sys.stdout.reconfigure(encoding="utf-8")
 sys.stderr.reconfigure(encoding="utf-8")
 
 DEFAULT_SKILL_DIR = Path.home() / ".workbuddy" / "skills" / "ai-workflow"
-SKILLS_ROOT = Path.home() / ".workbuddy" / "skills"
 TEMPLATE_FIELDS = (
     "task_type",
     "confirmed_at",
@@ -54,7 +58,11 @@ TEMPLATE_FIELDS = (
 )
 PLAN_META_REQUIRED = ("任务", "验证信号", "工作区根")
 PLAN_STEP_REQUIRED = ("做什么", "验证方式", "状态", "交付物")
-VALID_STATUS = ("待办", "进行中", "完成", "受阻")
+VALID_STATUS = ("待办", "进行中", "完成", "受阻", "熔断")
+# 熔断机制（v2.5.2）：两个存储态的唯一叫法 —— 正常（Closed）/ 已熔断（Open）；复位是一次迁移动作（Half-Open），不是第三个存储态，改回「正常」须用户明示并留痕
+VALID_FUSE = ("正常", "已熔断")
+FUSE_REPORT = "熔断报告.md"
+FUSE_SECTIONS = ("触发条件", "已试路径", "卡点根因", "待决策选项", "复位条件")
 # 业务性相对路径：不是技能内文件，跳过引用检查
 REF_WHITELIST = {"plan.yaml", "Ledger.md", "memory/YYYY-MM-DD.md", "README.md"}
 # 命名占位符（如 第NNN章-标题.md、报告-YYYY-MM-DD.md、<主题>.md）不是真实文件路径，跳过
@@ -159,11 +167,13 @@ def _candidate_paths(raw: str, base: Path) -> list[Path]:
     p = Path(raw)
     if p.is_absolute():
         return [p]
-    cands = [base / p, Path.home() / ".workbuddy" / p, base.parent / p]
-    # skill 内相对路径（如 references/xxx.md、scripts/yyy.py）逐个技能目录再试一遍
-    if SKILLS_ROOT.exists():
-        cands.extend(sd / p for sd in SKILLS_ROOT.glob("*/"))
-    return cands
+    # 【v2.5.2】交付物**只**在「本次任务基准目录（--base，应为工作区根）」下解析，候选唯一。
+    # 移除的两条通道均属假 PASS（夹具 A/B 实测，见 tasks/技能增强-ai-workflow-v2.5.2-2026-09-11/）：
+    #   1) ~/.workbuddy/<p> —— 固定前缀兜底，使工作区内并不存在的交付物被
+    #      ~/.workbuddy/skills/<技能>/… 的同名文件"救活"；
+    #   2) base.parent/<p> —— 基准的上级，使交付物落在工作区根之外也判 PASS，与红线③冲突。
+    # 需要声明工作区根之外的文件（如跨目录改技能本体）时，交付物**必须写绝对路径**。
+    return [base / p]
 
 
 def _is_file_like(token: str) -> bool:
@@ -228,6 +238,8 @@ def cmd_status(workspace: Path, archive_days: int, max_tasks: int) -> int:
     tasks_root = workspace / "tasks"
     if not tasks_root.exists():
         fail("tasks/ 目录存在", str(tasks_root))
+        print("       提示：工作区不是当前目录时请加 --workspace <工作区根>；"
+              "任务目录应建在工作区根下的 tasks/（见 SKILL.md 红线③）")
         return 1
     dirs = sorted([d for d in tasks_root.iterdir() if d.is_dir() and not d.name.startswith("_")])
     if not dirs:
@@ -236,17 +248,25 @@ def cmd_status(workspace: Path, archive_days: int, max_tasks: int) -> int:
 
     now = time.time()
     stale = []
+    tripped_tasks = []
     print(_pad("任务目录", 46) + _pad("层级", 7) + _pad("步骤完成", 11) + _pad("交付物", 11) + "最后修改")
     print("-" * 86)
     for d in dirs:
         plan = d / "plan.yaml"
         age_days = (now - d.stat().st_mtime) / 86400
         layer, steps_txt, deliv_txt = "—", "无 plan", "—"
+        fuse_mark = ""
         if plan.exists():
             try:
                 data = load_plan(plan)
-                layer = str((data.get("meta") or {}).get("任务层级", "—"))
+                meta = data.get("meta") or {}
+                layer = str(meta.get("任务层级", "—"))
                 steps = data.get("steps") or []
+                if str(meta.get("熔断状态", "") or "").strip() == "已熔断" or any(
+                    str(s.get("状态", "")).strip() == "熔断" for s in steps
+                ):
+                    fuse_mark = " ⚡已熔断"
+                    tripped_tasks.append(d.name)
                 audited = [audit_step(s, workspace) for s in steps]
                 done = [a for a in audited if a["状态"] == "完成"]
                 total_deliv = sum(a["交付物总数"] for a in audited)
@@ -262,27 +282,82 @@ def cmd_status(workspace: Path, archive_days: int, max_tasks: int) -> int:
         mark = " ← 建议归档" if age_days > archive_days else ""
         if age_days > archive_days:
             stale.append(d.name)
-        print(_pad(d.name, 46) + _pad(layer, 7) + _pad(steps_txt, 11) + _pad(deliv_txt, 11) + f"{age_days:>4.0f} 天{mark}")
+        print(_pad(d.name, 46) + _pad(layer, 7) + _pad(steps_txt, 11) + _pad(deliv_txt, 11)
+              + f"{age_days:>4.0f} 天{mark}{fuse_mark}")
 
+    if tripped_tasks:
+        print(f"\n[WARN] {len(tripped_tasks)} 个任务处于「已熔断」：{', '.join(tripped_tasks[:5])}{' …' if len(tripped_tasks) > 5 else ''}")
+        print("       已熔断的任务禁止自动续跑、不得交付；复位须用户明示且两步缺一不可（见 SKILL.md 熔断机制）")
     if len(dirs) > max_tasks:
         print(f"\n[WARN] 任务目录 {len(dirs)} 个 > 阈值 {max_tasks}，建议归档最旧的若干个（参考 SKILL.md 阶段 6 归档规则）")
     if stale:
         print(f"[WARN] {len(stale)} 个任务超过 {archive_days} 天未改动：{', '.join(stale[:5])}{' …' if len(stale) > 5 else ''}")
     else:
         print(f"\n[ OK ] 无超过 {archive_days} 天的陈旧任务")
-    ok("任务总览", f"{len(dirs)} 个任务目录")
+    ok("任务总览", f"{len(dirs)} 个任务目录" + (f"，其中 {len(tripped_tasks)} 个已熔断" if tripped_tasks else ""))
     return 0
 
 
-def cmd_mark(plan_path: Path, step_id: str, status: str) -> int:
-    if status not in VALID_STATUS:
+def _set_meta_fuse(plan_path: Path, value: str) -> bool:
+    """在 `meta` 块内设置 `熔断状态` 键（已存在则就地替换，缺失则插入到 meta 末尾；幂等）。
+
+    存在的意义：熔断**复位**要求「meta 改回正常」+「熔断步骤改回非熔断」两步。
+    若第一步只能手改 YAML，复位链路就留了个易错的人工口子（且与 `mark` 替代手工编辑的
+    设计目标不一致）。本函数让两步都能被工具完成：`mark <plan> <step> <status> --fuse 正常`。
+    """
+    lines = plan_path.read_text(encoding="utf-8").splitlines(keepends=True)
+    key_re = re.compile(r"^\s{2}熔断状态\s*:")
+    in_meta, last_meta = False, None
+    for i, ln in enumerate(lines):
+        if re.match(r"^meta\s*:\s*$", ln):
+            in_meta = True
+            continue
+        if not in_meta:
+            continue
+        if re.match(r"^\S", ln):  # 顶层键 → meta 块结束
+            in_meta = False
+            continue
+        if key_re.match(ln):
+            lines[i] = f"  熔断状态: {value}\n"
+            plan_path.write_text("".join(lines), encoding="utf-8")
+            return True
+        if ln.strip():
+            last_meta = i
+    if last_meta is None:  # 没有 meta 块，不擅自新建
+        return False
+    lines.insert(last_meta + 1, f"  熔断状态: {value}\n")
+    plan_path.write_text("".join(lines), encoding="utf-8")
+    return True
+
+
+def cmd_mark(plan_path: Path, step_id: str | None, status: str | None,
+             fuse: str | None = None) -> int:
+    if status is not None and status not in VALID_STATUS:
         fail("状态合法", f"『{status}』不在 {VALID_STATUS}")
+        return 1
+    if fuse is not None and fuse not in VALID_FUSE:
+        fail("熔断状态合法", f"『{fuse}』不在 {VALID_FUSE}")
+        return 1
+    if step_id is None and fuse is None:
+        fail("参数", "至少给出 ` <step_id> <状态>` 或 `--fuse <正常|已熔断>`")
+        return 1
+    if step_id is not None and status is None:
+        fail("参数", "给出 <step_id> 时必须同时给出 <状态>")
         return 1
     if plan_path.is_dir():
         plan_path = plan_path / "plan.yaml"
     if not plan_path.exists():
         fail("plan.yaml 存在", str(plan_path))
         return 1
+
+    if fuse is not None:
+        if not _set_meta_fuse(plan_path, fuse):
+            fail("meta.熔断状态 写入", "未找到 `meta:` 块，请手工添加该键")
+            return 1
+        ok("meta.熔断状态已更新", f"→ {fuse}")
+        if step_id is None:
+            return 0
+
     lines = plan_path.read_text(encoding="utf-8").splitlines(keepends=True)
     cur = None
     target = None
@@ -302,6 +377,51 @@ def cmd_mark(plan_path: Path, step_id: str, status: str) -> int:
     plan_path.write_text("".join(lines), encoding="utf-8")
     ok("步骤状态已更新", f"id={step_id}：{old} → 状态: {status}")
     return 0
+
+
+def _check_fuse(meta: dict, steps: list, plan_path: Path) -> None:
+    """熔断门禁（v2.5.2）：已熔断的任务不得作为可交付物。
+
+    触发：meta「熔断状态」= 已熔断，**或**任一步骤状态为「熔断」（任一命中即阻断，fail-closed）。
+    熔断时必须存在同目录《熔断报告.md》，且五个必填节**以标题行形式**出现（缺一即 FAIL）。
+    复位须用户明示，且**两步缺一不可**，两步**均由 `mark` 支持**（不要求手改 YAML）：
+    ① `mark <plan> --fuse 正常` 把 meta 改回『正常』；
+    ② `mark <plan> <步骤id> <非熔断状态>` 把熔断步骤改回。
+    合一句即：`mark <plan> <步骤id> 完成 --fuse 正常`。本工具**不做自动复位**。
+    """
+    raw = str(meta.get("熔断状态", "") or "").strip()
+    if raw and raw not in VALID_FUSE:
+        fail("meta.熔断状态 合法", f"实际『{raw}』，应为 {' / '.join(VALID_FUSE)} 之一（留空视为『正常』）")
+        return
+    tripped_steps = [str(s.get("id", "?")) for s in steps if str(s.get("状态", "")).strip() == "熔断"]
+    if raw != "已熔断" and not tripped_steps:
+        ok("熔断状态", "正常" if raw else "正常（未声明）")
+        return
+
+    detail = "meta.熔断状态=已熔断" if raw == "已熔断" else ""
+    if tripped_steps:
+        detail += ("；" if detail else "") + f"步骤 {'、'.join(tripped_steps)} 状态为『熔断』"
+    fail("已熔断：不得作为可交付物",
+         detail + " —— 自动化已停止。复位**须用户明示**，且两步缺一不可、均由 `mark` 完成："
+         "① `mark <plan> --fuse 正常`；② `mark <plan> <步骤id> <非熔断状态>`。"
+         "复位后重跑本命令确认 FAIL 清零（见 SKILL.md 熔断机制）")
+
+    report = plan_path.parent / FUSE_REPORT
+    if not report.exists():
+        fail("熔断报告存在", f"缺失 {report}")
+        return
+    ok("熔断报告存在", str(report))
+    text = report.read_text(encoding="utf-8", errors="replace")
+    # 标题级校验：五个节名必须各自作为 markdown **标题行**出现。两步防绕过：
+    #  ① 先剥除所有 fenced code block（```...```）——把节名写进代码块不算数（批D M1 复现的绕过）；
+    #  ② 节名必须独占标题行（其后紧跟的不能是"单词字符"，含中文/字母/数字/下划线），
+    #     防止「复位条件xx」这类前缀粘连绕过，同时允许「触发条件（质量类）」这种非单词字符后缀。
+    text_body = re.sub(r"```.*?```", "", text, flags=re.S)
+    miss = [s for s in FUSE_SECTIONS if not re.search(rf"^#+\s*{re.escape(s)}(?![\w])", text_body, re.M)]
+    (ok if not miss else fail)(
+        "熔断报告必含标题节",
+        ("缺标题 " + "、".join(miss)) if miss else f"{len(FUSE_SECTIONS)}/{len(FUSE_SECTIONS)}",
+    )
 
 
 def check_plan(plan_path: Path, base: Path) -> int:
@@ -346,7 +466,7 @@ def check_plan(plan_path: Path, base: Path) -> int:
         done_total += 1
         a = audit_step(s, base)
         for token in a["缺失"]:
-            hint = "（交付物须写完整路径，缩写如『选品分析.yaml』无法定位）" if "/" not in token and "\\" not in token else ""
+            hint = "（未在 --base=<工作区根> 下找到；相对路径以 --base 为基准，工作区根之外的文件须写绝对路径）"
             fail(f"步骤 {sid} 交付物缺失", token[:80] + hint)
         for token in a["非文件型"]:
             skip(f"步骤 {sid} 交付物", f"『{token[:40]}』非文件型，需人工确认")
@@ -354,6 +474,8 @@ def check_plan(plan_path: Path, base: Path) -> int:
             deliverable_ok += 1
 
     ok("Anti-drop 对账", f"已完成步骤 {done_total} 个，交付物确认 {deliverable_ok} 个")
+
+    _check_fuse(meta, steps, plan_path)
     return 0
 
 
@@ -373,10 +495,12 @@ def main() -> None:
     p.add_argument("--archive-days", type=int, default=30, help="超过该天数未改动则建议归档（默认 30）")
     p.add_argument("--max-tasks", type=int, default=10, help="任务目录数超过该值则提示归档（默认 10）")
 
-    p = sub.add_parser("mark", help="更新 plan.yaml 中某步骤的状态（替代手工编辑）")
+    p = sub.add_parser("mark", help="更新 plan.yaml 的步骤状态与/或 meta 熔断状态（替代手工编辑）")
     p.add_argument("plan", help="plan.yaml 路径或任务目录")
-    p.add_argument("step_id", help="步骤 id")
-    p.add_argument("status", choices=VALID_STATUS, help="新状态")
+    p.add_argument("step_id", nargs="?", help="步骤 id（只改熔断状态时可省略）")
+    p.add_argument("status", nargs="?", choices=VALID_STATUS, help="该步骤的新状态")
+    p.add_argument("--fuse", choices=VALID_FUSE,
+                   help="设置 meta.熔断状态；复位填『正常』（须与步骤状态一并复位，见 _check_fuse）")
 
     args = ap.parse_args()
     if args.cmd == "skill":
@@ -389,7 +513,7 @@ def main() -> None:
         code = cmd_status(Path(args.workspace), args.archive_days, args.max_tasks)
         name = "任务总览"
     else:
-        code = cmd_mark(Path(args.plan), args.step_id, args.status)
+        code = cmd_mark(Path(args.plan), args.step_id, args.status, args.fuse)
         name = "状态更新"
 
     if args.cmd in ("skill", "plan"):
@@ -404,19 +528,12 @@ def main() -> None:
             return code
         print(f"=== 结果：{len(results) - n_fail}/{len(results)} 通过，FAIL={n_fail} ===")
         return 1 if n_fail else code
-    else:  # status / mark：明细已即时打印，仅汇总结果行
+    else:  # status / mark：表格/明细已即时打印，这里只回显结果行（status 的熔断汇总行在此可见）
+        for status, item, note in results:
+            mark = {"OK": "[ OK ]", "FAIL": "[FAIL]", "SKIP": "[SKIP]"}[status]
+            print(f"{mark} {item}" + (f" — {note}" if note else ""))
         n_fail = sum(1 for r in results if r[0] == "FAIL")
-        if args.cmd == "mark":  # mark 需要回显结果，status 的表格已打印
-            for status, item, note in results:
-                mark = {"OK": "[ OK ]", "FAIL": "[FAIL]", "SKIP": "[SKIP]"}[status]
-                print(f"{mark} {item}" + (f" — {note}" if note else ""))
-        if n_fail:
-            if args.cmd != "mark":
-                for status, item, note in results:
-                    if status == "FAIL":
-                        print(f"[FAIL] {item}" + (f" — {note}" if note else ""))
-            return 1
-        return code
+        return 1 if n_fail else code
 
 
 if __name__ == "__main__":

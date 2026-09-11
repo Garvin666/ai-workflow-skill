@@ -137,8 +137,9 @@ def cmd_files(args) -> int:
         print(f"\n最大的 {min(args.top, len(biggest))} 个文件：")
         for size, fp in sorted(biggest, reverse=True)[: args.top]:
             print(f"{_human(size):>12}  {fp}")
+    # 走 stdout：走 stderr 时与 2>&1 合并会因缓冲差异插到正文之前（实测观感错位）
     print("\n[提示] 结构化(JSON/CSV/Parquet)优先用 `sql` 子命令直查；自由文本用 `find`；"
-          "原生 Grep 仍适合小目录", file=sys.stderr)
+          "原生 Grep 仍适合小目录")
     return 0
 
 
