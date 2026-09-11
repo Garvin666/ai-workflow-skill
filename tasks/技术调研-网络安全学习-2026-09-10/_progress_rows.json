@@ -1,0 +1,91 @@
+[
+  {
+    "name": "说明",
+    "rows": [
+      ["网络安全学习进度表", "", "", ""],
+      ["来源", "调研-网络安全学习资源-2026-09-10.md（ai-workflow v2.2 / L1 快速通道）", "", ""],
+      ["生成时间", "2026-09-10", "", ""],
+      ["使用方式", "在「状态」列把 ☐ 改为 ☑ 并填「完成日期」；每周日复盘时滚动更新", "", ""],
+      ["图例", "☐ 未开始 / ◐ 进行中 / ☑ 已完成 / ⏸ 暂缓", "", ""],
+      ["路线主张", "不走零基础转行渗透；走开发者视角 AppSec 主线（Web/API + 密码学 + AI 安全）", "", ""],
+      ["时间口径", "按每周 8–12 小时自学估算；阶段可并行，建议先完成 A 再进 B", "", ""],
+      ["压缩路径", "时间有限只求加固量化项目：A 阶段第 2/3 项 + B 阶段全部 + 密码学（Joy of Cryptography）", "", ""]
+    ]
+  },
+  {
+    "name": "总览",
+    "rows": [
+      ["阶段", "周期", "目标", "主资源", "可验证里程碑", "状态"],
+      ["A 地基（网络/OS/HTTP）", "3–5 周", "看穿一个请求的完整链路", "OverTheWire Bandit、Professor Messer、Cisco NetEss、本地 VirtualBox+Kali", "Bandit 通关 L20+；能手画 DNS→TCP→TLS→HTTP 全链路并说出各步攻击面", "☐"],
+      ["B 应用安全（性价比最高）", "6–10 周", "吃透 OWASP Web/API Top 10，能审自己的应用", "PortSwigger Web Security Academy（全免费）、Juice Shop、OWASP API Top 10", "PortSwigger Apprentice 全通；Juice Shop ≥30；给量化项目修掉 ≥1 个越权/注入并留 commit", "☐"],
+      ["C 方向扩展（二选一）", "8–12 周", "红队或蓝队入门", "红：TryHackMe / HTB / VulnHub；蓝：LetsDefend / CyberDefenders", "红：10 台 easy + writeup；蓝：20+ 条告警研判（写明 TP/FP 与依据）", "☐"],
+      ["D 专项深耕", "3–6 月", "选 1–2 个方向做深", "CryptoHack、pwn.college、OWASP LLM Top 10 + PortSwigger Web LLM Attacks", "通关 CryptoHack RSA+ECC，或 pwn.college 绿带，或产出 AI 红队报告", "☐"],
+      ["压缩路径（只求加固项目）", "4–8 周", "量化项目安全自查通过", "A 阶段第 2/3 项 + B 阶段全部 + Joy of Cryptography", "密钥扫描零告警 + 关键接口越权已修 + 依赖无高危 CVE", "☐"]
+    ]
+  },
+  {
+    "name": "阶段A-地基",
+    "rows": [
+      ["序号", "任务", "主资源/链接", "建议周", "里程碑/验收", "状态", "完成日期", "备注"],
+      ["A1", "搭本地实验环境（VirtualBox + Kali/Ubuntu 快照）", "https://www.virtualbox.org/ ｜ https://www.kali.org/", "1", "能 SSH 进虚拟机并完成快照回滚", "☐", "", "先快照再折腾，降低试错成本"],
+      ["A2", "通关 OverTheWire Bandit L0–L20", "https://overthewire.org/wargames/bandit/", "1–2", "到 L20，且能解释每条命令的作用", "☐", "", "Linux 命令行最快上手方式"],
+      ["A3", "补网络基础：TCP/IP、DNS、HTTP/TLS", "https://www.professormesser.com/（免费视频）", "1–2", "手画一次完整请求链路并标注各步攻击面", "☐", "", "不求背记，求看懂链路"],
+      ["A4", "Linux 命令行熟练（不看教程实操）", "https://linuxcommand.org/tlcl.php ｜ 鸟哥的 Linux 私房菜（官网免费在线版）", "1", "用 nmap/curl/tcpdump 独立完成扫描与抓包", "☐", "", "中文可选鸟哥，英文选 TLCL"],
+      ["A5", "建立知识地图（选路）", "https://www.cybok.org/（CyBOK v1.1）", "0.5", "说出 21 知识域中自己要走的 3 个", "☐", "", "避免漫无目的收藏资料"],
+      ["A6", "治理地基速览（可选）", "https://www.nist.gov/cyberframework（CSF 2.0）", "0.5", "能说出 6 大功能及其含义", "☐", "", "面试/合规场景用得上"]
+    ]
+  },
+  {
+    "name": "阶段B-应用安全",
+    "rows": [
+      ["序号", "任务", "主资源/链接", "建议周", "里程碑/验收", "状态", "完成日期", "备注"],
+      ["B1", "OWASP Top 10 通读（有中文版）+ Cheat Sheet 按需查", "https://owasp.org/Top10/ ｜ https://cheatsheetseries.owasp.org/", "1", "能逐条说出自己项目是否命中", "☐", "", "先建清单意识"],
+      ["B2", "PortSwigger Web Security Academy — Apprentice 全部实验", "https://portswigger.net/web-security", "4–6", "全部 Apprentice 实验通关", "☐", "", "本阶段核心，100% 免费"],
+      ["B3", "OWASP API Security Top 10 + 越权专项", "https://owasp.org/API-Security/", "1", "给量化项目 API 写一份 BOLA/IDOR 检查清单", "☐", "", "你的项目 API 多，优先级高"],
+      ["B4", "Juice Shop 本地部署并冲分 ≥30", "https://owasp.org/www-project-juice-shop/", "2", "得分 ≥30 并记录每题思路", "☐", "", "本地跑，安全可控"],
+      ["B5", "WSTG 方法论通读", "https://owasp.org/www-project-web-security-testing-guide/", "1", "能按 WSTG 目录给项目做一轮自查", "☐", "", "把零散知识变成流程"],
+      ["B6", "代码安全课程（Python/FastAPI 向）", "CodeSignal《OWASP Top 10 in Python》（约 10h 免费含证书）", "1", "拿证书 + 改掉项目对应问题", "☐", "", "与你的技术栈直接对齐"],
+      ["B7", "【交付】威胁建模 + 修掉 ≥1 个真实问题", "自己的仓库", "2", "提交带 commit 的修复记录", "☐", "", "本阶段真正的验收物"]
+    ]
+  },
+  {
+    "name": "阶段C-红蓝扩展",
+    "rows": [
+      ["序号", "方向", "任务", "主资源/链接", "建议周", "里程碑/验收", "状态", "完成日期"],
+      ["C1", "红队", "TryHackMe 入门：Pre Security → Jr Penetration Tester", "https://tryhackme.com/", "4–6", "完成 Jr Penetration Tester 路径", "☐", ""],
+      ["C2", "红队", "HTB Academy 免费模块 + 10 台 easy 机器", "https://academy.hackthebox.com/", "4–6", "10 台 easy + 各自 writeup", "☐", ""],
+      ["C3", "红队", "VulnHub 本地靶机 3–5 台", "https://www.vulnhub.com/", "2", "至少 3 台独立完成", "☐", ""],
+      ["C4", "蓝队", "SOC 基础（SOC Level 1 路径）", "https://tryhackme.com/", "3–4", "完成 SOC Level 1 路径", "☐", ""],
+      ["C5", "蓝队", "LetsDefend 告警研判实战", "https://letsdefend.io/", "4–6", "20+ 条告警研判，写明 TP/FP 与依据", "☐", ""],
+      ["C6", "蓝队", "CyberDefenders 蓝队挑战", "https://cyberdefenders.org/", "2", "完成 3 个 challenge", "☐", ""],
+      ["C7", "蓝队", "MITRE ATT&CK 通读", "https://attack.mitre.org/", "1", "能用 ATT&CK 描述一次完整攻击链", "☐", ""]
+    ]
+  },
+  {
+    "name": "阶段D-专项深耕",
+    "rows": [
+      ["序号", "方向", "任务", "主资源/链接", "建议周", "里程碑/验收", "状态", "完成日期"],
+      ["D1", "密码学（数学优势）", "The Joy of Cryptography 通读（官方免费全文）", "https://joyofcryptography.com/", "3–4", "完成各章习题 ≥60%", "☐", ""],
+      ["D2", "密码学", "CryptoHack 入门 → RSA/ECC", "https://cryptohack.org/", "4–6", "通关 RSA 与 ECC 课程", "☐", ""],
+      ["D3", "密码学", "A Graduate Course in Applied Cryptography（进阶）", "https://toc.cryptobook.us/", "按需", "读懂 ECC/格/MPC 对应章节", "☐", ""],
+      ["D4", "密码学", "结合项目：自查 JWT/加密实现", "自己的仓库", "1", "显式白名单算法 + 密钥轮换方案落地", "☐", ""],
+      ["D5", "二进制/pwn", "pwn.college 绿带", "https://pwn.college/", "8–12", "拿到绿带", "☐", ""],
+      ["D6", "二进制", "OST2 架构与逆向", "https://ost2.fyi/", "按需", "完成 Arch1001", "☐", ""],
+      ["D7", "AI/LLM 安全", "OWASP Top 10 for LLM Applications 通读", "https://genai.owasp.org/llm-top-10/", "1", "逐条对照自己的 LLM 模块", "☐", ""],
+      ["D8", "AI/LLM 安全", "PortSwigger Web LLM Attacks（7 labs）", "https://portswigger.net/web-security/llm-attacks", "1–2", "7 个 lab 全通", "☐", ""],
+      ["D9", "AI/LLM 安全", "LLMVault 离线靶场", "https://github.com/llmvault/llmvault", "1", "复现间接提示注入", "☐", ""],
+      ["D10", "AI/LLM 安全", "【交付】AI 红队测试报告", "自己的 LLM 应用", "1–2", "产出含 3 个真实发现", "☐", ""]
+    ]
+  },
+  {
+    "name": "工具链-量化加固",
+    "rows": [
+      ["顺序", "工具", "作用", "安装/地址", "实测活跃度", "许可证", "状态", "完成日期"],
+      ["0", "Gitleaks", "密钥/凭据扫描（防交易所 API key 入库）", "https://github.com/gitleaks/gitleaks", "29.2k★ / 2026-09-09", "MIT", "☐", ""],
+      ["1", "Semgrep CE", "源码 SAST（Python + TS/JS 一次覆盖）", "https://github.com/semgrep/semgrep", "16.6k★ / 2026-09-10", "LGPL-2.1", "☐", ""],
+      ["2", "Trivy", "依赖 CVE + 密钥 + 配置 + 镜像", "https://github.com/aquasecurity/trivy", "37.9k★ / 2026-09-09", "Apache-2.0", "☐", ""],
+      ["3", "OWASP ZAP（baseline）", "运行时 DAST（安全头/CORS/认证/注入面）", "https://www.zaproxy.org/", "15.8k★ / 2026-09-09", "Apache-2.0", "☐", ""],
+      ["", "顺序逻辑", "先堵不可逆的密钥泄露 → 再查要动手改的源码 → 再查可自动升级的依赖 → 最后打运行中的服务", "全部免费，Windows 原生或 WSL 均可", "", "", "", ""]
+    ]
+  }
+]
