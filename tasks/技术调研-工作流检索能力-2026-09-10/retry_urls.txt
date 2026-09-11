@@ -1,0 +1,8 @@
+https://console.cloud.google.com/bigquery
+https://huggingface.co/Qwen/Qwen3-Embedding-0.6B-GGUF
+https://huggingface.co/jinaai/jina-embeddings-v2-base-code
+https://jina.ai/models/jina-embeddings-v2-base-code
+https://magicliang.github.io/
+https://magicliang.github.io/2026/04/17/
+https://grep.app/
+https://api.searchcode.com/
