@@ -1,0 +1,28 @@
+[INFO] 25 个仓库并发取值完成，耗时 5.1s
+full_name	stargazers_count	forks_count	license_spdx	pushed_at	archived	error
+Genivia/ugrep-indexer	84	3	BSD-3-Clause	2025-06-22T20:21:08Z	否	—
+livegrep/livegrep	2233	204	NOASSERTION	2026-02-10T15:03:35Z	否	—
+google/codesearch	4008	403	BSD-3-Clause	2026-08-30T19:49:57Z	否	—
+hound-search/hound	5881	599	MIT	2026-08-13T01:22:30Z	否	—
+oracle/opengrok	4939	837	NOASSERTION	2026-09-02T20:03:47Z	否	—
+apache/datafusion	9300	2395	Apache-2.0	2026-09-10T05:10:11Z	否	—
+pola-rs/polars	39698	3090	MIT	2026-09-10T05:01:02Z	否	—
+quickwit-oss/tantivy-py	426	90	MIT	2026-09-09T23:00:00Z	否	—
+mchaput/whoosh	663	75	NOASSERTION	2024-01-03T13:23:50Z	否	—
+meilisearch/meilisearch	59242	2706	NOASSERTION	2026-09-09T16:14:46Z	否	—
+typesense/typesense	26543	973	GPL-3.0	2026-09-01T02:59:39Z	否	—
+valeriansaliou/sonic	21337	617	MPL-2.0	2026-09-04T07:13:19Z	否	—
+ggreer/the_silver_searcher	27118	1439	Apache-2.0	2024-06-16T19:37:41Z	否	—
+junegunn/fzf	82883	2863	MIT	2026-09-09T00:20:03Z	否	—
+sharkdp/fd	44348	1131	Apache-2.0	2026-09-09T01:47:38Z	否	—
+svent/sift	1652	109	GPL-3.0	2026-06-30T21:07:43Z	否	—
+github/codeql	10072	2078	MIT	2026-09-09T15:44:00Z	否	—
+universal-ctags/ctags	7281	671	GPL-2.0	2026-09-08T17:51:45Z	否	—
+ast-grep/ast-grep-mcp	461	27	MIT	2026-09-07T18:39:13Z	否	—
+facebookresearch/faiss	40888	4521	MIT	2026-09-09T18:10:17Z	否	—
+chroma-core/chroma	29263	2492	Apache-2.0	2026-09-10T00:21:01Z	否	—
+asg017/sqlite-vec	8094	349	Apache-2.0	2026-05-18T06:50:45Z	否	—
+PyGithub/PyGithub	7772	1895	LGPL-3.0	2026-09-09T20:02:00Z	否	—
+sigmavirus24/github3.py	1257	409	BSD-3-Clause	2026-08-31T19:28:22Z	否	—
+microsoft/CodeBERT	2787	497	MIT	2023-07-09T12:26:30Z	否	—
+
