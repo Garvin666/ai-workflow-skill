@@ -1,0 +1,60 @@
+# 执行计划：ai-workflow v2.6.1 阶段路由接入真实调用 + 降本实测
+# 注意：本任务交付物横跨技能目录（基础设施例外）与工作区 tasks 目录，按 v2.5.2 纪律一律写绝对路径，避免 Anti-drop 假 PASS。
+meta:
+  任务: "把阶段路由接入真实任务调用，并拿降本实测证据"
+  工作区根: "E:/ChatGPT/工作流"
+  创建时间: "2026-09-11 17:10"
+  任务层级: "L2"
+  确认表: "用户已选第②步（继续做『接入真实调用+降本实测』），红线②计划先行以本 plan 落地"
+  验证信号: "ai_call.py py_compile 通过 + 路由单测全绿 + 降本实测.md 含真实 token×价目表测算的降本% + checks skill/plan 全绿"
+  熔断状态: ""
+
+steps:
+  - id: 1
+    做什么: "新增 model_tiers.json 档位配置 + ai_call.py 加 --tier/--ledger 与用量账本"
+    输入: "SKILL.md 路由表（strong/mid/cheap）"
+    预期产出: "scripts/model_tiers.json、scripts/ai_call.py 含路由与账本逻辑"
+    验证方式: "py_compile 通过 + 路由单测（三档位解析/未知档退回/cheap 注入本地 base+¥0/账本成本计算）全绿"
+    状态: 完成
+    模型档位: "mid"
+    交付物: "C:/Users/26717/.workbuddy/skills/ai-workflow/scripts/model_tiers.json、C:/Users/26717/.workbuddy/skills/ai-workflow/scripts/ai_call.py"
+  - id: 2
+    做什么: "plan-template.yaml 每步加「模型档位」字段"
+    输入: "assets/plan-template.yaml"
+    预期产出: "步骤模板含 模型档位 字段（checks 校验兼容，非必填）"
+    验证方式: "checks.py plan 对账不破；grep 确认 模型档位 出现"
+    状态: 完成
+    模型档位: "mid"
+    交付物: "C:/Users/26717/.workbuddy/skills/ai-workflow/assets/plan-template.yaml"
+  - id: 3
+    做什么: "SKILL.md/ops.md/Ledger.md 文档同步（路由落地与实测口径）"
+    输入: "v2.6.0 路由表、ops.md 变更日志、Ledger.md"
+    预期产出: "SKILL.md 路由段补「落地与实测」；ops.md 加 model_tiers.json 行+变更日志 v2.6.1；Ledger.md 追加 v2.6.1 行"
+    验证方式: "三文件均含对应新增；ops.md 引用完整性（checks skill）通过"
+    状态: 完成
+    模型档位: "cheap"
+    交付物: "C:/Users/26717/.workbuddy/skills/ai-workflow/SKILL.md、C:/Users/26717/.workbuddy/skills/ai-workflow/references/ops.md、C:/Users/26717/.workbuddy/skills/ai-workflow/Ledger.md"
+  - id: 4
+    做什么: "写 routing-guide.md（真实路由使用说明，兼作 cheap 档实测语料）"
+    输入: "model_tiers.json、ai_call.py --tier 行为"
+    预期产出: "references/routing-guide.md"
+    验证方式: "文件存在且含三档位调用示例与账本说明"
+    状态: 完成
+    模型档位: "cheap"
+    交付物: "C:/Users/26717/.workbuddy/skills/ai-workflow/references/routing-guide.md"
+  - id: 5
+    做什么: "降本实测：真实 token 用量 × 官方价目表，算路由 vs 全程强模型 降本%"
+    输入: "本任务真实交付物（plan/model_tiers/ai_call增改/routing-guide）+ 代表性技术调研报告任务体积"
+    预期产出: "降本实测.md（含真实测算 + 代表性投影 + 机制 A/B，明确标注本机无 key/Ollama 故非云账单）"
+    验证方式: "markdown 含具体 token 数与降本%（本任务 71.4% / 代表性 78.0%，落入 70–90% 区间说明）"
+    状态: 完成
+    模型档位: "cheap"
+    交付物: "E:/ChatGPT/工作流/tasks/技能增强-ai-workflow-v2.6.1-模型路由接入实测-2026-09-11/降本实测.md"
+  - id: 6
+    做什么: "验证与本地提交（不推送）"
+    输入: "上述交付物"
+    预期产出: "checks.py skill/plan 全绿；git 本地提交 v2.6.1"
+    验证方式: "skill 19/19 FAIL=0、plan 对账 FAIL=0；git log 含本次提交"
+    状态: 完成
+    模型档位: "mid"
+    交付物: "E:/ChatGPT/工作流/tasks/技能增强-ai-workflow-v2.6.1-模型路由接入实测-2026-09-11/checks_skill.txt、E:/ChatGPT/工作流/tasks/技能增强-ai-workflow-v2.6.1-模型路由接入实测-2026-09-11/plan_out.txt"
