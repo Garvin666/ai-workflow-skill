@@ -1,0 +1,49 @@
+meta:
+  任务: ai-workflow v2.1 → v2.2 效率增强（主文件瘦身、抓取缓存与并发、批量 AI 调用、任务状态总览、状态更新命令）
+  创建时间: "2026-09-10 12:28"
+  任务层级: L2
+  确认表: 用户指令"增强优化可优化的内容并提升效率"（延续授权范围）
+  验证信号: checks.py skill 全绿 + checks.py status/mark 实测 + 缓存命中与并发计时对比 + py_compile
+steps:
+  - id: 1
+    做什么: http_fetch.py 增加本地缓存（TTL + --no-cache）与 GitHub 多仓库并发取值
+    输入: 现 http_fetch.py
+    预期产出: 支持缓存与并发的版本
+    验证方式: 二次请求同 URL 走缓存（计时对比）；3 仓库并发耗时 < 串行耗时
+    状态: 完成
+    交付物: skills/ai-workflow/scripts/http_fetch.py
+  - id: 2
+    做什么: ai_call.py 增加 --batch-file 批量调用（线程池并发，结果落 JSONL）
+    输入: 现 ai_call.py
+    预期产出: 批量调用能力
+    验证方式: py_compile + --help 校验参数；无效 key 场景下报错清晰
+    状态: 完成
+    交付物: skills/ai-workflow/scripts/ai_call.py
+  - id: 3
+    做什么: checks.py 增加 status 子命令（tasks/ 总览 + 交付物完成度 + 归档建议）
+    输入: 现 checks.py + 工作区 tasks/
+    预期产出: 任务状态总览命令
+    验证方式: 对当前工作区运行，正确列出已存在任务与其完成度
+    状态: 完成
+    交付物: skills/ai-workflow/scripts/checks.py
+  - id: 4
+    做什么: checks.py 增加 mark 子命令（安全更新 plan.yaml 步骤状态，替代手工 sed）
+    输入: 现 checks.py
+    预期产出: 状态更新命令
+    验证方式: 对测试 plan 执行状态更新并回读校验
+    状态: 完成
+    交付物: skills/ai-workflow/scripts/checks.py
+  - id: 5
+    做什么: SKILL.md 瘦身（脚本速查/故障排查/变更日志移入 references/ops.md），并新增两条效率规则
+    输入: 现 SKILL.md
+    预期产出: 精简主文件 + references/ops.md
+    验证方式: 主文件体积下降；引用完整性通过；规则可检索
+    状态: 完成
+    交付物: skills/ai-workflow/SKILL.md、skills/ai-workflow/references/ops.md
+  - id: 6
+    做什么: 备份 v2.1 快照 + 改动对照表 + 全量自检交付
+    输入: 全部改动
+    预期产出: _backup-v2.1/ + 对照表
+    验证方式: checks.py skill 全绿；plan 对账通过
+    状态: 完成
+    交付物: skills/ai-workflow/_backup-v2/README.md、tasks/技能增强-ai-workflow-v2.2-2026-09-10/改动对照表-v2.2.md
