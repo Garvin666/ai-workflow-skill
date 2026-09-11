@@ -1,0 +1,12 @@
+https://portswigger.net/web-security
+https://tryhackme.com/
+https://academy.hackthebox.com/
+https://adworld.xctf.org.cn/
+https://cryptohack.org/
+https://attack.mitre.org/
+https://joyofcryptography.com/
+https://cheatsheetseries.owasp.org/
+https://github.com/gitleaks/gitleaks
+https://github.com/semgrep/semgrep
+https://github.com/aquasecurity/trivy
+https://owasp.org/www-project-zap/
