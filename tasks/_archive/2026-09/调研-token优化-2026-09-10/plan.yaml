@@ -1,0 +1,36 @@
+task: 调研-token优化
+date: 2026-09-10
+goal: 调研可省 token 与精简对话的主流方案（上下文压缩/记忆管理/缓存/框架级精简），产出 Markdown 报告
+acceptance:
+  - 每方向 >=2 个代表项目
+  - 含既有资料盘点表 + 开源项目对比表（功能/Star/许可证/可复用部分）
+  - 给出 Agent/工作流场景选型建议
+constraints:
+  - 只调研不写代码
+  - 中文报告，引用标明来源
+  - 倾向可本地部署/免费方案
+steps:
+  - id: 1
+    do: 并行检索 4 个方向的方案与既有横评资料
+    input: WebSearch + GitHub API
+    output: 检索记录与候选项目清单
+    verify: 候选覆盖 4 方向且来源可溯
+    status: 完成
+  - id: 2
+    do: GitHub API 实测候选项目 star/活跃度/许可证
+    input: https://api.github.com/repos/<owner>/<repo>
+    output: 数据实测记录
+    verify: 每个候选项目有实测数据
+    status: 完成
+  - id: 3
+    do: 汇总撰写调研报告
+    input: 检索与实测记录
+    output: 调研-token优化与对话精简-2026-09-10.md
+    verify: 对照验收标准逐项核对
+    status: 完成
+  - id: 4
+    do: 自检交付（Anti-drop guard 对账 + present_files）
+    input: 报告与 plan.yaml
+    output: 交付完成
+    verify: 步骤数与交付数一致
+    status: 完成
