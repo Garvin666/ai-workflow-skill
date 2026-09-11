@@ -1,0 +1,63 @@
+meta:
+  任务: ai-workflow v2.4 检索能力增强——按调研结论补 P0（GitHub 搜索）、P1a（大数据集 DuckDB 直查）、P2（跨行结构化检索决策规则），P1b 暂缓，并归档旧格式任务
+  创建时间: "2026-09-10 13:20"
+  任务层级: L2（跨文件改造）
+  确认表: tasks/技术调研-工作流检索能力-2026-09-10/改造方案-检索能力增强.md（用户确认「都做」）
+  验证信号: ① P0 实测：`--github-search` 真实搜索返回结果（含空结果告警、JSON 输出）；② P1a 实测：`data_query.py` 对 470MB Parquet 聚合成功、`find` 带行号命中；③ 两处 bug 修复后复测通过（glob 相对路径、SQL 引号转义）；④ `checks.py skill` 全绿（18/18，含新脚本 py_compile）；⑤ 归档不丢文件（12 个文件全数迁移）；⑥ `checks.py plan` 对账全绿
+steps:
+  - id: 1
+    做什么: 备份 v2.3 全量快照（SKILL/references/assets/scripts）
+    输入: 当前技能目录
+    预期产出: _backup-v2.3/
+    验证方式: 文件数与版本号核对
+    状态: 完成
+    交付物: C:/Users/26717/.workbuddy/skills/ai-workflow/_backup-v2.3/SKILL.md、C:/Users/26717/.workbuddy/skills/ai-workflow/_backup-v2.3/scripts/http_fetch.py
+  - id: 2
+    做什么: P0 给 http_fetch.py 增加 GitHub 仓库搜索（--github-search / --search-sort / --search-limit），复用 fetch()，零新依赖，内置官方限制与空结果告警
+    输入: 调研结论（/search/repositories 匿名可用）
+    预期产出: 可用的搜索能力
+    验证方式: 真实搜索调用返回 TSV；空结果与 JSON 输出均验证
+    状态: 完成
+    交付物: scripts/http_fetch.py
+  - id: 3
+    做什么: P1a 新建 data_query.py（DuckDB：files/big/find/sql），并把 duckdb 加入 setup_env.ps1 依赖
+    输入: 716 调研结论（DuckDB 零导入直查）
+    预期产出: 大数据集检索脚本
+    验证方式: 470MB Parquet 聚合 <5s；find 带行号命中
+    状态: 完成
+    交付物: scripts/data_query.py
+  - id: 4
+    做什么: P2 在 SKILL.md 阶段 3 第 5 条写入「先选对工具再搜」决策清单（Grep/Glob → --github-search → sg(ast-grep) → data_query.py），并记录 sg 不支持正则的避坑
+    输入: P2 结论（只加 ast-grep）
+    预期产出: 决策规则
+    验证方式: SKILL.md 引用完整性自检通过
+    状态: 完成
+    交付物: SKILL.md
+  - id: 5
+    做什么: 更新 references/ops.md（脚本速查含 data_query 与 sg、依赖清单加 duckdb、排障新增 5 条、变更日志 v2.4）并升级 SKILL.md 版本号至 2.4
+    输入: 本轮全部改动
+    预期产出: 文档与版本一致
+    验证方式: checks.py skill 全绿
+    状态: 完成
+    交付物: references/ops.md
+  - id: 6
+    做什么: 归档 3 个旧格式任务目录到 tasks/_archive/2026-09/（只移动不删除）
+    输入: tasks/ 下旧格式目录
+    预期产出: 干净的任务列表
+    验证方式: 文件数前后一致（12 个）；checks.py status 不再显示旧格式
+    状态: 完成
+    交付物: tasks/_archive/2026-09/
+  - id: 7
+    做什么: 产出改动对照表并做 Anti-drop 对账
+    输入: 本轮全部改动
+    预期产出: 改动对照表 + 对账结果
+    验证方式: checks.py plan 全绿
+    状态: 完成
+    交付物: tasks/技能增强-ai-workflow-v2.4-2026-09-10/改动对照表-v2.4.md
+  - id: 8
+    做什么: v2.4.1 实装 ast-grep 并修正文档（sg 已废弃 → 改用 ast-grep；发现 outline 符号检索可替代 ctags；记录复合语句必须写全的 pattern 陷阱）
+    输入: 用户确认「装」
+    预期产出: ast-grep 可用且文档一致
+    验证方式: 真实结构检索有命中（多节点捕获 10 处、跨行函数体匹配）；checks.py skill 18/18
+    状态: 完成
+    交付物: C:/Users/26717/.workbuddy/skills/ai-workflow/SKILL.md、C:/Users/26717/.workbuddy/skills/ai-workflow/references/ops.md
