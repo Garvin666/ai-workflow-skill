@@ -1,0 +1,63 @@
+meta:
+  任务: ai-workflow v2.0 → v2.1 增强（自动化自检 + 模板扩容 + Office/抓取脚本增强 + 文档一致性）
+  创建时间: "2026-09-10 12:22"
+  任务层级: L2
+  确认表: 用户指令"增强优化一下可优化的内容"（延续上一轮改造授权范围）
+  验证信号: checks.py skill 子命令全绿 + plan 子命令对账通过 + py_compile + 模板 schema 8 字段检查
+steps:
+  - id: 1
+    做什么: 编写 scripts/checks.py（子命令 skill/plan），把今日手工自检自动化
+    输入: 今日手工验证流程（引用完整性/模板字段/py_compile/Anti-drop 交付物存在性）
+    预期产出: 可复用的自检脚本
+    验证方式: checks.py skill 对当前技能全绿；checks.py plan 对本计划对账通过
+    状态: 完成
+    交付物: skills/ai-workflow/scripts/checks.py
+  - id: 2
+    做什么: setup_env.ps1 增加 pyyaml 依赖（checks.py 解析 plan.yaml 需要）
+    输入: 现有 deps 列表
+    预期产出: 依赖清单含 pyyaml
+    验证方式: 在 venv 中 import yaml 成功
+    状态: 完成
+    交付物: skills/ai-workflow/scripts/setup_env.ps1
+  - id: 3
+    做什么: 新增 4 个项目类型任务确认表模板（量化分析/选品分析/小说写作/学习资料生成），打通 L1 快速通道
+    输入: references/playbook.md 四类差异化要求
+    预期产出: 4 个符合统一 schema 的模板
+    验证方式: 每模板 8 字段齐全
+    状态: 完成
+    交付物: skills/ai-workflow/assets/templates/量化分析.yaml、skills/ai-workflow/assets/templates/选品分析.yaml、skills/ai-workflow/assets/templates/小说写作.yaml、skills/ai-workflow/assets/templates/学习资料生成.yaml
+  - id: 4
+    做什么: 修正 report-template.md 与 v2 门禁不一致（补证据等级/验证闭环证据/复盘结论三节）
+    输入: SKILL.md v2 阶段 2/3/5/6
+    预期产出: 与门禁对齐的报告模板
+    验证方式: 三节均存在且含填写示例
+    状态: 完成
+    交付物: skills/ai-workflow/assets/report-template.md
+  - id: 5
+    做什么: office_io.py 增强（CSV 读取、Excel 列宽/冻结首行/多 sheet 写入）
+    输入: 原 office_io.py
+    预期产出: 向后兼容的增强版
+    验证方式: py_compile + 写一个多 sheet xlsx 并读回校验
+    状态: 完成
+    交付物: skills/ai-workflow/scripts/office_io.py
+  - id: 6
+    做什么: http_fetch.py 增加 --grep / --max-chars（精检索与 Token 纪律落地）
+    输入: 现 http_fetch.py
+    预期产出: 支持定向提取与截断
+    验证方式: 本地 HTML 测试 grep 命中与截断生效
+    状态: 完成
+    交付物: skills/ai-workflow/scripts/http_fetch.py
+  - id: 7
+    做什么: SKILL.md 补 tasks/ 归档治理 + 长任务进度汇报节奏；脚本速查表补 checks.py；版本号升 v2.1
+    输入: 现 SKILL.md
+    预期产出: v2.1 SKILL.md
+    验证方式: 新增规则可检索到；引用完整性通过
+    状态: 完成
+    交付物: skills/ai-workflow/SKILL.md
+  - id: 8
+    做什么: 备份 v2.0 快照 + 更新改动对照表 + 自检交付
+    输入: 全部改动
+    预期产出: _backup-v2/ + 改动对照表-v2.1
+    验证方式: 备份清单完整；对照表逐条可审
+    状态: 完成
+    交付物: skills/ai-workflow/_backup-v2/、tasks/技能增强-ai-workflow-v2.1-2026-09-10/改动对照表-v2.1.md
