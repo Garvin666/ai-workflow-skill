@@ -1,0 +1,56 @@
+meta:
+  任务: ai-workflow 技能 v1 → v2.0 改造（分层提速 + 注入调研硬证据 + 补复盘闭环 + 拆分 references + 修复 4 缺陷）
+  创建时间: "2026-09-10 11:55"
+  任务层级: L2
+  确认表: 本次对话确认（四方向全选 / 含脚本全量检查 / 备份 + 改动对照表）
+  验证信号: py_compile 通过 + 脚本功能实测 + 模板 schema 8 字段一致性检查 + SKILL.md 引用完整性检查 + 改动对照表逐条可审
+steps:
+  - id: 1
+    做什么: 只读盘点现有 14 个文件，定位缺陷并出任务确认表
+    输入: ~/.workbuddy/skills/ai-workflow/ 全量文件
+    预期产出: 缺陷清单 + 确认表
+    验证方式: 每个缺陷有实测证据（du 显示 0KB / 字段对比 / 403 实测）
+    状态: 完成
+    交付物: 本次对话记录（4 项缺陷 + 确认表）
+  - id: 2
+    做什么: 备份原版到 _backup-v1/
+    输入: SKILL.md + scripts/ + assets/ + references/
+    预期产出: 可完整回滚的备份
+    验证方式: ls 确认 4 项备份文件存在
+    状态: 完成
+    交付物: skills/ai-workflow/_backup-v1/（SKILL.v1.md + scripts + assets + references）
+  - id: 3
+    做什么: 重写 SKILL.md（分层 L0/L1/L2 + 验证闭环门禁 + 阶段 6 + 索引 + 变更日志）
+    输入: 原版 SKILL.md + 调研报告结论
+    预期产出: SKILL.md v2
+    验证方式: 六阶段主干与两条红线保留；引用文件均存在
+    状态: 完成
+    交付物: skills/ai-workflow/SKILL.md
+  - id: 4
+    做什么: 补齐/新建 references 手册（playbook 空文件补全 + quality-gates + orchestration）
+    输入: findings-3/4 调研笔记
+    预期产出: 3 份手册
+    验证方式: 文件非空且内容含实证依据标注
+    状态: 完成
+    交付物: references/playbook.md、references/quality-gates.md、references/orchestration.md
+  - id: 5
+    做什么: 统一 plan-template.yaml 与 3 个模板的 schema
+    输入: 4 个模板文件
+    预期产出: 统一 8 字段 schema
+    验证方式: grep 逐字段检查 8/8 通过
+    状态: 完成
+    交付物: assets/plan-template.yaml、assets/templates/{README.md,调研报告.yaml,技术调研.yaml,_示例-数据分析.yaml}
+  - id: 6
+    做什么: 升级 http_fetch.py 与 ai_call.py（限流重试 / GitHub 结构化取值 / HTML→文本 / model 覆盖 / 用量回显）
+    输入: 原版脚本 + 今日 403 踩坑记录
+    预期产出: 增强版脚本（向后兼容）
+    验证方式: py_compile + 四项功能实测
+    状态: 完成
+    交付物: scripts/http_fetch.py、scripts/ai_call.py
+  - id: 7
+    做什么: 自检交付：Anti-drop 对账 + 改动对照表 + 遗留事项
+    输入: 全部改动
+    预期产出: 改动对照表 + 交付说明
+    验证方式: 对照验收标准逐项核对
+    状态: 完成
+    交付物: tasks/技能改造-ai-workflow-2026-09-10/改动对照表.md
