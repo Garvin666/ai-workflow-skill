@@ -44,6 +44,7 @@ import re
 import shutil
 import ssl
 import sys
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -174,6 +175,56 @@ def cache_put(url: str, data: bytes) -> None:
         _cache_file(url).write_bytes(data)
     except OSError as e:
         print(f"[WARN] 缓存写入失败（不影响结果）：{e}", file=sys.stderr)
+
+
+# ---- 跨任务 GitHub 限流保护（消除「验证税」：多任务串行/并发不互相打爆匿名限流）----
+# 仅做"节流"（spaced calls），不做"计数拒绝"；任何异常都静默跳过，绝不阻断抓取。
+# 状态落基础设施例外目录 ~/.workbuddy/cache/ai-workflow/ratelimit.json（跨任务/跨进程共享）。
+_RL_LOCK = threading.Lock()
+_RL_STATE = CACHE_DIR.parent / "ratelimit.json"  # ~/.workbuddy/cache/ai-workflow/ratelimit.json
+
+
+def _rl_load() -> dict:
+    try:
+        if _RL_STATE.exists():
+            return json.loads(_RL_STATE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        pass
+    return {}
+
+
+def _rl_save(state: dict) -> None:
+    try:
+        _RL_STATE.parent.mkdir(parents=True, exist_ok=True)
+        tmp = _RL_STATE.with_suffix(".tmp")
+        tmp.write_text(json.dumps(state, ensure_ascii=False), encoding="utf-8")
+        tmp.replace(_RL_STATE)
+    except (OSError, json.JSONDecodeError):
+        pass
+
+
+def _rl_throttle(bucket: str, limit: int, window: int) -> None:
+    """按桶节流：窗口内已记录 >= limit 次调用则睡到最早一次过期（最长 RATE_LIMIT_MAX_WAIT）。
+
+    bucket: 端点桶名（gh_core / gh_search）；limit/window: 窗口内最大次数与窗口秒数。
+    失败静默跳过（不抛、不阻塞抓取）；先写临时文件再 rename，避免半截文件。
+    """
+    try:
+        with _RL_LOCK:
+            now = time.time()
+            calls = [t for t in _rl_load().get(bucket, []) if now - t < window]
+            if len(calls) >= limit:
+                sleep_for = window - (now - calls[0]) + 0.2
+                if sleep_for > 0:
+                    time.sleep(min(sleep_for, RATE_LIMIT_MAX_WAIT))
+                now = time.time()
+                calls = [t for t in _rl_load().get(bucket, []) if now - t < window]
+            calls.append(now)
+            state = _rl_load()
+            state[bucket] = calls[-50:]
+            _rl_save(state)
+    except Exception:
+        pass
 
 
 def _looks_like_token(s: str) -> bool:
@@ -322,6 +373,7 @@ def github_repo_metrics(slug: str, token: str | None = None, use_cache: bool = T
     if slug.count("/") != 1:
         print(f"[ERROR] 仓库格式应为 owner/repo，收到: {slug}", file=sys.stderr)
         raise SystemExit(2)
+    _rl_throttle("gh_core", 60, 3600)
     raw = fetch(f"https://api.github.com/repos/{slug}", token=token, use_cache=use_cache, ttl=ttl)
     data = json.loads(raw.decode("utf-8"))
     out = {k: data.get(k) for k in GITHUB_FIELDS}
@@ -386,6 +438,7 @@ def github_search(query: str, sort: str = "stars", limit: int = 30,
         print(f"[DRY-RUN] 认证：{'已提供 token' if token else '缺失（匿名限流 10 次/分钟）'}")
         print(f"[DRY-RUN] 注意：该端点官方上限 {SEARCH_RESULT_CAP} 条结果 / 扫描 {SEARCH_SCOPE_CAP} 个仓库")
         return []
+    _rl_throttle("gh_search", 10, 60)
     raw = fetch(url, token=token, use_cache=use_cache, ttl=ttl)
     try:
         data = json.loads(raw.decode("utf-8"))
@@ -466,6 +519,7 @@ def github_code_search(query: str, limit: int = 30, token: str | None = None,
         print("[HINT ] 只想按仓库名/描述找项目，用 --github-search（匿名可用）。", file=sys.stderr)
         raise SystemExit(2)
 
+    _rl_throttle("gh_search", 10, 60)
     raw = fetch(url, token=token, use_cache=use_cache, ttl=ttl,
                 headers_extra={"Accept": CODE_SEARCH_ACCEPT})
     try:

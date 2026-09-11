@@ -1,0 +1,10 @@
+=== ai-workflow 计划对账 ===
+[ OK ] plan.yaml 存在 — C:\Users\26717\.workbuddy\skills\ai-workflow\tasks\技能增强-ai-workflow-v2.6.0-2026-09-11\plan.yaml
+[ OK ] plan.yaml 可解析
+[ OK ] meta.任务
+[ OK ] meta.验证信号
+[ OK ] meta.工作区根
+[ OK ] steps 非空 — 5 步
+[ OK ] Anti-drop 对账 — 已完成步骤 5 个，交付物确认 5 个
+[ OK ] 熔断状态 — 正常（未声明）
+=== 结果：8/8 通过，FAIL=0 ===

@@ -1,0 +1,21 @@
+=== ai-workflow 技能自检 ===
+[ OK ] SKILL.md 存在
+[ OK ] frontmatter 含 name
+[ OK ] frontmatter 含 description
+[ OK ] frontmatter 含 agent_created
+[ OK ] 文档引用完整性 — 检查 29 条引用
+[ OK ] 模板 schema：_示例-数据分析.yaml — 9/9
+[ OK ] 模板 schema：UI组件库搭建.yaml — 9/9
+[ OK ] 模板 schema：学习资料生成.yaml — 9/9
+[ OK ] 模板 schema：小说写作.yaml — 9/9
+[ OK ] 模板 schema：技术调研.yaml — 9/9
+[ OK ] 模板 schema：调研报告.yaml — 9/9
+[ OK ] 模板 schema：选品分析.yaml — 9/9
+[ OK ] 模板 schema：量化分析.yaml — 9/9
+[ OK ] plan-template 必填键 — 齐全
+[ OK ] py_compile：ai_call.py
+[ OK ] py_compile：checks.py
+[ OK ] py_compile：data_query.py
+[ OK ] py_compile：http_fetch.py
+[ OK ] py_compile：office_io.py
+=== 结果：19/19 通过，FAIL=0 ===
