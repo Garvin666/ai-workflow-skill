@@ -1,0 +1,27 @@
+﻿# 链接存活检查：共 12 条，可达 10，受限 1（401/403/429），异常 1；并发 8，耗时 1.9s
+status	note	ms	bytes	url	final_url
+200	可达	1343	80763	https://portswigger.net/web-security	https://portswigger.net/web-security
+200	可达	609	608122	https://tryhackme.com/	https://tryhackme.com/
+403	可达但被拒绝(反爬/需授权)	955	-	https://academy.hackthebox.com/	https://academy.hackthebox.com/
+200	可达	352	2273	https://adworld.xctf.org.cn/	https://adworld.xctf.org.cn/
+200	可达	1541	25662	https://cryptohack.org/	https://cryptohack.org/
+200	可达	852	1510539	https://attack.mitre.org/	https://attack.mitre.org/
+200	可达	1493	-	https://joyofcryptography.com/	https://joyofcryptography.com/
+200	可达	946	-	https://cheatsheetseries.owasp.org/	https://cheatsheetseries.owasp.org/
+200	可达	1063	-	https://github.com/gitleaks/gitleaks	https://github.com/gitleaks/gitleaks
+200	可达	997	-	https://github.com/semgrep/semgrep	https://github.com/semgrep/semgrep
+200	可达	1014	-	https://github.com/aquasecurity/trivy	https://github.com/aquasecurity/trivy
+404	不存在	839	-	https://owasp.org/www-project-zap/	https://owasp.org/www-project-zap/
+
+# 第二批（修正与补充链接）
+# 链接存活检查：共 8 条，可达 8，受限 0（401/403/429），异常 0；并发 8，耗时 2.4s
+status	note	ms	bytes	url	final_url
+200	可达	1352	-	https://www.zaproxy.org/	https://www.zaproxy.org/
+200	可达	1229	-	https://owasp.org/www-project-top-ten/	https://owasp.org/www-project-top-ten/
+200	可达	1174	52045	https://portswigger.net/web-security/api-testing	https://portswigger.net/web-security/api-testing
+200	可达	2393	287962	https://www.isc2.org/certifications/cc	https://www.isc2.org/certifications/cc
+200	可达	1606	-	https://cyberdefenders.org/	https://cyberdefenders.org/
+200	可达	1706	-	https://letsdefend.io/	https://letsdefend.io/
+200	可达	1639	-	https://pwn.college/	https://pwn.college/
+200	可达	1399	-	https://overthewire.org/wargames/bandit/	https://overthewire.org/wargames/bandit/
+
