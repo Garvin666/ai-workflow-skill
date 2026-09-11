@@ -1,0 +1,22 @@
+# 执行计划：调研-模型路由与工作流编排-2026-09-10
+steps:
+  - id: 1
+    name: 开源查重（GitHub API + WebSearch 中英文）
+    status: 完成
+    output: 路由层 6+、编排层 10+ 项目数据；GitHub star 实测（litellm 58.4k/dify 155k/n8n 204k/langgraph 41k/crewai 58k/routellm 停更于 2024-08）
+  - id: 2
+    name: 补充检索：产业格局（OpenRouter 融资/厂商动作/中文生态）
+    status: 完成
+    output: OpenRouter B 轮 $113M@$1.3B、25T tokens/周、Stripe 收购传闻 $7-10B；Anthropic 编排份额 40%；语义路由停滞论断
+  - id: 3
+    name: 撰写 Markdown 报告
+    status: 完成
+    output: E:\ChatGPT\工作流\调研-模型路由与工作流编排-2026-09-10.md（总字符 7476，17 个来源链接，8 张对比表）
+  - id: 4
+    name: 自检（验收标准逐项核对 + Anti-drop 对账）
+    status: 完成
+    output: 来源可溯✓对比矩阵✓结论明确✓字数达标✓编码 utf-8✓
+  - id: 5
+    name: present_files 交付
+    status: 完成
+    output: 交付说明
