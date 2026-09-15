@@ -7,6 +7,7 @@
     mark <plan.yaml> <id> <状态>  安全更新某步骤状态（替代手工编辑，保留文件其余内容）
     decide <plan.yaml> --point …  追加一条能力决策记录到 meta.决策记录（自主决策层留痕，v3.0.0）
     revise <plan.yaml> --trigger … 追加一条计划修订到 meta.计划修订（重规划留痕，v3.0.0）
+    selftool <plan.yaml> --name …  追加一条自研工具/技能登记到 meta.自研工具（公开留痕，v3.1.0）
 
 用法:
     python checks.py skill
@@ -15,6 +16,9 @@
     python checks.py mark "E:/ChatGPT/工作流/tasks/xxx/plan.yaml" 3 完成
     python checks.py decide "…/plan.yaml" --point "缺什么" --basis "一句话判据" --capability 事实 --choice "gh api …"
     python checks.py revise "…/plan.yaml" --trigger R1 --change "新增步骤 3b"
+    python checks.py selftool "…/plan.yaml" --name "publish_tools.py" --purpose "推送自研工具到 public 仓" \
+        --scenario "产生自研脚本/技能时用；复用第三方或改既有文件时不用" \
+        --repo "https://github.com/Garvin666/ai-workflow-tools/blob/main/scripts/publish_tools.py"
 
 skill 子命令检查项:
     1. SKILL.md 存在且 frontmatter 含 name / description / agent_created
@@ -34,6 +38,8 @@ plan 子命令检查项:
        并直接判 FAIL：**已熔断的任务不得作为可交付物**（见 SKILL.md 熔断机制）
     6. 交付物路径解析口径（v2.5.2）：相对路径**只**以 --base（工作区根）为基准；
        工作区根之外的文件必须写绝对路径（旧的跨目录兜底通道已移除）
+    7. 自研工具留痕（v3.1.0）：meta「自研工具」可选，一旦填写每项必含
+       名称/用途/适用场景/仓库链接（空值或占位符链接判 FAIL；『待推送』判 SKIP 需人工确认）
 
 退出码: 0 = 全部通过；1 = 有 FAIL（不可交付）；2 = 用法错误
 """
@@ -76,6 +82,14 @@ VALID_TRIGGER = ("R1", "R2", "R3", "R4", "R5", "R6")
 DECISION_KEYS = ("决策点", "能力类", "依据", "选择")
 REVISION_KEYS = ("触发", "变化", "时间")
 MAX_REVISIONS = 3  # 超上限说明初始拆解有问题，应停下与用户重新对齐目标（非熔断）
+# 自研工具与技能公开留痕（v3.1.0）：四项必填。⚠️ 与 DECISION_KEYS 同理，此元组是
+# FAIL 文案的唯一事实源，防止再出现"文案写 N 个字段、代码只强制 M 个"的脱节。
+SELFTOOL_KEYS = ("名称", "用途", "适用场景", "仓库链接")
+# 中间态：登记时尚未推送。允许它是因为"先登记后推送"存在时序，但**交付前必须回填真实链接**
+# —— 故门禁对它判 SKIP（需人工确认）而非 OK，避免"填了待推送就当完成"。
+SELFTOOL_PENDING = "待推送"
+# 占位符链接（<...> / TODO / xxx / 待定 / N/A）不是真实地址，判 FAIL
+SELFTOOL_PLACEHOLDER = re.compile(r"[<>]|TODO|todo|XXX|xxx|\{|\}|待定|N/A")
 FUSE_REPORT = "熔断报告.md"
 FUSE_SECTIONS = ("触发条件", "已试路径", "卡点根因", "待决策选项", "复位条件")
 # 业务性相对路径：不是技能内文件，跳过引用检查
@@ -538,6 +552,45 @@ def _check_autonomy(meta: dict) -> None:
         (ok if not bad else fail)("计划修订", f"{len(rev)} 条" if not bad else "；".join(bad))
 
 
+def _check_selftools(meta: dict) -> None:
+    """自研工具与技能留痕校验（v3.1.0）：字段**可选**，一旦填写必须结构完整。
+
+    与 `_check_autonomy` 同口径 —— 多数任务本就没有自研产出，"没写"是正常状态；
+    此处只校验"写了的是否合法"：四项必填非空 + 仓库链接须为真实 http(s) 地址
+    （占位符判 FAIL；『待推送』判 SKIP 并明确提示，因为它是中间态而非完成态）。
+    """
+    items = meta.get("自研工具")
+    if items is None or (isinstance(items, list) and not items):
+        ok("自研工具登记", "未使用（本任务无自研产出，属正常）")
+        return
+    if not isinstance(items, list):
+        fail("自研工具格式", f"应为列表（每项必含 {'/'.join(SELFTOOL_KEYS)}）")
+        return
+    bad, pending = [], []
+    for i, t in enumerate(items, 1):
+        if not isinstance(t, dict):
+            bad.append(f"第{i}项非映射")
+            continue
+        miss = [k for k in SELFTOOL_KEYS if not str(t.get(k, "") or "").strip()]
+        if miss:
+            bad.append(f"第{i}项缺 {'、'.join(miss)}")
+            continue
+        url = str(t.get("仓库链接", "") or "").strip()
+        if url == SELFTOOL_PENDING:
+            pending.append(f"第{i}项『{str(t.get('名称', '')).strip() or '-'}』")
+            continue
+        if not re.match(r"^https?://", url) or SELFTOOL_PLACEHOLDER.search(url):
+            bad.append(f"第{i}项仓库链接『{url[:40]}』非法：须为 http(s) 真实地址、禁止占位符"
+                       f"（未推送前可填『{SELFTOOL_PENDING}』，但交付前必须回填）")
+    if bad:
+        fail("自研工具登记", "；".join(bad))
+    elif pending:
+        skip("自研工具登记", f"{len(items)} 项，其中 {len(pending)} 项链接仍为『{SELFTOOL_PENDING}』"
+                            f"（{'、'.join(pending)}）—— 交付前须回填真实仓库链接")
+    else:
+        ok("自研工具登记", f"{len(items)} 项")
+
+
 def _yaml_scalar(s: str) -> str:
     """把任意字符串写成安全的 YAML 双引号标量（JSON 字符串即合法 YAML flow 标量）。"""
     return json.dumps(s, ensure_ascii=False)
@@ -660,6 +713,33 @@ def cmd_revise(plan_path: Path, trigger: str, change: str,
     return 0
 
 
+def cmd_selftool(plan_path: Path, name: str, purpose: str, scenario: str, repo: str) -> int:
+    """追加一条自研工具/技能登记到 meta.自研工具（v3.1.0 公开留痕）。
+
+    四项参数均必填 —— 与 `decide` 同口径：登记的价值在于"事后能查到它是什么、
+    从哪来"，缺任何一项都会让留痕退化成走过场。
+    """
+    if not all((x or "").strip() for x in (name, purpose, scenario, repo)):
+        fail("参数", "必须给出 --name（名称）、--purpose（用途）、--scenario（适用场景）与 --repo（仓库链接）")
+        return 1
+    if plan_path.is_dir():
+        plan_path = plan_path / "plan.yaml"
+    if not plan_path.exists():
+        fail("plan.yaml 存在", str(plan_path))
+        return 1
+    item = [
+        f"    - 名称: {_yaml_scalar(name)}\n",
+        f"      用途: {_yaml_scalar(purpose)}\n",
+        f"      适用场景: {_yaml_scalar(scenario)}\n",
+        f"      仓库链接: {_yaml_scalar(repo)}\n",
+    ]
+    if not _append_meta_list(plan_path, "自研工具", item):
+        fail("meta.自研工具 写入", "未找到 `meta:` 块，请手工添加该键")
+        return 1
+    ok("自研工具已登记", f"{name}；仓库={repo[:48]}")
+    return 0
+
+
 def check_plan(plan_path: Path, base: Path) -> int:
     yaml = _require_yaml()
 
@@ -712,6 +792,7 @@ def check_plan(plan_path: Path, base: Path) -> int:
     ok("Anti-drop 对账", f"已完成步骤 {done_total} 个，交付物确认 {deliverable_ok} 个")
 
     _check_autonomy(meta)
+    _check_selftools(meta)
     _check_fuse(meta, steps, plan_path)
     return 0
 
@@ -754,6 +835,13 @@ def main() -> None:
     p.add_argument("--change", required=True, help="变化摘要（改了什么）")
     p.add_argument("--unchanged", help="未变部分（已完成步骤是否受影响）")
 
+    p = sub.add_parser("selftool", help="追加一条自研工具/技能登记到 meta.自研工具（公开留痕，v3.1.0）")
+    p.add_argument("plan", help="plan.yaml 路径或任务目录")
+    p.add_argument("--name", required=True, help="名称：工具/技能叫什么")
+    p.add_argument("--purpose", required=True, help="用途：一句话，它做什么")
+    p.add_argument("--scenario", required=True, help="适用场景：什么情况该用；什么情况不该用")
+    p.add_argument("--repo", required=True, help="仓库链接：http(s) 真实地址；尚未推送时填『待推送』（交付前须回填）")
+
     args = ap.parse_args()
     if args.cmd == "skill":
         code = check_skill(Path(args.skill_dir))
@@ -770,9 +858,12 @@ def main() -> None:
     elif args.cmd == "decide":
         code = cmd_decide(Path(args.plan), args.point, args.basis, args.capability, args.choice)
         name = "决策留痕"
-    else:  # revise
+    elif args.cmd == "revise":
         code = cmd_revise(Path(args.plan), args.trigger, args.change, args.unchanged)
         name = "计划修订"
+    else:  # selftool
+        code = cmd_selftool(Path(args.plan), args.name, args.purpose, args.scenario, args.repo)
+        name = "自研工具登记"
 
     if args.cmd in ("skill", "plan"):
         print(f"=== ai-workflow {name} ===")
