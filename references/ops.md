@@ -21,7 +21,7 @@ PY="C:/Users/26717/.workbuddy/binaries/python/envs/ai-workflow/Scripts/python.ex
 
 | 脚本 | 用途 | 示例 |
 | --- | --- | --- |
-| **checks.py** | `skill` 技能自检（frontmatter/引用完整性/模板 schema/py_compile）；`plan` 计划校验 + Anti-drop 对账 + **熔断门禁**（`熔断状态: 已熔断` 或步骤状态 `熔断` → 直接 FAIL）；`status` 工作区任务总览（交付物完成度 + 归档建议 + **已熔断任务 ⚡ 标记与 WARN 汇总**）；`mark` 更新步骤状态（含 `熔断`）与 **meta 熔断状态**（`--fuse 正常\|已熔断`，复位用 `--fuse 正常`，不必手改 YAML） | `checks.py plan tasks/x/plan.yaml --base "E:/ChatGPT/工作流"` |
+| **checks.py** | `skill` 技能自检（frontmatter/引用完整性/模板 schema/py_compile）；`plan` 计划校验 + Anti-drop 对账 + **熔断门禁**（`熔断状态: 已熔断` 或步骤状态 `熔断` → 直接 FAIL）；`status` 工作区任务总览（交付物完成度 + 归档建议 + **已熔断任务 ⚡ 标记与 WARN 汇总**）；`mark` 更新步骤状态（含 `熔断`）与 **meta 熔断状态**（`--fuse 正常\|已熔断`，复位用 `--fuse 正常`，不必手改 YAML）；**`decide` 追加一条能力决策记录到 meta.决策记录**（`--point --basis --capability --choice`，四参数均必填）；**`revise` 追加一条计划修订到 meta.计划修订**（`--trigger R1–R6 --change [--unchanged]`，上限 3 条，超限即 FAIL） | `checks.py plan tasks/x/plan.yaml --base "E:/ChatGPT/工作流"`<br>`checks.py decide tasks/x/plan.yaml --point "缺外部事实" --basis "本机推不出" --capability 事实 --choice "gh api repos/…"` |
 | setup_env.ps1 | 初始化 venv 与依赖（requests / openpyxl / python-docx / pypdf / pyyaml / **duckdb** / **ast-grep-cli**） | `powershell -File scripts\setup_env.ps1` |
 | ai_call.py | 调 AI 模型：`--model` 覆盖、`--system-file`、`--max-tokens`、`--temperature`、`--stats` 用量回显、`--batch-file` + `--concurrency` 批量并发（结果落 JSONL） | `ai_call.py --batch-file prompts.txt --concurrency 3` |
 | http_fetch.py | 联网抓取：`--github-repo a/b,c/d` 指标实测（并发 + 限流退避 + 缓存）、**`--github-search "<query>"` 按关键词搜仓库**（限定符 `language:` `stars:` `topic:` `pushed:`；`--search-sort stars,forks,updated`、`--search-limit`）、**`--github-code-search "<代码> repo:owner/name"` 按代码内容搜文件（⭐强制 token，返回仓库/路径/命中片段）**、**`--dry-run` 只打印将请求的 URL 与附加头（不发请求，无 token 也能验证参数构造）**、`--text` HTML→文本、`--grep`/`--max-chars` 定向提取、`--no-cache`/`--ttl` 控缓存、**`--check-links` 批量探活（只取状态码不下载正文，并发 8，交付外链前必跑；403 会换头重试并按 CDN/WAF 响应头分类）** | `http_fetch.py --github-search "code search language:rust stars:>500" --search-limit 20`<br>`http_fetch.py --github-code-search "read_parquet repo:duckdb/duckdb" --dry-run` |
@@ -158,6 +158,17 @@ grep -vE "api\.github\.com" all_urls.txt > check_urls.txt
 **硬规则**：子代理产出的链接**必须全量探活后才可进交付物**。实战数据：140 条中查出 3 条 404，其中 1 条是**编造的日期型假链接**，且它正被用于支撑一条结论。
 
 ## 七、变更日志
+
+- **v3.0.0（2026-09-15）新增「自主决策层」：能力路由 + 自适应计划 + 决策留痕**（由 `tasks/技能增强-ai-workflow-v3.0-2026-09-15/` 驱动；用户明示"升级为具备自主决策能力的智能工作流"，经方案评审选定「文档 + 机器门禁」方案）：
+  - **新增 `references/capability-routing.md`（能力路由）**：把"外部辅助"拆为**四类能力**（知识＝skill／算力＝子代理／事实＝联网／手脚＝脚本与 MCP），每类给出**该用与不该用双向判据**（只给"该用"会造成滥用，滥用比不用更贵）；决策三步（识别缺口 → 估收益（**须可验证**）→ 估开销）；**反合理化红线表 8 条**——借 superpowers 的形、**改其义**：拦的是"没想清楚就动手"，不是"没调用"；声明制 `[能力] <类> → <手段> ← 依据：<判据>`（同时是决策留痕的原始素材）；优先级两条（**方法先于执行**、**只读先于写入且本地先于联网**）。
+  - **新增 `references/adaptive-planning.md`（自适应计划）**：拆解四规则（右尺寸三问／可验证前置（含正反例）／依赖显式化／粒度可调——探索性任务粗拆、执行性任务细拆，**不要在计划期假装知道执行期才知道的事**）；**R1–R6 重规划触发**（R1 新事实推翻假设／R2 验证信号不可达／R3 暴露新依赖／R4 成本超阈／R5 用户改需求／R6 连续性断裂）与**「不触发」清单**（防过度重规划：只改路径且新路径不比旧路径更可靠时不重规划）；重规划四步（**停→记→改→报**，先留痕再改动）；**上限 3 次**（超限说明初始拆解有问题或任务不适合线性计划 → 停下与用户重新对齐目标，**这是重新澄清、非熔断**）；执行期六动作循环。
+  - **三层留痕（全部落在 `plan.yaml`，均为可选字段）**：`steps[].状态`（`checks.py mark`）／`meta.决策记录`（`checks.py decide`）／`meta.计划修订`（`checks.py revise`）。设计口径：**留痕只记录真实发生过的决策**——纯本地读写任务无外部辅助，"没写"是正常状态，故**不强制填空**（强制会退化成走过场）。
+  - **`checks.py` 新增 `decide` / `revise` 子命令**：均为**就地行插入**（与 `_set_meta_fuse` / `cmd_mark` 同风格），保留 plan.yaml 的注释与键序——整份 `yaml.dump` 会吃掉注释，那才是真正的信息损失。`decide` 四参数（`--point` / `--basis` / `--capability` / `--choice`）**均必填**；`revise` 在第 4 次追加时 FAIL（上限 3）。
+  - **`checks.py` 新增 `_check_autonomy()`**（`plan` 子命令调用）：校验决策记录／计划修订的**结构完整性**（必填键、能力类枚举、触发 R1–R6、修订上限）。**字段可选、但一旦填写必须合法**——既不误伤历史 plan，也不给新 plan 添空表单负担。FAIL 文案**由 `DECISION_KEYS` / `REVISION_KEYS` 常量生成**，防止再出现"文案写 5 个字段、代码只强制 3 个"的脱节。
+  - **与强制式机制的分界（重要，防口径漂移）**：外部参照 `obra/superpowers`（286,871 star，MIT，2026-09-14 更新）的 `using-superpowers` 采用**无条件强制**（"1% 可能适用就必须调用" + 12 条反合理化红线）。本技能**只取其机制（按需加载／反合理化表／声明制／优先级／子代理 STOP），不取其强制**——要不要走本流程、要不要引入某能力，一律按用户「最高准则」（**能否让结果更快更好**）自判。**照搬强制口径会推翻该准则**，故明确排除。
+  - **未改动**：三条红线（逐字节相同）、熔断机制（逐字节相同）、`VALID_STATUS`/`VALID_FUSE`、既有阶段骨架。
+  - **验证**：`checks.py skill` **19/19 FAIL=0**（文档引用数 29 → 35）；**零回归**——22 个既有 plan 的 FAIL 数**逐项完全一致**（总 FAIL 9 → 8，唯一变化是本任务 plan 1 → 0，因基线采样时 step1 交付物尚未生成）；**门禁真伪用自造 fixture 证明**（缺必填键／能力类非法／触发 R9／修订超上限 → 全部 FAIL；历史 plan 判「未使用」→ 不误伤），证明校验**真的在跑**而非空壳。详见该任务目录 `回归证据.txt`。
+  - **独立审核（未参与改造的子代理）发现 5 项描述↔实现脱节，全部返修**：① 文档写 `checks.py mark --revise`——该参数**不存在**（实为独立子命令 `checks.py revise`）；② `decide` 文档用法未列 `--choice`，而门禁强制其非空 → **照文档执行会被自家门禁判 FAIL**；③ 模板新增 `steps[].决策依据` 在代码中**零引用**（已**删除该字段**，避免"看起来有机制、实则无校验"的假象）；④ 门禁 FAIL 文案称 5 个字段、实际只强制 3 个（**改为由常量生成**，并补齐"能力类"必填）；⑤ SKILL.md 称"完整参数／变更日志见 ops.md"而本文件未收录（**本条即为此而补**）。返修后由原审核者逐条回归。
 
 - **v2.5.3（2026-09-11）「独立审核」由强制门禁降级为抽查制**（用户决定；由 `tasks/技能增强-ai-workflow-v2.5.3-2026-09-11/` 驱动）：
   - **口径变更**：原「每个关键产出都必须派未参与执行的子代理送审」→ **默认自查 + 机器门禁**（`checks.py plan` 交付物对账与熔断门禁、`checks.py skill`、`--check-links` 链接探活、`office_io` 写回读回、py_compile／测试断言），仅三类情形**必送审**：① **高危产出**（安全/资金/权限/凭据/不可逆动作）② **用户点名**复核 ③ 同一反模式**第 2 次复发**或返修触顶（转对抗式互审）。

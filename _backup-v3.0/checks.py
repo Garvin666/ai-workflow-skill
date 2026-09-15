@@ -5,16 +5,12 @@
     plan <plan.yaml|任务目录>     任务执行计划校验 + Anti-drop 交付物对账（阶段 3/5 用）
     status [--workspace DIR]     工作区任务总览：层级/步骤完成/交付物完成度/陈旧任务归档建议（阶段 0/6 用）
     mark <plan.yaml> <id> <状态>  安全更新某步骤状态（替代手工编辑，保留文件其余内容）
-    decide <plan.yaml> --point …  追加一条能力决策记录到 meta.决策记录（自主决策层留痕，v3.0.0）
-    revise <plan.yaml> --trigger … 追加一条计划修订到 meta.计划修订（重规划留痕，v3.0.0）
 
 用法:
     python checks.py skill
     python checks.py plan "E:/ChatGPT/工作流/tasks/xxx/plan.yaml" --base "E:/ChatGPT/工作流"
     python checks.py status --workspace "E:/ChatGPT/工作流"
     python checks.py mark "E:/ChatGPT/工作流/tasks/xxx/plan.yaml" 3 完成
-    python checks.py decide "…/plan.yaml" --point "缺什么" --basis "一句话判据" --capability 事实 --choice "gh api …"
-    python checks.py revise "…/plan.yaml" --trigger R1 --change "新增步骤 3b"
 
 skill 子命令检查项:
     1. SKILL.md 存在且 frontmatter 含 name / description / agent_created
@@ -38,13 +34,11 @@ plan 子命令检查项:
 退出码: 0 = 全部通过；1 = 有 FAIL（不可交付）；2 = 用法错误
 """
 import argparse
-import json
 import py_compile
 import re
 import shutil
 import sys
 import time
-from datetime import datetime
 from pathlib import Path
 
 sys.stdout.reconfigure(encoding="utf-8")
@@ -67,15 +61,6 @@ PLAN_STEP_REQUIRED = ("做什么", "验证方式", "状态", "交付物")
 VALID_STATUS = ("待办", "进行中", "完成", "受阻", "熔断")
 # 熔断机制（v2.5.2）：两个存储态的唯一叫法 —— 正常（Closed）/ 已熔断（Open）；复位是一次迁移动作（Half-Open），不是第三个存储态，改回「正常」须用户明示并留痕
 VALID_FUSE = ("正常", "已熔断")
-# 自主决策层（v3.0.0）：能力路由 + 自适应计划的留痕口径。字段全为**可选**——
-# 纯本地任务本就无外部辅助，强制填空会退化成走过场（见 references/adaptive-planning.md 第三节）。
-VALID_CAPABILITY = ("知识", "算力", "事实", "手脚")
-VALID_TRIGGER = ("R1", "R2", "R3", "R4", "R5", "R6")
-# 决策记录的必填项。⚠️ 此元组是**唯一事实源**：FAIL 文案由它生成，
-# 避免"文案写 5 个字段、代码只强制 3 个"这类描述↔实现脱节（v3.0.0 返修项 P4）。
-DECISION_KEYS = ("决策点", "能力类", "依据", "选择")
-REVISION_KEYS = ("触发", "变化", "时间")
-MAX_REVISIONS = 3  # 超上限说明初始拆解有问题，应停下与用户重新对齐目标（非熔断）
 FUSE_REPORT = "熔断报告.md"
 FUSE_SECTIONS = ("触发条件", "已试路径", "卡点根因", "待决策选项", "复位条件")
 # 业务性相对路径：不是技能内文件，跳过引用检查
@@ -490,176 +475,6 @@ def _check_fuse(meta: dict, steps: list, plan_path: Path) -> None:
     )
 
 
-def _check_autonomy(meta: dict) -> None:
-    """自主决策层留痕校验（v3.0.0）：字段**可选**，但一旦填写必须结构完整。
-
-    设计取舍（与熔断机制同源）：不强制每个任务都产生决策记录 —— 纯本地读写的任务
-    本就无外部辅助，"没写"是正常状态；此处只校验"写了的是否合法"。这样既不误伤
-    历史 plan（无这些字段 → 判为未使用），也不给新 plan 添空表单负担。
-    """
-    dec = meta.get("决策记录")
-    if dec is None or (isinstance(dec, list) and not dec):
-        ok("决策记录", "未使用（无外部辅助引入，属正常）")
-    elif not isinstance(dec, list):
-        fail("决策记录格式", f"应为列表（每项必含 {'/'.join(DECISION_KEYS)}；时间由工具自动填）")
-    else:
-        bad = []
-        for i, d in enumerate(dec, 1):
-            if not isinstance(d, dict):
-                bad.append(f"第{i}项非映射")
-                continue
-            miss = [k for k in DECISION_KEYS if not str(d.get(k, "") or "").strip()]
-            if miss:
-                bad.append(f"第{i}项缺 {'、'.join(miss)}")
-            cap = str(d.get("能力类", "") or "").strip()
-            if cap and cap not in VALID_CAPABILITY:
-                bad.append(f"第{i}项能力类『{cap}』不在 {VALID_CAPABILITY}")
-        (ok if not bad else fail)("决策记录", f"{len(dec)} 条" if not bad else "；".join(bad))
-
-    rev = meta.get("计划修订")
-    if rev is None or (isinstance(rev, list) and not rev):
-        ok("计划修订", "未使用（未发生重规划）")
-    elif not isinstance(rev, list):
-        fail("计划修订格式", f"应为列表（每项必含 {'/'.join(REVISION_KEYS)}）")
-    else:
-        bad = []
-        for i, r in enumerate(rev, 1):
-            if not isinstance(r, dict):
-                bad.append(f"第{i}项非映射")
-                continue
-            miss = [k for k in REVISION_KEYS if not str(r.get(k, "") or "").strip()]
-            if miss:
-                bad.append(f"第{i}项缺 {'、'.join(miss)}")
-            t = str(r.get("触发", "") or "").strip()
-            if t and t not in VALID_TRIGGER:
-                bad.append(f"第{i}项触发『{t}』不在 {VALID_TRIGGER}")
-        if len(rev) > MAX_REVISIONS:
-            bad.append(f"修订 {len(rev)} 次 > 上限 {MAX_REVISIONS}（应停下与用户重新对齐目标）")
-        (ok if not bad else fail)("计划修订", f"{len(rev)} 条" if not bad else "；".join(bad))
-
-
-def _yaml_scalar(s: str) -> str:
-    """把任意字符串写成安全的 YAML 双引号标量（JSON 字符串即合法 YAML flow 标量）。"""
-    return json.dumps(s, ensure_ascii=False)
-
-
-def _append_meta_list(plan_path: Path, key: str, item_lines: list[str]) -> bool:
-    """向 meta.<key> 追加列表项（块式 YAML），保留文件其余内容与注释。
-
-    走**就地行操作**而非 yaml.dump —— 与 `_set_meta_fuse` / `cmd_mark` 同一风格：
-    整份 dump 会吃掉 plan.yaml 里所有注释与键序，那才是真正的信息损失。
-    """
-    lines = plan_path.read_text(encoding="utf-8").splitlines(keepends=True)
-    key_re = re.compile(rf"^  {re.escape(key)}\s*:(.*)$")
-    in_meta, key_idx, meta_end = False, None, None
-    for i, ln in enumerate(lines):
-        if re.match(r"^meta\s*:\s*$", ln):
-            in_meta = True
-            continue
-        if not in_meta:
-            continue
-        if re.match(r"^\S", ln):  # 顶层键 → meta 块结束
-            meta_end = i
-            break
-        if key_re.match(ln):
-            key_idx = i
-    if meta_end is None:
-        meta_end = len(lines)
-
-    if key_idx is None:  # meta 内无该键 → 插到 meta 末尾
-        lines[meta_end:meta_end] = [f"  {key}:\n"] + item_lines
-        plan_path.write_text("".join(lines), encoding="utf-8")
-        return True
-
-    # 已有该键：识别 `[]` 占位（可能带行尾注释），并跳到列表块末尾
-    val = lines[key_idx].split(":", 1)[1].split("#", 1)[0].strip()
-    if val == "[]":
-        # 只移除 `[]` 占位，保留该行注释
-        lines[key_idx] = re.sub(r"(:\s*)\[\]", r"\1", lines[key_idx], count=1)
-        insert_at = key_idx + 1
-    else:
-        insert_at = key_idx + 1
-        while insert_at < meta_end and (not lines[insert_at].strip()
-                                        or lines[insert_at].startswith("    ")):
-            insert_at += 1
-    lines[insert_at:insert_at] = item_lines
-    plan_path.write_text("".join(lines), encoding="utf-8")
-    return True
-
-
-def cmd_decide(plan_path: Path, point: str, basis: str,
-               capability: str | None, choice: str | None) -> int:
-    """追加一条能力决策记录（自主决策层留痕，v3.0.0）。"""
-    if capability not in VALID_CAPABILITY:  # argparse choices 已兜一层，此处再防一次
-        fail("能力类合法", f"『{capability}』不在 {VALID_CAPABILITY}")
-        return 1
-    if not (point or "").strip() or not (basis or "").strip() or not (choice or "").strip():
-        fail("参数", "必须给出 --point（决策点）、--basis（依据）与 --choice（选择）")
-        return 1
-    if plan_path.is_dir():
-        plan_path = plan_path / "plan.yaml"
-    if not plan_path.exists():
-        fail("plan.yaml 存在", str(plan_path))
-        return 1
-    ts = datetime.now().strftime("%Y-%m-%d %H:%M")
-    item = [
-        f"    - 决策点: {_yaml_scalar(point)}\n",
-        f"      能力类: {_yaml_scalar(capability or '')}\n",
-        f"      依据: {_yaml_scalar(basis)}\n",
-        f"      选择: {_yaml_scalar(choice or '')}\n",
-        f"      时间: {_yaml_scalar(ts)}\n",
-    ]
-    if not _append_meta_list(plan_path, "决策记录", item):
-        fail("meta.决策记录 写入", "未找到 `meta:` 块，请手工添加该键")
-        return 1
-    ok("决策记录已追加", f"能力类={capability or '-'}；决策点={point[:40]}")
-    return 0
-
-
-def cmd_revise(plan_path: Path, trigger: str, change: str,
-               unchanged: str | None) -> int:
-    """追加一条计划修订（重规划留痕，v3.0.0）；超上限 FAIL 并提示重新对齐目标。"""
-    if trigger not in VALID_TRIGGER:
-        fail("触发编号合法", f"『{trigger}』不在 {VALID_TRIGGER}")
-        return 1
-    if not (change or "").strip():
-        fail("参数", "必须给出 --change（变化摘要）")
-        return 1
-    if plan_path.is_dir():
-        plan_path = plan_path / "plan.yaml"
-    if not plan_path.exists():
-        fail("plan.yaml 存在", str(plan_path))
-        return 1
-    yaml = _require_yaml()
-    try:
-        data = yaml.safe_load(plan_path.read_text(encoding="utf-8")) or {}
-    except yaml.YAMLError as e:
-        fail("plan.yaml 可解析", str(e).splitlines()[0][:120])
-        return 1
-    cur = (data.get("meta") or {}).get("计划修订") or []
-    if not isinstance(cur, list):
-        fail("meta.计划修订 格式", "应为列表")
-        return 1
-    if len(cur) >= MAX_REVISIONS:
-        fail("计划修订上限", f"已有 {len(cur)} 条，上限 {MAX_REVISIONS}：说明初始拆解方法有问题"
-                             "或该任务不适合线性计划，应停下与用户重新对齐目标（这是重新澄清，非熔断）")
-        return 1
-    ts = datetime.now().strftime("%Y-%m-%d %H:%M")
-    ver = f"v{len(cur) + 1} → v{len(cur) + 2}"
-    item = [
-        f"    - 版本: {_yaml_scalar(ver)}\n",
-        f"      触发: {_yaml_scalar(trigger)}\n",
-        f"      时间: {_yaml_scalar(ts)}\n",
-        f"      变化: {_yaml_scalar(change)}\n",
-        f"      未变: {_yaml_scalar(unchanged or '')}\n",
-    ]
-    if not _append_meta_list(plan_path, "计划修订", item):
-        fail("meta.计划修订 写入", "未找到 `meta:` 块，请手工添加该键")
-        return 1
-    ok("计划修订已追加", f"第 {len(cur) + 1}/{MAX_REVISIONS} 条；触发={trigger}")
-    return 0
-
-
 def check_plan(plan_path: Path, base: Path) -> int:
     yaml = _require_yaml()
 
@@ -711,7 +526,6 @@ def check_plan(plan_path: Path, base: Path) -> int:
 
     ok("Anti-drop 对账", f"已完成步骤 {done_total} 个，交付物确认 {deliverable_ok} 个")
 
-    _check_autonomy(meta)
     _check_fuse(meta, steps, plan_path)
     return 0
 
@@ -741,19 +555,6 @@ def main() -> None:
                    help="设置 meta.熔断状态；复位填『正常』（须与步骤状态一并复位，见 _check_fuse）")
     p.add_argument("--batch", help="批量文件：每行 `<step_id> <status>`（空行/# 忽略）；一次性落盘，避免 N 步 N 次重写（N7）")
 
-    p = sub.add_parser("decide", help="追加一条能力决策记录到 meta.决策记录（自主决策层留痕）")
-    p.add_argument("plan", help="plan.yaml 路径或任务目录")
-    p.add_argument("--point", required=True, help="决策点：这一步缺什么/要决定什么")
-    p.add_argument("--basis", required=True, help="依据：一句话判据（说不出可验证收益就别引入）")
-    p.add_argument("--capability", required=True, choices=VALID_CAPABILITY, help="能力类：知识/算力/事实/手脚")
-    p.add_argument("--choice", required=True, help="选择：实际引入的具体手段")
-
-    p = sub.add_parser("revise", help="追加一条计划修订到 meta.计划修订（重规划留痕）")
-    p.add_argument("plan", help="plan.yaml 路径或任务目录")
-    p.add_argument("--trigger", required=True, choices=VALID_TRIGGER, help="触发编号：R1–R6")
-    p.add_argument("--change", required=True, help="变化摘要（改了什么）")
-    p.add_argument("--unchanged", help="未变部分（已完成步骤是否受影响）")
-
     args = ap.parse_args()
     if args.cmd == "skill":
         code = check_skill(Path(args.skill_dir))
@@ -764,15 +565,9 @@ def main() -> None:
     elif args.cmd == "status":
         code = cmd_status(Path(args.workspace), args.archive_days, args.max_tasks, args.light)
         name = "任务总览"
-    elif args.cmd == "mark":
+    else:
         code = cmd_mark(Path(args.plan), args.step_id, args.status, args.fuse, args.batch)
         name = "状态更新"
-    elif args.cmd == "decide":
-        code = cmd_decide(Path(args.plan), args.point, args.basis, args.capability, args.choice)
-        name = "决策留痕"
-    else:  # revise
-        code = cmd_revise(Path(args.plan), args.trigger, args.change, args.unchanged)
-        name = "计划修订"
 
     if args.cmd in ("skill", "plan"):
         print(f"=== ai-workflow {name} ===")
