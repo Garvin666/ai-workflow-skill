@@ -1,0 +1,51 @@
+# 执行计划：ai-workflow v2.4.4 工作区边界红线
+meta:
+  任务: 把「Agent 工作范围仅限所选文件夹工作空间」做成红线③并配套 schema 强制
+  工作区根: C:\Users\26717\.workbuddy\skills\ai-workflow
+  创建时间: "2026-09-10 22:35"
+  任务层级: L2
+  确认表: 用户三项选择（每次任务指定工作区根 / 越界先问再做 / skill+venv+缓存为例外）构成明示确认
+  验证信号: checks.py skill 18/18（模板 schema 9/9）且 checks.py plan 全绿（含工作区根必填校验）
+steps:
+  - id: 1
+    做什么: SKILL.md 增设「工作区边界」规则段并把红线由两条改为三条
+    输入: SKILL.md
+    预期产出: 红线③ + 边界规则段 + 阶段 0 第 5 条确认工作区根
+    验证方式: 关键字符串校验（三条红线/工作区边界段/阶段0第5条）全部命中
+    状态: 完成
+    交付物: SKILL.md
+  - id: 2
+    做什么: 阶段 1 五要素扩为六要素，阶段 4/5 增加工作区内校验
+    输入: SKILL.md
+    预期产出: 确认表含工作区根；产出清单逐条校验；自检表含边界项
+    验证方式: 三处关键字符串校验命中
+    状态: 完成
+    交付物: SKILL.md
+  - id: 3
+    做什么: 7 个任务模板加 workspace 字段，plan-template 加工作区根，checks.py 同步必填与动态计数
+    输入: assets/templates/*.yaml、assets/plan-template.yaml、scripts/checks.py
+    预期产出: schema 8 → 9 字段，plan meta 必填三项
+    验证方式: checks.py skill 模板 schema 输出 9/9；plan 对账校验 工作区根
+    状态: 完成
+    交付物: assets/templates/README.md
+  - id: 4
+    做什么: 文档与反模式沉淀（ops.md 变更日志 v2.4.4、quality-gates 反模式 35/36、模板 README schema v3）
+    输入: 上述改动
+    预期产出: 规则可查可背
+    验证方式: checks.py skill 引用完整性通过
+    状态: 完成
+    交付物: references/quality-gates.md
+  - id: 5
+    做什么: 用户级记忆写入工作区边界强制规则
+    输入: ~/.workbuddy/MEMORY.md
+    预期产出: 跨项目生效的强制规则条目
+    验证方式: 文件内容包含「工作区根」「越界」「例外」三要素
+    状态: 完成
+    交付物: references/ops.md
+  - id: 6
+    做什么: 自检、对账、git 提交
+    输入: 全部改动
+    预期产出: skill 18/18、plan 全绿、git v2.4.4 提交
+    验证方式: checks.py skill / checks.py plan / git log 三处实证
+    状态: 完成
+    交付物: scripts/checks.py

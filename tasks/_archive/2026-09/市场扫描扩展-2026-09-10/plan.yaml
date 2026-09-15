@@ -1,0 +1,56 @@
+meta:
+  任务: "市场扫描（MarketScanPage）数据字段与筛选条件扩充：新增量能/多周期涨幅/均线结构/波动/位置/动量/基本面共 20 个字段，新增 21 项筛选条件，新增 0-100 综合评分，筛选面板改分组折叠"
+  创建时间: "2026-09-10 22:00"
+  任务层级: "L2"
+  确认表: "本轮对话确认记录：全量含基本面 + 分组折叠 + 新增评分列；估值采用股本外推法"
+  验证信号: "①后端 pytest 扫描相关用例通过；②真实跑 run_scan(history) 新字段非空且市值量级合理；③前端 tsc -b && vite build 通过；④vitest 通过；⑤SQL/Python 双路径筛选结果逐条一致"
+steps:
+  - id: 1
+    做什么: "扩展历史数据层：批量加载估值快照（total_mv/circ_mv/pe_ttm/pb/dv_ttm）与行业元数据（industry/list_date）"
+    输入: "历史数据集/A股统一数据集/a_share_daily.parquet、stocks_meta.parquet"
+    预期产出: "load_cn_valuation_snapshot() 返回 {symbol: 估值基准行}；load_stock_meta() 返回 {symbol: {industry, list_date}}；均带 TTL 缓存"
+    验证方式: "调用函数返回条目数 >5000（行业）/ ~1400（估值），数值单位与 DuckDB 直查一致"
+    状态: 完成
+    交付物: "E:/ChatGPT/量化分析与数据分析/backend/services/history_data.py"
+  - id: 2
+    做什么: "新建行情衍生指标模块，实现量比/多周期涨幅/ATR/波动率/RSI/MACD/均线排列/位置类/连涨天数计算"
+    输入: "单只标的 OHLCV 长表"
+    预期产出: "indicators/features.py，纯 pandas 向量化，单股耗时 <5ms"
+    验证方式: "用手工构造的确定性序列断言（如单调上涨序列 RSI=100、连涨天数=长度）"
+    状态: 完成
+    交付物: "E:/ChatGPT/量化分析与数据分析/indicators/features.py"
+  - id: 3
+    做什么: "scan.py 输出新字段 + 基本面外推（股本 = total_mv/基准收盘价）+ 综合评分 + 扩展 _matches_filters"
+    输入: "features.py、history_data 估值快照、行业元数据"
+    预期产出: "ScanItem 新增约 20 字段；score 0-100；Python 过滤支持全部新条件"
+    验证方式: "跑 run_scan 后抽查 3 只股票，市值/PE 与 DuckDB 直算对照误差 <1%"
+    状态: 完成
+    交付物: "E:/ChatGPT/量化分析与数据分析/indicators/scan.py"
+  - id: 4
+    做什么: "screener.compile_where 同步新增全部 SQL 筛选条件（含行业 IN 列表）"
+    输入: "scan.py 的 _matches_filters 新规则"
+    预期产出: "SQL 与 Python 两路径条件语义逐条对齐"
+    验证方式: "对同一 items 列表分别跑两条路径，结果条数与顺序完全一致"
+    状态: 完成
+    交付物: "E:/ChatGPT/量化分析与数据分析/indicators/screener.py"
+  - id: 5
+    做什么: "贯通参数链路：run.py argparse、backend/schemas.py ScanFilters、backend/main.py argv、agent/tools.py 工具 schema"
+    输入: "新增筛选条件清单"
+    预期产出: "前端可传、AI 助手可用、命令行可用"
+    验证方式: "pytest 后端接口用例通过；python -m indicators.run scan --help 显示新参数"
+    状态: 完成
+    交付物: "E:/ChatGPT/量化分析与数据分析/backend/schemas.py"
+  - id: 6
+    做什么: "前端改造：types.ts 类型、mock 数据补字段、MarketScanPage 表格列扩充 + 筛选面板分组折叠 + 评分列 + CSV 导出扩展"
+    输入: "后端字段定义"
+    预期产出: "仪表盘可展示 38 个字段、32 项筛选条件，旧预设向后兼容"
+    验证方式: "tsc -b 无类型错误；vitest 通过；dev 页面人工确认分组面板可折叠"
+    状态: 完成
+    交付物: "E:/ChatGPT/量化分析与数据分析/frontend/src/pages/MarketScanPage.tsx"
+  - id: 7
+    做什么: "端到端验证：后端 pytest、真实 history 扫描、前端构建与单测、SQL/Python 一致性对拍、估值外推准确性核验"
+    输入: "全部改动"
+    预期产出: "交付报告（含改动清单、数据质量发现、验证证据表）"
+    验证方式: "全部命令退出码为 0，且对拍结果一致"
+    状态: 完成
+    交付物: "E:/ChatGPT/量化分析与数据分析/报告-市场扫描数据与筛选扩展-20260910.md"

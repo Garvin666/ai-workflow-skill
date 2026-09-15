@@ -1,0 +1,136 @@
+==============================================================================
+v3.0.0 改造回归证据（全部为原始输出，可复算）
+==============================================================================
+
+## 一、改造后文件指纹
+
+  5fd68765197cacd4f2c8c161b16fdbe9  SKILL.md
+  a0fbf8eb302160a33f51bcaa3a8308a8  references/capability-routing.md
+  f95b8d28a8a9059bf344e0c82739d347  references/adaptive-planning.md
+  c0cebe9e6f623fd3b81fa3decedff774  assets/plan-template.yaml
+  9d1ed1dafb7f9ac9e8fd71b866734090  scripts/checks.py
+  ff37cd47ee751b45054adbc817382493  references/ops.md
+
+## 二、技能自检（checks.py skill）—— 改造后
+
+=== ai-workflow 技能自检 ===
+[ OK ] SKILL.md 存在
+[ OK ] frontmatter 含 name
+[ OK ] frontmatter 含 description
+[ OK ] frontmatter 含 agent_created
+[ OK ] 文档引用完整性 — 检查 35 条引用
+[ OK ] 模板 schema：_示例-数据分析.yaml — 9/9
+[ OK ] 模板 schema：UI组件库搭建.yaml — 9/9
+[ OK ] 模板 schema：学习资料生成.yaml — 9/9
+[ OK ] 模板 schema：小说写作.yaml — 9/9
+[ OK ] 模板 schema：技术调研.yaml — 9/9
+[ OK ] 模板 schema：调研报告.yaml — 9/9
+[ OK ] 模板 schema：选品分析.yaml — 9/9
+[ OK ] 模板 schema：量化分析.yaml — 9/9
+[ OK ] plan-template 必填键 — 齐全
+[ OK ] py_compile：ai_call.py
+[ OK ] py_compile：checks.py
+[ OK ] py_compile：data_query.py
+[ OK ] py_compile：http_fetch.py
+[ OK ] py_compile：office_io.py
+=== 结果：19/19 通过，FAIL=0 ===
+
+## 三、零回归证明（逐 plan FAIL 数与改造前比对）
+
+基线 plan 项数 = 23；改造后 plan 项数 = 23
+
+FAIL 数发生变化的项：1
+  1 FAIL → 0 FAIL | tasks/技能增强-ai-workflow-v3.0-2026-09-15/plan.yaml
+
+FAIL 数逐项一致：22 项（其中 0 FAIL 的 14 项，预期带 FAIL 的 8 项）
+总 FAIL 数：基线=9 → 改造后=8
+
+零回归判定：PASS
+
+## 四、门禁有效性证明（自主决策层 decide/revise + 两组阴性对照）
+
+============================================================================
+自主决策层门禁测试（v3.0.0，返修后）
+============================================================================
+
+## T1 decide 在『决策记录: [] + 注释』占位上的行为
+  decide 退出码=0 | [ OK ] 决策记录已追加 — 能力类=事实；决策点=需要外部事实校验
+  回读 meta.决策记录 = [{'决策点': '需要外部事实校验', '能力类': '事实', '依据': '版本号/star 数属当世事实，本机推不出', '选择': 'gh api repos/obra/superpowers', '时间': '2026-09-15 17:31'}]
+  注释是否保留：是
+
+## T2 decide 在『无该键』的 meta 上追加（本任务 plan 副本）
+  第1次：退出码=0 | [ OK ] 决策记录已追加 — 能力类=知识；决策点=决策点1
+  第2次：退出码=0 | [ OK ] 决策记录已追加 — 能力类=算力；决策点=决策点2
+  第3次：退出码=0 | [ OK ] 决策记录已追加 — 能力类=事实；决策点=决策点3
+  回读条数 = 3；末条 = {'决策点': '决策点3', '能力类': '事实', '依据': '依据3', '选择': '手段3', '时间': '2026-09-15 17:31'}
+  check_plan：[ OK ] 决策记录 — 3 条
+
+## T3 revise 写入与『上限 3 条』门禁
+  第1次：退出码=0 | [ OK ] 计划修订已追加 — 第 1/3 条；触发=R1
+  第2次：退出码=0 | [ OK ] 计划修订已追加 — 第 2/3 条；触发=R2
+  第3次：退出码=0 | [ OK ] 计划修订已追加 — 第 3/3 条；触发=R3
+  第4次（**应被拒**）：退出码=1 | [FAIL] 计划修订上限 — 已有 3 条，上限 3：说明初始拆解方法有问题或该任务不适合线性计划，应停下与用户重新对齐目标（这是重新澄清，非熔断）
+  回读修订条数 = 3（应为 3）
+  check_plan：[ OK ] 计划修订 — 3 条
+
+## T4 阴性对照：故意造坏（缺『决策点』/ 能力类非法 / 触发 R9 / 修订 4 条）
+  check_plan 退出码=1（**应为 1**）
+  决策记录：[FAIL] 决策记录 — 第1项缺 决策点；第1项能力类『量子』不在 ('知识', '算力', '事实', '手脚')
+  计划修订：[FAIL] 计划修订 — 第1项触发『R9』不在 ('R1', 'R2', 'R3', 'R4', 'R5', 'R6')；修订 4 次 > 上限 3（应停下与用户重新对齐目标）
+
+## T5 阴性对照：历史 plan（无新字段）不应被误伤
+  check_plan 退出码=0（**应为 0**）
+  决策记录：[ OK ] 决策记录 — 未使用（无外部辅助引入，属正常）
+  计划修订：[ OK ] 计划修订 — 未使用（未发生重规划）
+
+## T6 返修验证（审核 P2）：decide 缺任一必填参数必须被拒
+  缺 --point      : 退出码=2 | checks.py decide: error: the following arguments are required: --point
+  缺 --basis      : 退出码=2 | checks.py decide: error: the following arguments are required: --basis
+  缺 --capability : 退出码=2 | checks.py decide: error: the following arguments are required: --capability
+  缺 --choice     : 退出码=2 | checks.py decide: error: the following arguments are required: --choice
+
+============================================================================
+判据汇总
+============================================================================
+T1 [] 占位就地展开且可回读              : True
+T2 无键时插入 meta 末尾（3 条）          : True
+T3 第 4 次 revise 被拒（上限生效）        : True
+T4 造坏 fixture 判 FAIL                  : True
+T5 历史 plan 不被误伤（0 FAIL）          : True
+T6 缺任一必填参数被拒（P2 返修）          : True
+
+总体：全部通过
+
+## 五、语法与用法
+
+py_compile：
+  (无输出即通过)
+
+revise --help：
+usage: checks.py revise [-h] --trigger {R1,R2,R3,R4,R5,R6} --change CHANGE
+                        [--unchanged UNCHANGED]
+                        plan
+
+positional arguments:
+  plan                  plan.yaml 路径或任务目录
+
+options:
+  -h, --help            show this help message and exit
+  --trigger {R1,R2,R3,R4,R5,R6}
+                        触发编号：R1–R6
+  --change CHANGE       变化摘要（改了什么）
+  --unchanged UNCHANGED
+                        未变部分（已完成步骤是否受影响）
+
+==============================================================================
+结论
+==============================================================================
+1. 技能自检 FAIL=0（引用数 29 → 35，因新增 2 个 reference 并挂入索引）。
+2. 零回归：22 个既有 plan 的 FAIL 数**逐项完全一致**；唯一变化是本任务 plan
+   由 1 FAIL → 0 FAIL（基线采样时 step1 交付物尚未生成，属预期）。
+3. 门禁有效：造坏 fixture（缺必填键 / 能力类非法 / 触发 R9 / 修订超上限）
+   全部被 check_plan 判 FAIL；历史 plan（无新字段）判为『未使用』不被误伤。
+   这证明校验**真的在跑**，而非「永远通过」的空壳。
+4. 新字段全为可选：不填写不产生 FAIL，符合「留痕只记录真实发生过的决策」的设计。
+5. 返修验证（独立审核 P2）：decide 缺 --point / --basis / --capability / --choice
+   任一均被拒（退出码 2），不再出现『照文档执行 → 被自家门禁判 FAIL』的路径。

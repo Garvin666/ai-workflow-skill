@@ -1,0 +1,24 @@
+远端 Garvin666/ai-workflow-skill@main
+  推送前 commit = 69013644b66b  文件(blob)=216  条目(含目录)=259
+  推送后 commit = 4c8afc537d59  文件(blob)=221  条目(含目录)=265
+
+删除的路径 = 0 （无）
+新增的路径 = 6
+    + _backup-v3.0
+    + _backup-v3.0/SKILL.md
+    + _backup-v3.0/checks.py
+    + _backup-v3.0/plan-template.yaml
+    + references/adaptive-planning.md
+    + references/capability-routing.md
+
+内容被改的文件 = 5
+    ~ Ledger.md
+    ~ SKILL.md
+    ~ assets/plan-template.yaml
+    ~ references/ops.md
+    ~ scripts/checks.py
+
+--- 本轮交付的 10 个文件逐一比对（远端 vs 本地 git blob）---
+
+文件一致 10/10；删除 0 项；新增集合符合预期：True
+独立验收：PASS

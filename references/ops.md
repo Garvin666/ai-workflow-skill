@@ -29,6 +29,7 @@ PY="C:/Users/26717/.workbuddy/binaries/python/envs/ai-workflow/Scripts/python.ex
 | office_io.py | Office 读写：excel-read（xlsx/csv）、excel-write（单表/多表，默认表头加粗+冻结首行+自适应列宽）、word-read/write、pdf-extract/merge | `office_io.py excel-read data.csv --fmt json` |
 | run_stage.ps1 | 状态检查 + 一键调脚本 | `run_stage.ps1 http_fetch.py <URL>` |
 | **ast-grep**（`ast-grep-cli`，已装入 venv） | **跨行/结构模式检索 + 符号检索**。`run -p '<pattern>' -l py <路径>` 结构匹配；`outline <文件>` 列符号（替代 ctags 需求）；`scan` 跑规则文件。⚠️ pattern **不支持正则**（`\|`/`.*`/`\w` 无效），且**复合语句必须写全**（`except:` 单独不是合法 pattern，须写成 `try: $$$B except: pass`）。`sg` 命令**已废弃**，用 `ast-grep`。MIT / Windows 原生 / 离线 | `ast-grep run -p 'print($$$A, file=sys.stderr)' -l py scripts/` |
+| **archive_tasks.py** | **任务目录归档**（阶段 6 治理）：`--older-than <YYYY-MM-DD>` 或 `--dirs "a,b,c"` 选定 → 默认 **dry-run**（只看计划），`--apply` 执行。**只移动不删除**；带**前置门禁**——被 `SKILL.md`／`references/*.md` 引用的目录自动剔除并打印引用出处（归档它们会使「文档引用完整性」FAIL）；移动前后用逐文件 sha256 快照自证零丢失。退出码 0／1／2 | `archive_tasks.py --root . --older-than 2026-09-11`<br>`archive_tasks.py --root . --older-than 2026-09-11 --apply` |
 
 各脚本详细参数：加 `--help`。
 
@@ -126,6 +127,7 @@ powershell -ExecutionPolicy Bypass -File scripts\setup_env.ps1
 | `npm install` 报 `ETARGET No matching version found for X@=1.2.3`，但该版本确实存在 | ⚠️ `.npmrc` 里的 **`prefer-offline=true` 用的是旧 packument 缓存**，新发布的版本不在其中，于是误报"版本不存在"（实测 `@oxc-project/types@0.149.0` 明明就是 latest 却解析不到）。**去掉 `prefer-offline`**，只保留 `maxsockets` |
 | 用 curl 取 `registry.npmjs.org/<pkg>` 后 `json.load` 报 `Unterminated string` | 全量文档太大，**经管道/head 会被截断**（react-dom 可达 8MB+）。加头 `-H "Accept: application/vnd.npm.install-v1+json"` 取精简元数据；只要单版本就用 `/<pkg>/<version>` 或 `/<pkg>/latest` 这类小文档 |
 | `agent-browser open` 无任何输出即被 SIGTERM | 本机沙箱**拦截浏览器启动**（Chromium 已装在 `%LOCALAPPDATA%\ms-playwright`，但 `open` 连一行日志都不给就死）。环境变量里的 `HTTP_PROXY=http://127.0.0.1:54912` 会让 localhost 也走代理，即便 `unset` 全部 proxy 变量 + 设 `NO_PROXY` 仍无效。**不要在无头浏览器上反复重试**：改派可判定的静态信号（如 `vite build` 全量构建过一遍模块），并把"运行时渲染"显式登记为人审点交用户确认 |
+| `checks.py skill` 报「文档引用完整性 — 缺失：某脚本名（来自 ops.md）」 | 该检查是**扁平**的：任何**反引号包裹**且后缀为 md／yaml／py／ps1 的 token 都被当成**相对技能根的路径**，用 `skill_dir` 及其 `scripts`／`assets`／`references` 子目录做存在性判断，**不区分"引用"与"举例提及"**。所以文档里用裸文件名举例会被判缺失（v3.0.1 实测：一条变更日志举例提到某个测试脚本的裸名，自检当场 19/20 FAIL）。**两种改法**：① 改写成**完整相对路径**（推荐——它真正可被核验，且该文件日后被移动时门禁会 FAIL 提醒你同步引用）；② 去掉反引号，使其不被识别为路径 |
 
 ## 六、链接收集与核验 SOP（调研类任务交付前必跑）
 
@@ -159,6 +161,12 @@ grep -vE "api\.github\.com" all_urls.txt > check_urls.txt
 
 ## 七、变更日志
 
+- **v3.0.1（2026-09-15）阶段 6 治理工具化：新增 `scripts/archive_tasks.py`**（首次执行记录见 `tasks/_archive/2026-09/README.md`）：
+  - **起因**：`checks.py status` 会周期性提示「任务目录 N 个 > 阈值 10，建议归档」，但**只有建议、没有工具**——每次归档都要临时写脚本；而归档有一个**非显然的破坏性约束**：`checks.py skill` 的「文档引用完整性」会扫 `SKILL.md` 与 `references/*.md` 中反引号包裹、后缀 md/yaml/py/ps1 的路径，并用 `skill_dir/ref` 做存在性校验，**归档被引用的目录会直接使自检 FAIL**。首次执行的实测案例：最旧的 `技能增强-ai-workflow-v2.4.3-2026-09-10` 被 `references/ops.md` 引用其下的 `tasks/技能增强-ai-workflow-v2.4.3-2026-09-10/_test_server.py`（403 分类实测证据），故**保留原位不归档**，切分线定为「2026-09-10 归档、09-11 起保留」；归档 6 个目录（28 文件 / 158,687 字节）后 `skill` 仍 **19/19 FAIL=0**、`status` 由 14 个降至 8 个且不再 WARN。
+  - **工具形态**：`--older-than`／`--dirs` 选定 → 默认 **dry-run** → `--apply` 执行；**只移动不删除**（脚本内无任何删除调用）；把上述引用约束做成**前置门禁**（被引用目录自动剔除 + 打印引用出处）；移动前后用**逐文件 sha256 快照**比对自证零丢失；报告剩余目录集合与"来源目录去向全部有据"核对。退出码 0（成功，含 dry-run）／1（移动后校验失败）／2（前置检查拒绝）。
+  - **验证**：`py_compile` 通过；dry-run 正确剔除 v2.4.3 并列出可归档项；**阴性对照**——显式 `--dirs "技能增强-ai-workflow-v2.4.3-2026-09-10"` 被拒（退出码 2 并给出引用出处）。
+  - **诚实边界**：归档仍是**位置敏感的破坏性动作**。工具只解决"安全地移动"，**不解决"引用该不该随动"**——除 `SKILL.md`／`references/*.md` 外，`Ledger.md` 与 `tasks/` 内部的历史路径引用**不受任何机械校验**，归档后它们会静默失效（见 Ledger 备注区 2026-09-15 条）。
+  - **文档↔实现交叉自查（用同期沉淀的 `doc-impl-parity-audit` 技能跑）**：高置信维度命中 6 项，逐项人工核实后 **4 项假阳性**（参数被"描述为不存在"、命令被"记录为失败"、通用词被当字段名）、**1 项措辞不精确**（把位置参数写成了选项形式）、**1 项真脱节**（写了一个并不存在的子命令，该脚本实为单层 argparse、无子命令）——后两项已在本条目上方的历史记载处修正并标注。**意义**：该检查在本次改动**同一轮**就抓出了存量脱节，实证「作者自查对描述↔实现脱节失效、须用机器交叉查」这一结论。注意其精度：6 项中仅 2 项为真，**它是缩窄候选范围的工具，不是问题清单**。
 - **v3.0.0（2026-09-15）新增「自主决策层」：能力路由 + 自适应计划 + 决策留痕**（由 `tasks/技能增强-ai-workflow-v3.0-2026-09-15/` 驱动；用户明示"升级为具备自主决策能力的智能工作流"，经方案评审选定「文档 + 机器门禁」方案）：
   - **新增 `references/capability-routing.md`（能力路由）**：把"外部辅助"拆为**四类能力**（知识＝skill／算力＝子代理／事实＝联网／手脚＝脚本与 MCP），每类给出**该用与不该用双向判据**（只给"该用"会造成滥用，滥用比不用更贵）；决策三步（识别缺口 → 估收益（**须可验证**）→ 估开销）；**反合理化红线表 8 条**——借 superpowers 的形、**改其义**：拦的是"没想清楚就动手"，不是"没调用"；声明制 `[能力] <类> → <手段> ← 依据：<判据>`（同时是决策留痕的原始素材）；优先级两条（**方法先于执行**、**只读先于写入且本地先于联网**）。
   - **新增 `references/adaptive-planning.md`（自适应计划）**：拆解四规则（右尺寸三问／可验证前置（含正反例）／依赖显式化／粒度可调——探索性任务粗拆、执行性任务细拆，**不要在计划期假装知道执行期才知道的事**）；**R1–R6 重规划触发**（R1 新事实推翻假设／R2 验证信号不可达／R3 暴露新依赖／R4 成本超阈／R5 用户改需求／R6 连续性断裂）与**「不触发」清单**（防过度重规划：只改路径且新路径不比旧路径更可靠时不重规划）；重规划四步（**停→记→改→报**，先留痕再改动）；**上限 3 次**（超限说明初始拆解有问题或任务不适合线性计划 → 停下与用户重新对齐目标，**这是重新澄清、非熔断**）；执行期六动作循环。
@@ -270,12 +278,12 @@ grep -vE "api\.github\.com" all_urls.txt > check_urls.txt
   - **补 P1a｜大数据集搜不动** → 新增 **`scripts/data_query.py`**（DuckDB），四个子命令 `files` / `big` / `find` / `sql`。依赖清单加入 `duckdb`。实测：**470MB Parquet / 1,710 万行 / 5,665 只标的，全表聚合 1.53 秒，零导入**；跨文件正则检索 41 文件 2.2 秒带行号。
   - **P2｜跨行/结构检索** → SKILL.md 阶段 3 第 5 条改为「**先选对工具再搜**」决策清单：`Grep`/`Glob` → `--github-search` → `sg`(ast-grep) → `data_query.py`。写入 `sg` 的关键避坑：**pattern 不支持正则**，文本匹配必须回 `Grep`。（ast-grep MIT / Windows 原生 / 离线；实测排除 comby（停更）与 CodeQL（许可））
   - **P1b｜自由文本索引 → 暂缓**：实测 `Genivia/ugrep-indexer` 仅 84★ 且停更 14 个月，原推荐被推翻，不引入。
-  - 实战修掉 2 个 bug：① `data_query.py` 的 glob 相对 **CWD** 而非 `--path` 解析 → 静默零命中；② 用 `json.dumps` 拼 SQL 字面量 → **中文被转义成 `\uXXXX`** + **双引号在 SQL 中是标识符**，双坑叠加致零命中。改用 `_sql_str()` 单引号转义。
+  - 实战修掉 2 个 bug：① `data_query.py` 的 glob 相对 **CWD** 而非其**位置参数** `path` 解析 → 静默零命中；② 用 `json.dumps` 拼 SQL 字面量 → **中文被转义成 `\uXXXX`** + **双引号在 SQL 中是标识符**，双坑叠加致零命中。改用 `_sql_str()` 单引号转义。
   - SKILL.md 版本号 2.2 → 2.3 → **2.4**（前两轮漏改头部，已补齐）。
 - **v2.3（2026-09-10）实战修复**（由真实任务 `tasks/技术调研-网络安全学习-2026-09-10/` 驱动）：
   - `checks.py` **修假绿**：缺 pyyaml 时原会先报错、再打印 `结果：0/0 通过，FAIL=0` 并返回 0，调用方（含 CI/子代理）会误判为通过。现改为 `_require_yaml()` 统一守卫，**以退出码 2 中止**并给出 venv 绝对路径提示；`main()` 不再吞掉非零 `code`（`return 1 if n_fail else code`），未跑起来时输出「未执行」而非「全绿」。同一守卫也修掉 `load_plan` 在 `status` 子命令下的裸 traceback。
   - `http_fetch.py` 新增 **`--check-links`** 批量探活：只取状态码不下载正文。实战量化——12 条链接串行探活 41.2s 且白下载 3.5MB；新工具并发 8 实测 1.9s（≈40× 加速）。⚠️ 当时记录的"平均 156ms/条"取自 12 条小样本，**均值受超时条数影响极大**（另有实测 1 条 502 超时即把均值拉到 2573ms/条），**不可当基线引用**。
-  - `http_fetch.py fetch` 在 `--out` 目标已存在但抓取失败时打印告警（防旧内容被误用）。
+  - `http_fetch.py` 在 `--out` 目标已存在但抓取失败时打印告警（防旧内容被误用）。⚠️ 原写「http_fetch.py fetch…」，**更正**：该脚本是**单层 argparse、没有子命令**，`fetch` 并非子命令名（v3.0.1 由文档↔实现交叉检查发现）。
   - 交付前置动作确立：**外部链接必须探活后才可写进交付物**（实战中拦下 1 条 404 死链并修正）。
 - **v2.2（2026-09-10）**：效率增强——SKILL.md 瘦身（脚本速查/排障/日志移入本文件）；`http_fetch.py` 增加本地缓存（TTL + `--no-cache`）与 GitHub 多仓库并发；`ai_call.py` 增加 `--batch-file` 批量并发（JSONL 输出）；`checks.py` 增加 `status`（任务总览 + 归档建议）与 `mark`（安全更新步骤状态）；阶段 1 追问轮次上限 2 轮、阶段 0 用 `status` 替代逐个翻历史任务。
 - **v2.1（2026-09-10）**：新增 `checks.py`（自检 + Anti-drop 对账）；模板 3 → 7 类；`office_io.py` 支持 CSV/多 sheet/格式化；`http_fetch.py` 增加 `--grep`/`--max-chars`；`report-template.md` 补证据等级、验证闭环证据、复盘三节；依赖补 pyyaml。快照 `_backup-v2/`。

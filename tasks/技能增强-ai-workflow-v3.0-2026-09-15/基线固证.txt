@@ -1,0 +1,102 @@
+==============================================================================
+改造前基线固证（v3.0.0 升级任务的 step 1 交付物）
+==============================================================================
+
+## 1. 备份完整性（_backup-v3.0/ 与原件逐一比对）
+
+文件                                原件 sha256[:16]      备份 sha256[:16]      一致
+SKILL.md                          349060370ad7fe7a    349060370ad7fe7a    是
+assets/plan-template.yaml         a3569016f55cf71e    a3569016f55cf71e    是
+scripts/checks.py                 99ce457724dc79d5    99ce457724dc79d5    是
+
+备份完整性：全部一致
+
+## 2. 技能自检基线（checks.py skill）
+
+=== ai-workflow 技能自检 ===
+[ OK ] SKILL.md 存在
+[ OK ] frontmatter 含 name
+[ OK ] frontmatter 含 description
+[ OK ] frontmatter 含 agent_created
+[ OK ] 文档引用完整性 — 检查 29 条引用
+[ OK ] 模板 schema：_示例-数据分析.yaml — 9/9
+[ OK ] 模板 schema：UI组件库搭建.yaml — 9/9
+[ OK ] 模板 schema：学习资料生成.yaml — 9/9
+[ OK ] 模板 schema：小说写作.yaml — 9/9
+[ OK ] 模板 schema：技术调研.yaml — 9/9
+[ OK ] 模板 schema：调研报告.yaml — 9/9
+[ OK ] 模板 schema：选品分析.yaml — 9/9
+[ OK ] 模板 schema：量化分析.yaml — 9/9
+[ OK ] plan-template 必填键 — 齐全
+[ OK ] py_compile：ai_call.py
+[ OK ] py_compile：checks.py
+[ OK ] py_compile：data_query.py
+[ OK ] py_compile：http_fetch.py
+[ OK ] py_compile：office_io.py
+=== 结果：19/19 通过，FAIL=0 ===
+
+## 3. 历史 plan 校验基线（checks.py plan，逐项 FAIL 数）
+
+口径说明：兼容性判据不是『全部 0 FAIL』，而是『改造后逐项 FAIL 数与改造前完全一致』。
+其中 toy/plan_n*.yaml 与 tmp/fuse-e2e/plan.yaml 是**故意造坏**的阴性 fixture，
+本就预期 FAIL；它们保持 FAIL 恰恰证明门禁未被改哑。
+
+# plan 文件总数: 23
+# checks.py sha256[:16] = 99ce457724dc79d5
+# SKILL.md  sha256[:16] = 349060370ad7fe7a
+# plan-template sha256[:16] = a3569016f55cf71e
+
+  0 FAIL | exit= 0 | tasks/UI组件库搭建-2026-09-10/plan.yaml
+          === 结果：8/8 通过，FAIL=0 ===
+  0 FAIL | exit= 0 | tasks/估值快照源接入-2026-09-10/plan.yaml
+          === 结果：8/8 通过，FAIL=0 ===
+  0 FAIL | exit= 0 | tasks/估值残余限制完善-2026-09-10/plan.yaml
+          === 结果：8/8 通过，FAIL=0 ===
+  0 FAIL | exit= 0 | tasks/体验评估-ai-workflow-v2.5.0-2026-09-10/plan.yaml
+          === 结果：8/8 通过，FAIL=0 ===
+  0 FAIL | exit= 0 | tasks/体验评估-ai-workflow-v2.5.0-2026-09-10/toy/plan.yaml
+          === 结果：8/8 通过，FAIL=0 ===
+  1 FAIL | exit= 1 | tasks/体验评估-ai-workflow-v2.5.0-2026-09-10/toy/plan_n1_missing_ws.yaml
+          === 结果：7/8 通过，FAIL=1 ===
+  1 FAIL | exit= 1 | tasks/体验评估-ai-workflow-v2.5.0-2026-09-10/toy/plan_n2_missing_deliv.yaml
+          === 结果：8/9 通过，FAIL=1 ===
+  1 FAIL | exit= 1 | tasks/体验评估-ai-workflow-v2.5.0-2026-09-10/toy/plan_n3_ascii_colon.yaml
+          === 结果：1/2 通过，FAIL=1 ===
+  1 FAIL | exit= 1 | tasks/体验评估-ai-workflow-v2.5.0-2026-09-10/toy/plan_n4_no_deliv_field.yaml
+          === 结果：8/9 通过，FAIL=1 ===
+  1 FAIL | exit= 1 | tasks/体验评估-ai-workflow-v2.5.0-2026-09-10/toy/plan_n5_short.yaml
+          === 结果：8/9 通过，FAIL=1 ===
+  0 FAIL | exit= 0 | tasks/对抗互审-ai-workflow-v2.5.1-2026-09-11/plan.yaml
+          === 结果：8/8 通过，FAIL=0 ===
+  1 FAIL | exit= 1 | tasks/市场扫描扩展-2026-09-10/plan.yaml
+          === 结果：7/8 通过，FAIL=1 ===
+  1 FAIL | exit= 1 | tasks/技能增强-ai-workflow-v2.4.3-2026-09-10/plan.yaml
+          === 结果：7/8 通过，FAIL=1 ===
+  0 FAIL | exit= 0 | tasks/技能增强-ai-workflow-v2.4.4-2026-09-10/plan.yaml
+          === 结果：8/8 通过，FAIL=0 ===
+  0 FAIL | exit= 0 | tasks/技能增强-ai-workflow-v2.5.0-2026-09-10/plan.yaml
+          === 结果：8/8 通过，FAIL=0 ===
+  0 FAIL | exit= 0 | tasks/技能增强-ai-workflow-v2.5.1-2026-09-10/plan.yaml
+          === 结果：10/10 通过，FAIL=0 ===
+  0 FAIL | exit= 0 | tasks/技能增强-ai-workflow-v2.5.1-2026-09-10/tmp/unrelated/plan.yaml
+          === 结果：8/8 通过，FAIL=0 ===
+  0 FAIL | exit= 0 | tasks/技能增强-ai-workflow-v2.5.1-2026-09-10/tmp/unrelated-r6/plan.yaml
+          === 结果：8/8 通过，FAIL=0 ===
+  0 FAIL | exit= 0 | tasks/技能增强-ai-workflow-v2.5.2-2026-09-11/plan.yaml
+          === 结果：8/8 通过，FAIL=0 ===
+  1 FAIL | exit= 1 | tasks/技能增强-ai-workflow-v2.5.2-2026-09-11/tmp/fuse-e2e/plan.yaml
+          === 结果：9/10 通过，FAIL=1 ===
+  0 FAIL | exit= 0 | tasks/技能增强-ai-workflow-v2.5.3-2026-09-11/plan.yaml
+          === 结果：8/8 通过，FAIL=0 ===
+  0 FAIL | exit= 0 | tasks/技能增强-ai-workflow-v2.6.0-2026-09-11/plan.yaml
+          === 结果：8/8 通过，FAIL=0 ===
+  1 FAIL | exit= 1 | tasks/技能增强-ai-workflow-v3.0-2026-09-15/plan.yaml
+          === 结果：8/9 通过，FAIL=1 ===
+
+# FAIL 总数 = 9
+
+## 4. 运行环境
+
+- 解释器：C:\Users\26717\.workbuddy\binaries\python\envs\ai-workflow\Scripts\python.exe
+- Python：Python 3.13.14
+- git HEAD：7301a951a764fd1405d0b7dc8fae686f91a93bc8
