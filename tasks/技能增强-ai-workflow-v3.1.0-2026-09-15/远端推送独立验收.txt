@@ -1,0 +1,42 @@
+技能本体推送独立验收（ai-workflow v3.1.0 → Garvin666/ai-workflow-skill）—— 2026-09-16
+授权：用户 2026-09-16「将 ai-workflow 推远端 ai-workflow-skill 仓，写 ai-workflow-skill」
+本地 commit c020f17（8 文件 / +717 −9） → 远端 commit dc2121d5（tree 757dd53e，父 ddd13643）
+推送方式：api.github.com Git Data API + base_tree。理由：远端是**混合仓**（技能本体 ∪ 工作区档案），
+          且本地与远端历史不互通（此前远端 commit 由 API 创建，无本地对应），直接 git push 会因历史无关被拒。
+验收器：自写 verify_push_v3_1_0.py —— 与推送脚本 push_incremental.py **零代码共享**（作者自查不作数）
+
+口径（踩过的两个坑，已在验收器里显式处理）：
+  ① 本地侧一律 git -c core.quotePath=false ls-tree —— 否则中文路径被转义，与远端 API 的正常中文路径
+     比对会凭空造出「假缺失」（v3.0.1 曾误报 101 项）。
+  ② 混合仓不适用「集合相等」：正确口径 = 本地 ⊆ 远端 + 远端独有项须机器证明其早于本次推送。
+
+==================== 验收器实时输出 ====================
+[本地] c020f17 下 blob 文件 172 个
+[远端] HEAD dc2121d5 → tree 757dd53e，blob 238 个
+[远端] 推送前 base_tree 498926e9，blob 235 个
+
+[判据1] 本地 ⊆ 远端：缺失 0 项，sha 不一致 0 项
+[判据2] 远端独有 66 项（混合仓的工作区档案侧）；其中非推送前就存在的 0 项
+[判据3] 关键文件抽查（远端 blob sha 与本地 git 对象比对）
+        OK  SKILL.md  local=52730c8ea413 remote=52730c8ea413
+        OK  scripts/publish_tools.py  local=6a2fac1ac9f9 remote=6a2fac1ac9f9
+        OK  scripts/checks.py  local=90b07258bf53 remote=90b07258bf53
+        OK  references/ops.md  local=cb2fd3a75915 remote=cb2fd3a75915
+        OK  Ledger.md  local=c7211060152c remote=c7211060152c
+        OK  assets/plan-template.yaml  local=cbf6fa548c25 remote=cbf6fa548c25
+[判据4] 远端 SKILL.md 标注合规性
+        OK  selfbuilt: true
+        OK  repo 指向 ai-workflow-skill
+        OK  正文含自研标注块
+        OK  版本 3.1.0
+[判据5] 本次推送引入的删除项：0
+
+=== 结果：PASS —— 5 项判据全过，本地内容已完整、一致地发布于远端 ===
+RC=0
+========================================================
+
+结论：本地 172 个文件全部存在于远端且 blob sha 逐一相等；远端独有的 66 项（工作区档案侧）经 base_tree
+      比对确认**全部早于本次推送**，非本次引入；本次推送引入的删除项为 0；远端 SKILL.md 确为已标注版本。
+
+自研技能标注（按 v3.1.0 规则）：名称 ai-workflow ｜ 仓库 https://github.com/Garvin666/ai-workflow-skill
+自研工具（另一仓）：scripts/publish_tools.py ｜ 仓库 https://github.com/Garvin666/ai-workflow-tools
