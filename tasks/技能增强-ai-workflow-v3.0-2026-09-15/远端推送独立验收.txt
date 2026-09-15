@@ -22,3 +22,55 @@
 
 文件一致 10/10；删除 0 项；新增集合符合预期：True
 独立验收：PASS
+
+
+====================================================================
+v3.0.1 推送独立验收（2026-09-15）
+====================================================================
+远端 Garvin666/ai-workflow-skill@main
+  推送前 commit = 4c8afc537d596fd51d2e1c208c1d873dbaa08aef
+  推送后 commit = e09378116df940950f05cb37395a4204845d52de
+  tree          = f13b24accb68270f00997a2a3b2456f6afb01b26（recursive，truncated=False）
+  推送前 blob = 221  →  推送后 blob = 235
+
+本地 rev = 1b75fed（169 blob）   推送前本地 rev = a77a4bc（155 blob）
+改动面：写入 39 项 / 删除 22 项
+  其中 22 项删除 = tasks/体验评估-ai-workflow-v2.5.0-2026-09-10/** 整体重命名
+  至 tasks/_archive/2026-09/ 同名目录（R100，内容零变更）；
+  新位置仍属远端 blob，故不占新建配额（新建 blob 17 / 复用 22）。
+
+—— 独立验收（三源比对：本地 git 对象库 / 远端新 tree / 远端旧 base_tree）——
+  说明：验收脚本与推送脚本零代码共享，不复用推送侧任何缓存或结论。
+[1] 本地全部 169 个路径已在远端 ............... PASS（缺失 0）
+[2] 同路径 blob sha 全部一致 .................. PASS（内容不符 0）
+[3] 本次删除的 22 项已从远端消失 .............. PASS
+[4] 本次写入的 39 项已落地且 sha 正确 ......... PASS
+[5] 远端多出的 66 项均早于本次推送 ............ PASS（不在旧 base_tree 的 = 0）
+[6] _archive/2026-09 各归档目录 blob 计数一致 . PASS
+    远端独有的 技术调研-2026-09-10 / 调研-AI效率-2026-09-10 /
+    调研-token优化-2026-09-10 三个目录属混合仓的「工作区档案」那一半，
+    本地技能仓库从未包含它们，与本次删除无关（已在 [5]/[7b] 机器证明）。
+[7] 本地归档位 ⊆ 远端归档位 ................... PASS（仅本地有 0）
+[7b] 远端独有归档项均早于本次推送 ............. PASS
+
+抽样 sha 交叉验证（local == remote，取前 10 位）：
+  SKILL.md                          fd35b8833e
+  Ledger.md                         4fcbe094f7
+  scripts/archive_tasks.py          2a5b377efc
+  scripts/checks.py                 ef12389924
+  references/ops.md                 0bb2101209
+  references/capability-routing.md  b0559dcd76
+  references/adaptive-planning.md   64c1d8b6a1
+  tasks/_archive/2026-09/README.md  357cefc3a9
+
+独立验收：PASS
+验收脚本：tasks/技能增强-ai-workflow-v3.0-2026-09-15/tmp/verify_v3_0_1b.py
+          （tmp/ 按仓库 .gitignore 不入版本控制；本文件为正式留痕）
+
+—— 本轮踩到的两个「验收口径」坑（如实记录）——
+  ① core.quotePath：git ls-tree 默认把中文路径转义成 "…\346\212\200…"，
+     与远端 API 返回的正常中文路径对不上，会凭空造出 101 项「假缺失」。
+     口径：本地侧必须用 git -c core.quotePath=false ls-tree。
+  ② 混合仓不适用「集合相等」：远端 = 技能本体 ∪ 工作区档案，本地只有前者。
+     口径应是「本地 ⊆ 远端」+「远端独有项须验证其早于本次推送」，
+     而不是「本地集合 == 远端集合」。用相等口径会误判 66+12 项为异常。
