@@ -249,7 +249,8 @@ version: 3.1.0
 
 ### 仓库与推送工具
 
-- **默认仓库**：`https://github.com/Garvin666/ai-workflow-tools`（**public**）。覆盖方式：`SELFTOOL_REPO` 环境变量，或 `publish_tools.py --repo OWNER/NAME`。
+- **默认仓库**：`https://github.com/Garvin666/ai-workflow-tools`（**public**，放**自研工具**源码）。覆盖方式：`SELFTOOL_REPO` 环境变量，或 `publish_tools.py --repo OWNER/NAME`。
+- **两仓分工（用户 2026-09-16 定）**：**自研工具** → `ai-workflow-tools`；**技能本体** → `Garvin666/ai-workflow-skill`（本技能自身即自研技能，已在 frontmatter 标 `selfbuilt: true` + `repo:`，正文首段给出用途／适用场景／链接）。推送技能本体用 `--repo Garvin666/ai-workflow-skill`。
 - **`scripts/publish_tools.py init --name <仓库名> [--apply]`**：创建 **public** 仓库（本规则不允许 private，故无 `--private`）；默认 dry-run。**幂等**：仓库已存在且为 public → 打印 `[OK] …跳过创建（幂等）` 且退出码 0；已存在但为 private → FAIL 并给出改可见性指引。
 - **`scripts/publish_tools.py push --file <本地路径> [--dest <仓内路径>] [--message …]`**：默认 **dry-run**（只打印将写入的仓内路径与 blob sha），加 `--apply` 才真写；已存在文件带远端 `sha` 更新，**幂等可重跑**（内容一致则 `[SKIP] … 一致，无需推送`）。
 - **`publish_tools.py verify [--file …]`**：查仓库 `private` 字段（**为 true 直接 FAIL——规则要求 public**）+ 比对远端 blob sha 与本地是否一致。**这是"版本一致"的机器判据**，不靠"我记得推过了"。
