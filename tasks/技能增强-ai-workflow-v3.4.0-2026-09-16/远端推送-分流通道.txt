@@ -1,0 +1,338 @@
+# v3.4.0 远端推送 · 分流通道原始日志
+
+> 本文件是**推送动作的原始输出**，不是结论。结论见 `远端推送-独立验收.txt`。
+> 三条通道：本体（技能根 → ai-workflow-skill）｜自研工具（技能根 → ai-workflow-tools）｜
+> 工作区档案（工作区根 → ai-workflow-skill）。第三条是**旁路**，不经过 push_router 的交叉校验
+> （已知治理缺口，push_router 只管辖技能根内文件）。
+
+远端锚点（推送前）：
+  ai-workflow-skill  main = 5633f77038e0133c29525c9e60bf5244aab614a4  （v3.2.1）
+  ai-workflow-tools  main = 2f5aa4fd428a266ebeafb9a937320f8c9c228bef
+
+推送前两仓 HEAD 与记忆锚点逐一核对一致 → 证明上一轮被 SIGTERM 中断的推送**没有落任何东西**，
+基线 rev `5f2f21a` 有效（重推不得把 `--base` 建在一个"以为推过、其实没有"的 rev 上）。
+
+════════════════════════════════════════════════════════════════════════
+推送 1：本体 34 项 + 自研工具 5 项
+  base 5f2f21a → head ab93cd131a718ed62dd42ac278e0858c71550e22
+  expect-remote 5633f77038e0133c29525c9e60bf5244aab614a4
+  skill: 5633f77038 → f83b1f8deec427735e0948ca4ec644c3412ff9d4（新建 blob 31 / 复用 3）
+════════════════════════════════════════════════════════════════════════
+
+=== push_router push（分流推送）===
+技能根：C:\Users\26717\.workbuddy\skills\ai-workflow
+改动面：5f2f21a..ab93cd131a718ed62dd42ac278e0858c71550e22
+模式：APPLY（真实推送两仓）
+
+── 分流判定 ──
+  [本体          ] SKILL.md
+  [本体          ] _backup-v3.2.1/SKILL.v3.2.1.md
+  [本体          ] _backup-v3.3.0/SKILL.v3.3.0.md
+  [本体          ] _backup-v3.3.0/assets.plan-template.v3.3.0.yaml
+  [本体          ] _backup-v3.3.0/references/ops.v3.3.0.md
+  [本体          ] _backup-v3.3.0/references/orchestration.v3.3.0.md
+  [本体          ] _backup-v3.3.0/scripts/checks.v3.3.0.py
+  [本体          ] _backup-v3.3.0/scripts/http_fetch.v3.3.0.py
+  [本体          ] assets/plan-template.yaml
+  [本体          ] references/changelog.md
+  [本体          ] references/ops.md
+  [本体          ] references/orchestration.md
+  [本体          ] references/push-routing.md
+  [本体          ] references/routing-guide.md
+  [本体          ] references/security-guide.md
+  [本体          ] scripts/checks.py
+  [本体+自研工具     ] scripts/gen_skill_index.py
+  [本体          ] scripts/http_fetch.py
+  [本体+自研工具     ] scripts/perf_baseline.py
+  [本体+自研工具     ] scripts/push_ontology.py
+  [本体+自研工具     ] scripts/push_router.py
+  [本体          ] scripts/setup_env.ps1
+  [本体+自研工具     ] scripts/verify_push.py
+  [本体          ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/perf_baseline_after.json
+  [本体          ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/分流器-交叉校验.txt
+  [本体          ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/基线对比-before-after.txt
+  [本体          ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/扫描缓存残留.py
+  [本体          ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/断言-P3-P8-输出.txt
+  [本体          ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/断言-P3-P8.py
+  [本体          ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/生成验证输出.py
+  [本体          ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/缓存残留清理-待确认.txt
+  [本体          ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/逐字节一致-新旧checks-skill.py
+  [本体          ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/逐字节一致-新旧checks-skill.txt
+  [本体          ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/验证输出.txt
+
+── 交叉校验（标注头 vs plan.yaml 登记表）──
+  [OK  ] SKILL.md                                   有标注头且已登记，但登记链接指向**本体仓**（https://github.com/Garvin666/ai-workflow-skill）→ 只走本体通道，不推 tools 仓
+  [OK  ] _backup-v3.2.1/SKILL.v3.2.1.md             普通本体文件（无自研标注，无需登记）
+  [OK  ] _backup-v3.3.0/SKILL.v3.3.0.md             普通本体文件（无自研标注，无需登记）
+  [OK  ] _backup-v3.3.0/assets.plan-template.v3.3.0.yaml 普通本体文件（无自研标注，无需登记）
+  [OK  ] _backup-v3.3.0/references/ops.v3.3.0.md    普通本体文件（无自研标注，无需登记）
+  [OK  ] _backup-v3.3.0/references/orchestration.v3.3.0.md 普通本体文件（无自研标注，无需登记）
+  [OK  ] _backup-v3.3.0/scripts/checks.v3.3.0.py    普通本体文件（无自研标注，无需登记）
+  [OK  ] _backup-v3.3.0/scripts/http_fetch.v3.3.0.py 普通本体文件（无自研标注，无需登记）
+  [OK  ] assets/plan-template.yaml                  普通本体文件（无自研标注，无需登记）
+  [OK  ] references/changelog.md                    普通本体文件（无自研标注，无需登记）
+  [OK  ] references/ops.md                          普通本体文件（无自研标注，无需登记）
+  [OK  ] references/orchestration.md                普通本体文件（无自研标注，无需登记）
+  [OK  ] references/push-routing.md                 普通本体文件（无自研标注，无需登记）
+  [OK  ] references/routing-guide.md                普通本体文件（无自研标注，无需登记）
+  [OK  ] references/security-guide.md               普通本体文件（无自研标注，无需登记）
+  [OK  ] scripts/checks.py                          普通本体文件（无自研标注，无需登记）
+  [OK  ] scripts/gen_skill_index.py                 标注头齐全，已登记（来源 tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/plan.yaml）→ 双属：本体 + 自研工具
+  [OK  ] scripts/http_fetch.py                      普通本体文件（无自研标注，无需登记）
+  [OK  ] scripts/perf_baseline.py                   标注头齐全，已登记（来源 tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/plan.yaml）→ 双属：本体 + 自研工具
+  [OK  ] scripts/push_ontology.py                   标注头齐全，已登记（来源 tasks/技能增强-ai-workflow-v3.2.0-2026-09-16/plan.yaml）→ 双属：本体 + 自研工具
+  [OK  ] scripts/push_router.py                     标注头齐全，已登记（来源 tasks/技能增强-ai-workflow-v3.2.0-2026-09-16/plan.yaml）→ 双属：本体 + 自研工具
+  [OK  ] scripts/setup_env.ps1                      普通本体文件（无自研标注，无需登记）
+  [OK  ] scripts/verify_push.py                     标注头齐全，已登记（来源 tasks/技能增强-ai-workflow-v3.2.1-2026-09-16/plan.yaml）→ 双属：本体 + 自研工具
+  [OK  ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/perf_baseline_after.json 普通本体文件（无自研标注，无需登记）
+  [OK  ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/分流器-交叉校验.txt 普通本体文件（无自研标注，无需登记）
+  [OK  ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/基线对比-before-after.txt 普通本体文件（无自研标注，无需登记）
+  [OK  ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/扫描缓存残留.py 普通本体文件（无自研标注，无需登记）
+  [OK  ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/断言-P3-P8-输出.txt 普通本体文件（无自研标注，无需登记）
+  [OK  ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/断言-P3-P8.py 普通本体文件（无自研标注，无需登记）
+  [OK  ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/生成验证输出.py 普通本体文件（无自研标注，无需登记）
+  [OK  ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/缓存残留清理-待确认.txt 普通本体文件（无自研标注，无需登记）
+  [OK  ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/逐字节一致-新旧checks-skill.py 普通本体文件（无自研标注，无需登记）
+  [OK  ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/逐字节一致-新旧checks-skill.txt 普通本体文件（无自研标注，无需登记）
+  [OK  ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/验证输出.txt 普通本体文件（无自研标注，无需登记）
+  [SKIP] 登记表（共 11 项）                                另有 4 项未涉及本次改动面（历史登记或本次未改动，非错误）：publish_tools.py、marked_ok.py、marked_incomplete.py、registered_ghost.py
+  登记表共 11 项（来自 tasks/**/plan.yaml）
+
+── 推送计划 ──
+  本体     → Garvin666/ai-workflow-skill@main ：34 项（通道 push_ontology.py，Git Data API + base_tree）
+  自研工具 → Garvin666/ai-workflow-tools@main ：5 项（通道 publish_tools.py，contents API 逐文件）：scripts/gen_skill_index.py、scripts/perf_baseline.py、scripts/push_ontology.py、scripts/push_router.py、scripts/verify_push.py
+
+── 通道 1/2：本体 → Garvin666/ai-workflow-skill ──
+
+  $ C:\Users\26717\.workbuddy\binaries\python\envs\ai-workflow\Scripts\python.exe C:\Users\26717\.workbuddy\skills\ai-workflow\scripts\push_ontology.py --base 5f2f21a --head ab93cd131a718ed62dd42ac278e0858c71550e22 --repo Garvin666/ai-workflow-skill --branch main --root C:\Users\26717\.workbuddy\skills\ai-workflow --apply --expect-remote 5633f77038e0133c29525c9e60bf5244aab614a4=== push_ontology（本体 → Garvin666/ai-workflow-skill@main）===
+模式：APPLY（真实推送）
+本地 git 根：C:\Users\26717\.workbuddy\skills\ai-workflow
+改动面：5f2f21a..ab93cd131a718ed62dd42ac278e0858c71550e22
+
+本地：写入 34 项 / 删除 0 项
+远端 HEAD = 5633f77038e0133c29525c9e60bf5244aab614a4
+base_tree = 14d8dca8a56f96c297dc04d5723a025fd2f0ccbe
+远端 blob 路径 250 个
+
+  [写] SKILL.md
+        新建 blob  f2bbc10375
+  [写] _backup-v3.2.1/SKILL.v3.2.1.md
+        复用远端已有 blob  78c839b1b9
+  [写] _backup-v3.3.0/SKILL.v3.3.0.md
+        新建 blob  1abbf13e2a
+  [写] _backup-v3.3.0/assets.plan-template.v3.3.0.yaml
+        新建 blob  e359c45db5
+  [写] _backup-v3.3.0/references/ops.v3.3.0.md
+        新建 blob  0b41673a54
+  [写] _backup-v3.3.0/references/orchestration.v3.3.0.md
+        新建 blob  5982a60a30
+  [写] _backup-v3.3.0/scripts/checks.v3.3.0.py
+        复用远端已有 blob  d736a7ab6c
+  [写] _backup-v3.3.0/scripts/http_fetch.v3.3.0.py
+        复用远端已有 blob  3f7bab157f
+  [写] assets/plan-template.yaml
+        新建 blob  83c8b072b3
+  [写] references/changelog.md
+        新建 blob  5f50855293
+  [写] references/ops.md
+        新建 blob  009c7f683c
+  [写] references/orchestration.md
+        新建 blob  5982a60a30
+  [写] references/push-routing.md
+        新建 blob  e0535b0099
+  [写] references/routing-guide.md
+        新建 blob  fd59c4a4df
+  [写] references/security-guide.md
+        新建 blob  4b4e238616
+  [写] scripts/checks.py
+        新建 blob  4b19c47a0a
+  [写] scripts/gen_skill_index.py
+        新建 blob  fef5af385e
+  [写] scripts/http_fetch.py
+        新建 blob  804c8b3c18
+  [写] scripts/perf_baseline.py
+        新建 blob  6975e73a4c
+  [写] scripts/push_ontology.py
+        新建 blob  19a61403de
+  [写] scripts/push_router.py
+        新建 blob  9b7ec7d9b4
+  [写] scripts/setup_env.ps1
+        新建 blob  547b872c89
+  [写] scripts/verify_push.py
+        新建 blob  6db6357da8
+  [写] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/perf_baseline_after.json
+        新建 blob  a9ec11fa83
+  [写] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/分流器-交叉校验.txt
+        新建 blob  ad2a1519ee
+  [写] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/基线对比-before-after.txt
+        新建 blob  8738cf1d5c
+  [写] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/扫描缓存残留.py
+        新建 blob  4c07d96c77
+  [写] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/断言-P3-P8-输出.txt
+        新建 blob  3eda3f759b
+  [写] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/断言-P3-P8.py
+        新建 blob  9fb442ce9d
+  [写] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/生成验证输出.py
+        新建 blob  fa2e370329
+  [写] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/缓存残留清理-待确认.txt
+        新建 blob  a20413ec8a
+  [写] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/逐字节一致-新旧checks-skill.py
+        新建 blob  c6c848f5af
+  [写] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/逐字节一致-新旧checks-skill.txt
+        新建 blob  89910317ba
+  [写] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/验证输出.txt
+        新建 blob  28c4346c6f
+
+小计：新建 31 / 复用 3 / 同内容跳过 0 / 删除 0 / 删除跳过 0
+
+新 tree   = de5a79c757834232e0619dfd491bbad219c10df5
+新 commit = f83b1f8deec427735e0948ca4ec644c3412ff9d4
+ref main 已更新：5633f77038 → f83b1f8dee
+[PLAN] C:\Users\26717\.workbuddy\skills\ai-workflow\scripts\gen_skill_index.py  →  scripts/gen_skill_index.py  |  新建：本地 fef5af385e50 → 远端 无
+[OK] 仓库可见性 — Garvin666/ai-workflow-tools public（private=false）
+[OK] 已推送 scripts/gen_skill_index.py — 13334 字节
+[PLAN] C:\Users\26717\.workbuddy\skills\ai-workflow\scripts\perf_baseline.py  →  scripts/perf_baseline.py  |  新建：本地 6975e73a4c34 → 远端 无
+[OK] 仓库可见性 — Garvin666/ai-workflow-tools public（private=false）
+[OK] 已推送 scripts/perf_baseline.py — 14752 字节
+[PLAN] C:\Users\26717\.workbuddy\skills\ai-workflow\scripts\push_ontology.py  →  scripts/push_ontology.py  |  更新：本地 19a61403de78 → 远端 b7cb4188750c
+[OK] 仓库可见性 — Garvin666/ai-workflow-tools public（private=false）
+[OK] 已推送 scripts/push_ontology.py — 14899 字节
+[PLAN] C:\Users\26717\.workbuddy\skills\ai-workflow\scripts\push_router.py  →  scripts/push_router.py  |  更新：本地 9b7ec7d9b490 → 远端 afeb98acd5b1
+[OK] 仓库可见性 — Garvin666/ai-workflow-tools public（private=false）
+[OK] 已推送 scripts/push_router.py — 28492 字节
+[PLAN] C:\Users\26717\.workbuddy\skills\ai-workflow\scripts\verify_push.py  →  scripts/verify_push.py  |  更新：本地 6db6357da890 → 远端 e76780ee012b
+[OK] 仓库可见性 — Garvin666/ai-workflow-tools public（private=false）
+[OK] 已推送 scripts/verify_push.py — 30996 字节
+
+  退出码 = 0
+
+── 通道 2/2：自研工具 → Garvin666/ai-workflow-tools ──
+
+  $ C:\Users\26717\.workbuddy\binaries\python\envs\ai-workflow\Scripts\python.exe C:\Users\26717\.workbuddy\skills\ai-workflow\scripts\publish_tools.py --repo Garvin666/ai-workflow-tools --branch main push --file C:\Users\26717\.workbuddy\skills\ai-workflow\scripts\gen_skill_index.py --dest scripts/gen_skill_index.py --apply --message v3.4.0：性能提速 P1-P9 + 变更治理 + 两个自撞缺陷修复
+  退出码 = 0
+
+  $ C:\Users\26717\.workbuddy\binaries\python\envs\ai-workflow\Scripts\python.exe C:\Users\26717\.workbuddy\skills\ai-workflow\scripts\publish_tools.py --repo Garvin666/ai-workflow-tools --branch main push --file C:\Users\26717\.workbuddy\skills\ai-workflow\scripts\perf_baseline.py --dest scripts/perf_baseline.py --apply --message v3.4.0：性能提速 P1-P9 + 变更治理 + 两个自撞缺陷修复
+  退出码 = 0
+
+  $ C:\Users\26717\.workbuddy\binaries\python\envs\ai-workflow\Scripts\python.exe C:\Users\26717\.workbuddy\skills\ai-workflow\scripts\publish_tools.py --repo Garvin666/ai-workflow-tools --branch main push --file C:\Users\26717\.workbuddy\skills\ai-workflow\scripts\push_ontology.py --dest scripts/push_ontology.py --apply --message v3.4.0：性能提速 P1-P9 + 变更治理 + 两个自撞缺陷修复
+  退出码 = 0
+
+  $ C:\Users\26717\.workbuddy\binaries\python\envs\ai-workflow\Scripts\python.exe C:\Users\26717\.workbuddy\skills\ai-workflow\scripts\publish_tools.py --repo Garvin666/ai-workflow-tools --branch main push --file C:\Users\26717\.workbuddy\skills\ai-workflow\scripts\push_router.py --dest scripts/push_router.py --apply --message v3.4.0：性能提速 P1-P9 + 变更治理 + 两个自撞缺陷修复
+  退出码 = 0
+
+  $ C:\Users\26717\.workbuddy\binaries\python\envs\ai-workflow\Scripts\python.exe C:\Users\26717\.workbuddy\skills\ai-workflow\scripts\publish_tools.py --repo Garvin666/ai-workflow-tools --branch main push --file C:\Users\26717\.workbuddy\skills\ai-workflow\scripts\verify_push.py --dest scripts/verify_push.py --apply --message v3.4.0：性能提速 P1-P9 + 变更治理 + 两个自撞缺陷修复
+  退出码 = 0
+
+分流推送完成：本体 34 项 → Garvin666/ai-workflow-skill ｜ 自研工具 5 项 → Garvin666/ai-workflow-tools
+
+
+════════════════════════════════════════════════════════════════════════
+推送 1b（工作区档案旁路）：6 项
+  push_ontology.py --root "E:/ChatGPT/工作流" --base 623b17c --head 7011bf0
+  expect-remote f83b1f8dee（即推送 1 刚产生的新 HEAD —— 防"基于过时基线推送"）
+  skill: f83b1f8dee → 977d53b630dbbddca62aea5da912e68c00618db5
+  注：`--base 623b17c` 是工作区仓自己的 rev；远端 base_tree 取远端当前 HEAD 的 tree，
+      故 diff 只有 6 份顶层报告（其余工作区档案早已在远端）。dry-run 先跑过一遍，
+      实测**零 blob POST、秒回** —— 这正是本轮修的 dry-run 缺陷的现场验证。
+════════════════════════════════════════════════════════════════════════
+
+=== push_ontology（本体 → Garvin666/ai-workflow-skill@main）===
+模式：APPLY（真实推送）
+本地 git 根：E:\ChatGPT\工作流
+改动面：623b17c..7011bf0
+
+本地：写入 6 项 / 删除 0 项
+远端 HEAD = f83b1f8deec427735e0948ca4ec644c3412ff9d4
+base_tree = de5a79c757834232e0619dfd491bbad219c10df5
+远端 blob 路径 273 个
+
+  [写] Agent三层架构升级方案-2026-09-16.md
+        新建 blob  e685d141f0
+  [写] 升级清单-ai-workflow-v4.0可执行版-2026-09-16.md
+        新建 blob  71c9b6b3e0
+  [写] 对比-ai-workflow现状vs-v4.0升级提案-2026-09-16.md
+        新建 blob  c30ea5bd46
+  [写] 对比-三层架构现状vs升级方案-2026-09-16.md
+        新建 blob  51c3e5eed0
+  [写] 性能瓶颈分析与提速方案-ai-workflow-2026-09-16.md
+        新建 blob  86a2a2d208
+  [写] 解读-人工智能+软件专项行动实施方案-2026-09-16.md
+        新建 blob  b72bbcef7f
+
+小计：新建 6 / 复用 0 / 同内容跳过 0 / 删除 0 / 删除跳过 0
+
+新 tree   = 9e3db331270acde5df40a2bf90d864270d0e1c7d
+新 commit = 977d53b630dbbddca62aea5da912e68c00618db5
+ref main 已更新：f83b1f8dee → 977d53b630
+
+
+════════════════════════════════════════════════════════════════════════
+推送 2：本体 4 项 + 自研工具 1 项
+  base ab93cd1 → head 666bb5b2e158ad0a92f0efa23acfb1c5ff398e12
+  expect-remote 977d53b630dbbddca62aea5da912e68c00618db5
+  skill: 977d53b630 → 0fa7882f2ca794d346a5bedc986afab45e1d79f1
+  内容：references/ops.md、references/push-routing.md、references/changelog.md、
+        scripts/verify_push.py（自研工具 → tools 仓同步）
+════════════════════════════════════════════════════════════════════════
+
+=== push_ontology（本体 → Garvin666/ai-workflow-skill@main）===
+模式：APPLY（真实推送）
+本地 git 根：C:\Users\26717\.workbuddy\skills\ai-workflow
+改动面：ab93cd1..666bb5b2e158ad0a92f0efa23acfb1c5ff398e12
+
+本地：写入 4 项 / 删除 0 项
+远端 HEAD = 977d53b630dbbddca62aea5da912e68c00618db5
+base_tree = 9e3db331270acde5df40a2bf90d864270d0e1c7d
+远端 blob 路径 279 个
+
+  [写] references/changelog.md
+        新建 blob  8f09750318
+  [写] references/ops.md
+        新建 blob  20987f5eda
+  [写] references/push-routing.md
+        新建 blob  1d879fca76
+  [写] scripts/verify_push.py
+        新建 blob  781ff33536
+
+小计：新建 4 / 复用 0 / 同内容跳过 0 / 删除 0 / 删除跳过 0
+
+新 tree   = 5a5938ec2cf3fe8cbf2b3c0fe81f394870d3b86a
+新 commit = 0fa7882f2ca794d346a5bedc986afab45e1d79f1
+ref main 已更新：977d53b630 → 0fa7882f2c
+[PLAN] C:\Users\26717\.workbuddy\skills\ai-workflow\scripts\verify_push.py  →  scripts/verify_push.py  |  更新：本地 781ff335362e → 远端 6db6357da890
+[OK] 仓库可见性 — Garvin666/ai-workflow-tools public（private=false）
+[OK] 已推送 scripts/verify_push.py — 32813 字节
+=== push_router push（分流推送）===
+技能根：C:\Users\26717\.workbuddy\skills\ai-workflow
+改动面：ab93cd1..666bb5b2e158ad0a92f0efa23acfb1c5ff398e12
+模式：APPLY（真实推送两仓）
+
+── 分流判定 ──
+  [本体          ] references/changelog.md
+  [本体          ] references/ops.md
+  [本体          ] references/push-routing.md
+  [本体+自研工具     ] scripts/verify_push.py
+
+── 交叉校验（标注头 vs plan.yaml 登记表）──
+  [OK  ] references/changelog.md                    普通本体文件（无自研标注，无需登记）
+  [OK  ] references/ops.md                          普通本体文件（无自研标注，无需登记）
+  [OK  ] references/push-routing.md                 普通本体文件（无自研标注，无需登记）
+  [OK  ] scripts/verify_push.py                     标注头齐全，已登记（来源 tasks/技能增强-ai-workflow-v3.2.1-2026-09-16/plan.yaml）→ 双属：本体 + 自研工具
+  [SKIP] 登记表（共 11 项）                                另有 10 项未涉及本次改动面（历史登记或本次未改动，非错误）：publish_tools.py、ai-workflow（技能本体）、push_ontology.py、push_router.py…
+  登记表共 11 项（来自 tasks/**/plan.yaml）
+
+── 推送计划 ──
+  本体     → Garvin666/ai-workflow-skill@main ：4 项（通道 push_ontology.py，Git Data API + base_tree）
+  自研工具 → Garvin666/ai-workflow-tools@main ：1 项（通道 publish_tools.py，contents API 逐文件）：scripts/verify_push.py
+
+── 通道 1/2：本体 → Garvin666/ai-workflow-skill ──
+
+  $ C:\Users\26717\.workbuddy\binaries\python\envs\ai-workflow\Scripts\python.exe C:\Users\26717\.workbuddy\skills\ai-workflow\scripts\push_ontology.py --base ab93cd1 --head 666bb5b2e158ad0a92f0efa23acfb1c5ff398e12 --repo Garvin666/ai-workflow-skill --branch main --root C:\Users\26717\.workbuddy\skills\ai-workflow --apply --expect-remote 977d53b630dbbddca62aea5da912e68c00618db5
+  退出码 = 0
+
+── 通道 2/2：自研工具 → Garvin666/ai-workflow-tools ──
+
+  $ C:\Users\26717\.workbuddy\binaries\python\envs\ai-workflow\Scripts\python.exe C:\Users\26717\.workbuddy\skills\ai-workflow\scripts\publish_tools.py --repo Garvin666/ai-workflow-tools --branch main push --file C:\Users\26717\.workbuddy\skills\ai-workflow\scripts\verify_push.py --dest scripts/verify_push.py --apply --message v3.4.0 补修：verify_push.py --skill-dir 功能缺口 + 登记 .gitignore 撞车与验收器建模前提
+  退出码 = 0
+
+分流推送完成：本体 4 项 → Garvin666/ai-workflow-skill ｜ 自研工具 1 项 → Garvin666/ai-workflow-tools

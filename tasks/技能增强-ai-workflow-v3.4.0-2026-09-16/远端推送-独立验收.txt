@@ -1,0 +1,254 @@
+# v3.4.0 远端推送 · 独立验收（按通道分跑，共三次）
+
+验收器：`scripts/verify_push.py` —— 与三条推送通道**零代码共享**。
+**口径：一通道一次，`--prev-remote` 取「该通道推送前」的远端 HEAD。**
+理由与两条结构性限制见 `references/push-routing.md` →「推送后的独立验收：多通道口径与两条结构性限制」。
+判据清单：1 条前提（判据 0：工作区干净 + rev 可解析）+ 7 条实质判据（1/2/3/4+6/5/7）。
+退出码 0 = 全通过、1 = 有 FAIL、2 = 基建错误。
+
+最终状态：**通道 A 全绿（OK 49 / FAIL 0 / SKIP 0 / WARN 0）**；
+通道 B 有 1 项 FAIL，根因是**混合仓同路径撞车的结构性问题**（详见下方归因），不是本次动作的错误。
+
+════════════════════════════════════════════════════════════════════════
+【第 1 次】通道 A（技能根）—— 推送 1 之后，远端当时 = 977d53b630
+  --rev ab93cd1 --expect-remote 977d53b630 --prev-remote 5633f77038
+  结论：OK 48 / FAIL 1 / SKIP 0 / WARN 0
+  唯一 FAIL = 判据 3「无本次新出现的远端独有项」：远端独有 72 项，其中本次新出现 6 项。
+  ⚠️ 归因（不是"先跑再说"，是**判据建模前提不成立**）：那 6 项正是**另一条通道**
+     （工作区档案）在同轮推上去的 6 份顶层报告。判据 3 假设「一轮推送 = 一个本地仓 + 一次提交」，
+     而 ai-workflow-skill 是混合仓、本轮有两条本地来源 → 先推送的通道只要在兄弟通道推完之后复核，
+     就必然把兄弟通道的新增项报出来。**不得靠放松判据掩盖**，故改用"按通道分跑"（见第 2、3 次）。
+════════════════════════════════════════════════════════════════════════
+
+=== 推送结果 · 独立验收 ===
+验收器：verify_push.py
+零代码共享：不 import push_ontology.py / push_router.py / publish_tools.py
+本地 rev：ab93cd131a718ed62dd42ac278e0858c71550e22    技能根：C:\Users\26717\.workbuddy\skills\ai-workflow
+
+-- 判据 0：验收前提（工作区干净 + rev 合法）--
+[ OK ] 工作区无未提交改动
+[ OK ] 本地 rev 可解析 —— ab93cd131a718ed62dd42ac278e0858c71550e22 → 207 个 blob
+[transport] gh api（子进程）
+
+-- 判据 1：远端本体仓 HEAD --
+[ OK ] 远端 HEAD == 期望值 —— 实际 977d53b630 / 期望 977d53b630
+[ OK ] 远端 HEAD ≠ 推送前值（确非空跑） —— 推送前 5633f77038
+
+-- 判据 2：本地 rev ⊆ 远端（全量逐文件 blob sha 比对）--
+[ OK ] 本地全部文件存在于远端 —— 本地 207 项 / 远端 279 项 / 缺失 0 项
+[ OK ] 同名文件 blob sha 逐一相等 —— 不一致 0 项
+
+-- 判据 3：远端独有项均为推送前既有（混合仓的工作区档案侧）--
+[FAIL] 无本次新出现的远端独有项 —— 远端独有 72 项，其中本次新出现 6 项
+        本次新出现：Agent三层架构升级方案-2026-09-16.md
+        本次新出现：升级清单-ai-workflow-v4.0可执行版-2026-09-16.md
+        本次新出现：对比-ai-workflow现状vs-v4.0升级提案-2026-09-16.md
+        本次新出现：对比-三层架构现状vs升级方案-2026-09-16.md
+        本次新出现：性能瓶颈分析与提速方案-ai-workflow-2026-09-16.md
+[ OK ] 远端 blob 数未减少（无意外删除） —— 250 → 279
+
+-- 判据 4 / 6：自研工具（由 meta.自研工具 自动发现）--
+[ OK ] 读到自研工具登记 —— 7 项（来自 4 份 plan.yaml 汇总）
+[ OK ] 标注头存在：scripts/publish_tools.py —— 注释行命中：# [自研工具] publish_tools.py
+[ OK ] 标注头五项齐全：scripts/publish_tools.py —— 标识/名称/用途/适用场景/仓库链接 齐
+[ OK ] 工具仓版本一致：scripts/publish_tools.py —— 远端 6a2fac1ac9 = 独立重算 6a2fac1ac9（19475 字节，CRLF 0 处）
+[ OK ] 跨仓一致性：scripts/publish_tools.py —— 本体仓 6a2fac1ac9 / 工具仓 6a2fac1ac9
+[ OK ] 标注头存在：SKILL.md —— frontmatter selfbuilt: true
+[ OK ] 标注头五项齐全：SKILL.md —— 标识/名称/用途/适用场景/仓库链接 齐
+[ OK ] 本体登记归属正确（不进工具仓） —— ai-workflow（技能本体） → Garvin666/ai-workflow-skill
+[ OK ] 本体未被误推入工具仓：SKILL.md —— 工具仓内无此路径
+[ OK ] 标注头存在：scripts/push_ontology.py —— 注释行命中：# [自研工具] push_ontology.py
+[ OK ] 标注头五项齐全：scripts/push_ontology.py —— 标识/名称/用途/适用场景/仓库链接 齐
+[ OK ] 工具仓版本一致：scripts/push_ontology.py —— 远端 19a61403de = 独立重算 19a61403de（14899 字节，CRLF 0 处）
+[ OK ] 跨仓一致性：scripts/push_ontology.py —— 本体仓 19a61403de / 工具仓 19a61403de
+[ OK ] 标注头存在：scripts/push_router.py —— 注释行命中：# [自研工具] push_router.py
+[ OK ] 标注头五项齐全：scripts/push_router.py —— 标识/名称/用途/适用场景/仓库链接 齐
+[ OK ] 工具仓版本一致：scripts/push_router.py —— 远端 9b7ec7d9b4 = 独立重算 9b7ec7d9b4（28492 字节，CRLF 0 处）
+[ OK ] 跨仓一致性：scripts/push_router.py —— 本体仓 9b7ec7d9b4 / 工具仓 9b7ec7d9b4
+[ OK ] 标注头存在：scripts/verify_push.py —— 注释行命中：# [自研工具] verify_push.py
+[ OK ] 标注头五项齐全：scripts/verify_push.py —— 标识/名称/用途/适用场景/仓库链接 齐
+[ OK ] 工具仓版本一致：scripts/verify_push.py —— 远端 6db6357da8 = 独立重算 6db6357da8（30996 字节，CRLF 0 处）
+[ OK ] 跨仓一致性：scripts/verify_push.py —— 本体仓 6db6357da8 / 工具仓 6db6357da8
+[ OK ] 标注头存在：scripts/gen_skill_index.py —— 注释行命中：# [自研工具] gen_skill_index.py
+[ OK ] 标注头五项齐全：scripts/gen_skill_index.py —— 标识/名称/用途/适用场景/仓库链接 齐
+[ OK ] 工具仓版本一致：scripts/gen_skill_index.py —— 远端 fef5af385e = 独立重算 fef5af385e（13334 字节，CRLF 0 处）
+[ OK ] 跨仓一致性：scripts/gen_skill_index.py —— 本体仓 fef5af385e / 工具仓 fef5af385e
+[ OK ] 标注头存在：scripts/perf_baseline.py —— 注释行命中：# [自研工具] perf_baseline.py
+[ OK ] 标注头五项齐全：scripts/perf_baseline.py —— 标识/名称/用途/适用场景/仓库链接 齐
+[ OK ] 工具仓版本一致：scripts/perf_baseline.py —— 远端 6975e73a4c = 独立重算 6975e73a4c（14752 字节，CRLF 0 处）
+[ OK ] 跨仓一致性：scripts/perf_baseline.py —— 本体仓 6975e73a4c / 工具仓 6975e73a4c
+
+   汇总：指向工具仓 6 项 / 指向本体仓 1 项
+
+-- 判据 5：发布物自证（远端 SKILL.md 自身 + 它指向的下沉手册）--
+[ OK ] 期望版本已确定 —— 3.4.0（从本地 rev 自动推导）
+[ OK ] 远端 SKILL.md 版本 = 期望 —— 命中 version: 3.4.0
+[ OK ] 远端 SKILL.md 含「selfbuilt: true」
+[ OK ] 远端 SKILL.md 含「references/push-routing.md」
+[ OK ] 远端 SKILL.md 含「references/changelog.md」
+[ OK ] 远端 references/push-routing.md 含「两类资源的分流推送路由」
+[ OK ] 远端 references/push-routing.md 含「触发条件」
+[ OK ] 远端 references/push-routing.md 含「判定依据」
+[ OK ] 远端 references/push-routing.md 含「冲突处理策略」
+[ OK ] 远端 references/push-routing.md 含「推送后的独立验收」
+
+-- 判据 7：两仓均为 public --
+[ OK ] Garvin666/ai-workflow-skill public —— visibility=public
+[ OK ] Garvin666/ai-workflow-tools public —— visibility=public
+
+=== 结果：有 1 项 FAIL（OK 48 / FAIL 1 / SKIP 0 / WARN 0）===
+
+
+════════════════════════════════════════════════════════════════════════
+【第 2 次】通道 B（工作区档案根）—— 推送 1b 之后，远端当时 = 977d53b630
+  --skill-dir "E:/ChatGPT/工作流" --rev 7011bf0 --expect-remote 977d53b630
+  --prev-remote f83b1f8dee --expect-version 3.4.0
+  结论：OK 20 / FAIL 1 / SKIP 1 / WARN 0
+
+  ✅ 判据 3 转为 OK（新出现 0 项）—— 这就是第 1 次那个 FAIL 的**独立机器证明**：
+     那 6 份报告确实是本通道自己的 local rev（7011bf0）里的内容，不是来路不明的远端新增。
+  ❌ 唯一 FAIL = 判据 2「同名文件 blob sha 逐一相等」：`.gitignore`
+     本地 5138ffeea1 ≠ 远端 3d53038d4d。
+     根因 = **混合仓同一远端路径被两条本地来源各自主张，且两侧策略方向相反**：
+       技能仓 .gitignore 要忽略 tasks/*/plan.yaml、tasks/*/tmp/（设计如此）
+       工作区仓 .gitignore 要**跟踪**它的 tasks/*/plan.yaml，并忽略 .workbuddy/
+     远端只存一份 → 后推者覆盖先推者。远端当前为**技能侧**版本、未被覆盖。
+     这一项**对工作区侧恒 FAIL，不可通过任何推送动作消除**，属结构性开放缺陷。
+     ⚠️ 未修：三种候选修法都涉及删除公开仓既有路径或改动验收判据，属高风险，须用户先定。
+  ⚠️ SKIP 1 = 判据 4/6「读到自研工具登记 —— 0 项」。**事实正确，不是漏检**：
+     该判据读 tasks/**/plan.yaml 的 meta.自研工具，而该约定 2026-09-15（v3.1.0）才立；
+     工作区的 8 份历史 plan（v2.1–v2.6.1，2026-09-10/11）全部早于它，经全文检索确认 0 命中。
+     验收器对 SKIP 的提示是「需人工确认，不当作通过」—— 此处即人工确认结论。
+════════════════════════════════════════════════════════════════════════
+
+=== 推送结果 · 独立验收 ===
+验收器：verify_push.py
+零代码共享：不 import push_ontology.py / push_router.py / publish_tools.py
+本地 rev：7011bf0    技能根（= 本地 git 根）：E:\ChatGPT\工作流
+
+-- 判据 0：验收前提（工作区干净 + rev 合法）--
+[ OK ] 工作区无未提交改动
+[ OK ] 本地 rev 可解析 —— 7011bf0 → 73 个 blob
+[transport] gh api（子进程）
+
+-- 判据 1：远端本体仓 HEAD --
+[ OK ] 远端 HEAD == 期望值 —— 实际 977d53b630 / 期望 977d53b630
+[ OK ] 远端 HEAD ≠ 推送前值（确非空跑） —— 推送前 f83b1f8dee
+
+-- 判据 2：本地 rev ⊆ 远端（全量逐文件 blob sha 比对）--
+[ OK ] 本地全部文件存在于远端 —— 本地 73 项 / 远端 279 项 / 缺失 0 项
+[FAIL] 同名文件 blob sha 逐一相等 —— 不一致 1 项
+        .gitignore  本地 5138ffeea1 ≠ 远端 3d53038d4d
+
+-- 判据 3：远端独有项均为推送前既有（混合仓的工作区档案侧）--
+[ OK ] 无本次新出现的远端独有项 —— 远端独有 206 项，其中本次新出现 0 项
+[ OK ] 远端 blob 数未减少（无意外删除） —— 273 → 279
+
+-- 判据 4 / 6：自研工具（由 meta.自研工具 自动发现）--
+[SKIP] 读到自研工具登记 —— 0 项（来自 0 份 plan.yaml 汇总）
+
+   汇总：指向工具仓 0 项 / 指向本体仓 0 项
+
+-- 判据 5：发布物自证（远端 SKILL.md 自身 + 它指向的下沉手册）--
+[ OK ] 期望版本已确定 —— 3.4.0（来自 --expect-version；本地 rev 无 SKILL.md，未走推导）
+[ OK ] 期望版本已确定 —— 3.4.0（来自 --expect-version）
+[ OK ] 远端 SKILL.md 版本 = 期望 —— 命中 version: 3.4.0
+[ OK ] 远端 SKILL.md 含「selfbuilt: true」
+[ OK ] 远端 SKILL.md 含「references/push-routing.md」
+[ OK ] 远端 SKILL.md 含「references/changelog.md」
+[ OK ] 远端 references/push-routing.md 含「两类资源的分流推送路由」
+[ OK ] 远端 references/push-routing.md 含「触发条件」
+[ OK ] 远端 references/push-routing.md 含「判定依据」
+[ OK ] 远端 references/push-routing.md 含「冲突处理策略」
+[ OK ] 远端 references/push-routing.md 含「推送后的独立验收」
+
+-- 判据 7：两仓均为 public --
+[ OK ] Garvin666/ai-workflow-skill public —— visibility=public
+[ OK ] Garvin666/ai-workflow-tools public —— visibility=public
+
+=== 结果：有 1 项 FAIL（OK 20 / FAIL 1 / SKIP 1 / WARN 0）===
+    ⚠️ SKIP 项需人工确认，不当作通过
+
+
+════════════════════════════════════════════════════════════════════════
+【第 3 次】通道 A（技能根）—— 推送 2 之后，远端 = 0fa7882f2c
+  --rev 666bb5b2 --expect-remote 0fa7882f2ca794d346a5bedc986afab45e1d79f1
+  --prev-remote 977d53b630
+  结论：OK 49 / FAIL 0 / SKIP 0 / WARN 0 —— 全部通过
+  ⭐ 判据 3 这次为 OK（远端独有 72 项、本次新出现 0 项）：因为基线取的是**本通道推送前**
+     的 977d53b630，那 6 份工作区报告已在基线 tree 内 → 不再被误判为新出现。
+     这一对对照（第 1 次 FAIL / 第 3 次 OK，同一批文件）**本身就是"按通道分跑"口径成立的证明**。
+════════════════════════════════════════════════════════════════════════
+
+=== 推送结果 · 独立验收 ===
+验收器：verify_push.py
+零代码共享：不 import push_ontology.py / push_router.py / publish_tools.py
+本地 rev：666bb5b2e158ad0a92f0efa23acfb1c5ff398e12    技能根（= 本地 git 根）：C:\Users\26717\.workbuddy\skills\ai-workflow
+
+-- 判据 0：验收前提（工作区干净 + rev 合法）--
+[ OK ] 工作区无未提交改动
+[ OK ] 本地 rev 可解析 —— 666bb5b2e158ad0a92f0efa23acfb1c5ff398e12 → 207 个 blob
+[transport] gh api（子进程）
+
+-- 判据 1：远端本体仓 HEAD --
+[ OK ] 远端 HEAD == 期望值 —— 实际 0fa7882f2c / 期望 0fa7882f2c
+[ OK ] 远端 HEAD ≠ 推送前值（确非空跑） —— 推送前 977d53b630
+
+-- 判据 2：本地 rev ⊆ 远端（全量逐文件 blob sha 比对）--
+[ OK ] 本地全部文件存在于远端 —— 本地 207 项 / 远端 279 项 / 缺失 0 项
+[ OK ] 同名文件 blob sha 逐一相等 —— 不一致 0 项
+
+-- 判据 3：远端独有项均为推送前既有（混合仓的工作区档案侧）--
+[ OK ] 无本次新出现的远端独有项 —— 远端独有 72 项，其中本次新出现 0 项
+[ OK ] 远端 blob 数未减少（无意外删除） —— 279 → 279
+
+-- 判据 4 / 6：自研工具（由 meta.自研工具 自动发现）--
+[ OK ] 读到自研工具登记 —— 7 项（来自 4 份 plan.yaml 汇总）
+[ OK ] 标注头存在：scripts/publish_tools.py —— 注释行命中：# [自研工具] publish_tools.py
+[ OK ] 标注头五项齐全：scripts/publish_tools.py —— 标识/名称/用途/适用场景/仓库链接 齐
+[ OK ] 工具仓版本一致：scripts/publish_tools.py —— 远端 6a2fac1ac9 = 独立重算 6a2fac1ac9（19475 字节，CRLF 0 处）
+[ OK ] 跨仓一致性：scripts/publish_tools.py —— 本体仓 6a2fac1ac9 / 工具仓 6a2fac1ac9
+[ OK ] 标注头存在：SKILL.md —— frontmatter selfbuilt: true
+[ OK ] 标注头五项齐全：SKILL.md —— 标识/名称/用途/适用场景/仓库链接 齐
+[ OK ] 本体登记归属正确（不进工具仓） —— ai-workflow（技能本体） → Garvin666/ai-workflow-skill
+[ OK ] 本体未被误推入工具仓：SKILL.md —— 工具仓内无此路径
+[ OK ] 标注头存在：scripts/push_ontology.py —— 注释行命中：# [自研工具] push_ontology.py
+[ OK ] 标注头五项齐全：scripts/push_ontology.py —— 标识/名称/用途/适用场景/仓库链接 齐
+[ OK ] 工具仓版本一致：scripts/push_ontology.py —— 远端 19a61403de = 独立重算 19a61403de（14899 字节，CRLF 0 处）
+[ OK ] 跨仓一致性：scripts/push_ontology.py —— 本体仓 19a61403de / 工具仓 19a61403de
+[ OK ] 标注头存在：scripts/push_router.py —— 注释行命中：# [自研工具] push_router.py
+[ OK ] 标注头五项齐全：scripts/push_router.py —— 标识/名称/用途/适用场景/仓库链接 齐
+[ OK ] 工具仓版本一致：scripts/push_router.py —— 远端 9b7ec7d9b4 = 独立重算 9b7ec7d9b4（28492 字节，CRLF 0 处）
+[ OK ] 跨仓一致性：scripts/push_router.py —— 本体仓 9b7ec7d9b4 / 工具仓 9b7ec7d9b4
+[ OK ] 标注头存在：scripts/verify_push.py —— 注释行命中：# [自研工具] verify_push.py
+[ OK ] 标注头五项齐全：scripts/verify_push.py —— 标识/名称/用途/适用场景/仓库链接 齐
+[ OK ] 工具仓版本一致：scripts/verify_push.py —— 远端 781ff33536 = 独立重算 781ff33536（32813 字节，CRLF 0 处）
+[ OK ] 跨仓一致性：scripts/verify_push.py —— 本体仓 781ff33536 / 工具仓 781ff33536
+[ OK ] 标注头存在：scripts/gen_skill_index.py —— 注释行命中：# [自研工具] gen_skill_index.py
+[ OK ] 标注头五项齐全：scripts/gen_skill_index.py —— 标识/名称/用途/适用场景/仓库链接 齐
+[ OK ] 工具仓版本一致：scripts/gen_skill_index.py —— 远端 fef5af385e = 独立重算 fef5af385e（13334 字节，CRLF 0 处）
+[ OK ] 跨仓一致性：scripts/gen_skill_index.py —— 本体仓 fef5af385e / 工具仓 fef5af385e
+[ OK ] 标注头存在：scripts/perf_baseline.py —— 注释行命中：# [自研工具] perf_baseline.py
+[ OK ] 标注头五项齐全：scripts/perf_baseline.py —— 标识/名称/用途/适用场景/仓库链接 齐
+[ OK ] 工具仓版本一致：scripts/perf_baseline.py —— 远端 6975e73a4c = 独立重算 6975e73a4c（14752 字节，CRLF 0 处）
+[ OK ] 跨仓一致性：scripts/perf_baseline.py —— 本体仓 6975e73a4c / 工具仓 6975e73a4c
+
+   汇总：指向工具仓 6 项 / 指向本体仓 1 项
+
+-- 判据 5：发布物自证（远端 SKILL.md 自身 + 它指向的下沉手册）--
+[ OK ] 期望版本已确定 —— 3.4.0（从本地 rev 自动推导）
+[ OK ] 远端 SKILL.md 版本 = 期望 —— 命中 version: 3.4.0
+[ OK ] 远端 SKILL.md 含「selfbuilt: true」
+[ OK ] 远端 SKILL.md 含「references/push-routing.md」
+[ OK ] 远端 SKILL.md 含「references/changelog.md」
+[ OK ] 远端 references/push-routing.md 含「两类资源的分流推送路由」
+[ OK ] 远端 references/push-routing.md 含「触发条件」
+[ OK ] 远端 references/push-routing.md 含「判定依据」
+[ OK ] 远端 references/push-routing.md 含「冲突处理策略」
+[ OK ] 远端 references/push-routing.md 含「推送后的独立验收」
+
+-- 判据 7：两仓均为 public --
+[ OK ] Garvin666/ai-workflow-skill public —— visibility=public
+[ OK ] Garvin666/ai-workflow-tools public —— visibility=public
+
+=== 结果：全部通过 FAIL=0（OK 49 / FAIL 0 / SKIP 0 / WARN 0）===
