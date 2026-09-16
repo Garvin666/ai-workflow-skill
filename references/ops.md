@@ -33,6 +33,7 @@ PY="C:/Users/26717/.workbuddy/binaries/python/envs/ai-workflow/Scripts/python.ex
 | **publish_tools.py**（v3.1.0 自研） | **自研工具/技能的公开留痕**：`init` 创建**公开**仓库（默认 public，**不提供 `--private`**；**幂等**——已存在且 public 则跳过，已存在但 private 则 FAIL 并给改可见性指引）；`push` 推送本地文件（默认 dry-run，`--apply` 才写；已存在文件带远端 `sha` 更新，幂等）；`verify` 校验仓库 `private=false` + 远端 blob sha 与本地一致（**版本一致的机器判据**）。走 `api.github.com`，优先 `gh api` 子进程、回退 urllib；凭据 `--token`→`GITHUB_TOKEN`→`GH_TOKEN`→`gh auth token`。`--repo` 或 `SELFTOOL_REPO` 覆盖目标仓（默认 `Garvin666/ai-workflow-tools`）。⚠️ 文本类扩展名默认做 **CRLF→LF 规范化**再算 sha（否则工作区 CRLF 会与仓内 LF 不一致，表现为"每次都判需推送"），`--no-normalize` 关闭 | `publish_tools.py init --name ai-workflow-tools --apply`<br>`publish_tools.py push --file scripts/foo.py --dest scripts/foo.py --apply`<br>`publish_tools.py verify --file scripts/foo.py --dest scripts/foo.py` |
 | **push_ontology.py**（v3.2.0 自研） | **本体（Ontology）专用推送通道** → `ai-workflow-skill`：`--base <rev> --head <rev>` 增量推送本地 commit 范围。走 `api.github.com` Git Data API（blob → tree(**base_tree**) → commit → PATCH ref），远端混合仓故用 `base_tree` 精确列改动；内容从 `git cat-file blob` 取（**git 对象库天然 LF**，不用工作区 CRLF 字节）；新 blob 的 sha 与远端返回不符**立即抛错**（换行符口径的机器判据）。**默认 dry-run**，`--apply` 才写；`--allow-delete` 才删远端（默认只列出）；`--expect-remote <sha>` 锁基线防并发。`--repo` / `ONTOLOGY_REPO` 覆盖（默认 `Garvin666/ai-workflow-skill`）。由 v3.0 任务临时脚本 `tasks/技能增强-ai-workflow-v3.0-2026-09-15/tmp/push_incremental.py` 提升而来（v3.2.0 修正其三个隐患：藏在 tmp 不入仓、仓名硬编码、**默认就真推**） | `push_ontology.py --base 8f14ac61 --head HEAD`<br>`push_ontology.py --base X --head Y --apply --allow-delete` |
 | **push_router.py**（v3.2.0 自研） | **两类资源的分流推送路由**：`classify` 离线分类 + **交叉校验**（标注头×`meta.自研工具` 登记表；漏登记／登记与实现不符／标注头缺项 → FAIL）；`push` 分流推两仓（本体 → 技能仓，自研工具 → 工具仓，默认 dry-run）。⚠️ **分流不是互斥二选一**：本体＝改动面全量，自研工具＝其子集，`scripts/` 下自研脚本属**双属**。判定三条件缺一不可：① 事实＝有 `[自研工具]`/`[自研技能]` 标注或 `SKILL.md` frontmatter `selfbuilt: true` ② 意图＝已登记 ③ **指向＝登记链接指向工具仓**（否则技能本体本身的登记会被误判成自研工具）。交叉校验 FAIL **阻塞两条通道**；本体通道失败则中止、不继续工具通道 | `push_router.py classify --files scripts/foo.py`<br>`push_router.py push --base X --head Y --apply` |
+| **verify_push.py**（v3.2.1 自研） | **推送结果的独立验收器**（与三条推送通道**零代码共享**）：`--rev <本地 rev> [--prev-remote <推送前远端 HEAD>] [--expect-remote <sha>] [--repo] [--tools-repo] [--allow-dirty]`。7 类判据：① 工作区干净+rev 可解析 ② 远端 HEAD 等值/非空跑 ③ 本地 rev ⊆ 远端且 blob sha 逐一相等 ④ 远端独有项早于本次推送+blob 数不减少 ⑤ 每个自研工具在工具仓的 sha == 本地**独立重算**值（CRLF→LF 归一化）⑥ **跨仓一致性**（同文件两仓 sha 必须相同）⑦ 发布物自证（版本+分流小节）⑧ 两仓 public。**期望版本从本地 rev 的 SKILL.md 自动推导；自研工具清单从 `tasks/**/plan.yaml` 的 `meta.自研工具` 自动发现**（`tasks/*/tmp/` 不读——那里是探针伪造的假登记）。口径坑内建：`git -c core.quotePath=false ls-tree`、混合仓用「本地⊆远端」而非「集合相等」。几种"像失败其实不是"的情形显式判 **SKIP**（未传 prev-remote／登记链接为「待推送」／登记文件只存在于工作区未入版本控制）。退出码 0=全通过、1=有 FAIL、2=基建错误 | `verify_push.py --rev HEAD --prev-remote db2a3e58`<br>`verify_push.py --rev HEAD --prev-remote X --expect-remote Y` |
 
 各脚本详细参数：加 `--help`。
 
@@ -164,6 +165,21 @@ grep -vE "api\.github\.com" all_urls.txt > check_urls.txt
 
 ## 七、变更日志
 
+- **v3.2.1（2026-09-16）把「推送验收器」正式化为 `scripts/verify_push.py` 并登记为自研工具**（用户指令：「补」—— 补上前一轮自己登记的待办建议）：
+  - **起因**：v3.1.0／v3.2.0 三轮推送**各写一份**临时验收器（v3.1.0 那份在 `tasks/技能增强-ai-workflow-v3.1.0-2026-09-15/tmp/verify_push_v3_1_0.py`，v3.2.0 那份在 `tasks/技能增强-ai-workflow-v3.2.0-2026-09-16/tmp/verify_push_v3_2_0.py`），全落在 `tasks/*/tmp/`（按约定**不入版本控制**）→ 不可复用、每轮重写，而"复制粘贴漏改常量"恰是作者自查最抓不住的一类错。本轮把它的逻辑抽出来通用化，落到 `scripts/` 并登记。
+  - **消灭所有「人工记得改」的常量**：期望版本 ← 从本地 rev 的 `SKILL.md` frontmatter **自动推导**；自研工具清单 ← 从 `tasks/**/plan.yaml` 的 `meta.自研工具` **自动发现**；默认分支 ← 从远端仓库元数据取。调用方只需给 **本地 rev** 与 **推送前远端 HEAD** 两件事。
+  - **与三条推送通道零代码共享**（`push_ontology.py`／`push_router.py`／`publish_tools.py` 一概不 import）：自己算 blob sha、自己经 api.github.com 取远端、自己解析本地 tree。并且与分流器构成**方向相反的第二实现** —— 分流器「标注头驱动」（先扫文件再回查登记），验收器「登记表驱动」（先读登记再回查文件），两者同时通过才算交叉印证。
+  - **7 类判据**（另加判据 0 前提）：远端 HEAD 等值/非空跑 → 本地 rev ⊆ 远端且 blob sha 逐一相等 → 远端独有项早于本次推送且 blob 数不减少 → 自研工具在工具仓的 sha == 本地独立重算 → **跨仓一致性** → 发布物自证（版本+分流小节）→ 两仓 public。判据 6 正是 v3.2.0 那次**跨通道内容不一致事故**推出来的。
+  - **本轮撞出的 4 处判据缺陷（全部由实测暴露，作者自查未发现）**：
+    - **① 登记名带注释后缀**：v3.1.0 的登记名是 `ai-workflow（技能本体）`，初版按字面匹配 → 误报 FAIL。修：名称规范化（剥说明性括号后缀）。**登记名里的注释是给人看的，不是身份的一部分。**
+    - **② 把测试替身误判成真缺陷**：v3.2.0 为证明门禁真伪登记了 4 个 fixture 测试替身（`marked_ok` / `marked_incomplete` / `registered_ghost` / `fixture-skill`，放在 `tasks/*/tmp/fixture_router/` 的嵌套假任务树里），初版一律判 FAIL → **4 项全是误报**。修：`tasks/*/tmp/` 下的 `plan.yaml` **不读**（那里是中间产物/测试替身的投放区）；且登记项映射不到时**区分两种情形** —— 只在工作区、未入版本控制 → SKIP（需人工确认）；两处都找不到 → FAIL（悬空登记）。
+    - **③ 标注头判据按字面而非语义**：既有脚本把名称写在标识同一行（`[自研工具] push_ontology.py`），初版硬找「名称：」三字 → 对两个**合规**脚本各误报一次「缺名称」。修：按**语义**判五项（标识/名称/用途/适用场景/仓库链接），不强制某种排版。
+    - **④ 技能包只认带斜杠的 `…/SKILL.md`**：根级 `SKILL.md` 的相对路径没有斜杠、父目录名为空串 → 技能本体自己的登记被误报「悬空登记」。修：补根级情形（与技能根目录名比对）。
+  - **几种"看起来像失败、其实不是"的情形显式判 SKIP**（不静默、不算通过）：未传 `--prev-remote`（无法机器证明）／登记链接为「待推送」（中间态，推送后须回填）／登记文件只存在于工作区未入版本控制。**SKIP 项在输出末尾单独计数并提示"需人工确认"**。
+  - **设计选择（可被证伪优先）**：新工具的登记**直接写真实仓库链接**而不写「待推送」—— 于是"改了代码忘了推"会被判据 4 必然抓出（本轮推送前实跑即成功触发该 FAIL，构成一次天然的阴性对照）。**可被证伪的声明 > 自我声明的豁免。**
+  - **验证**：`checks.py skill` **24/24 FAIL=0**（23→24 系新脚本纳入 py_compile）；`checks.py plan` 本任务对账 FAIL=0；推送前实跑 1 项 FAIL（预期：登记为已推送而远端尚无该文件）→ 推送后转全 PASS；**验收器自身即本次的验收工具（dogfooding）**。证据见 `tasks/技能增强-ai-workflow-v3.2.1-2026-09-16/`。
+  - **诚实边界（未解决）**：① 判据 3 依赖调用方提供 `--prev-remote`，漏传即降级为 SKIP（不做任何猜测）；② 需要 `pyyaml` 与 `gh`（无 `gh` 时回退 urllib，本机 urllib 直连 api.github.com 曾报 `ssl.SSLEOFError`，故回退通道在本机可能不可用）；③ 只验收**两个已知仓**与**技能根内**的自研工具，技能根外的工具仍须直接用 `publish_tools.py verify`。
+
 - **v3.2.0（2026-09-16）新增「两类资源的分流推送路由」（SKILL.md 新小节，唯一事实源）**（用户 2026-09-16 指定：「本体（Ontology）→ `ai-workflow-skill`，自研工具 → `ai-workflow-tools`，并明确触发条件／判定依据／推送格式／冲突处理策略」）：
   - **四要素**：**①触发条件** —— 新增/更新 → 推（内容一致则幂等跳过）；重命名 → 本体按「删旧+增新」、工具按新路径更新；删除 → 本体须 `--allow-delete`、工具**不自动删**。**②判定依据** —— 本体＝路径落在技能仓内（改动面**全量**）；自研工具＝三条**同时**满足：*事实*＝有 `[自研工具]`/`[自研技能]` 标注块或 `SKILL.md` frontmatter `selfbuilt: true`，*意图*＝`meta.自研工具` 已登记，***指向*＝登记链接指向工具仓**。**③推送格式** —— 本体走 Git Data API + `base_tree`（一次 commit 覆盖全部改动，内容取 `git cat-file blob`）；工具走 contents API（**逐文件**，CRLF→LF 归一化）。**④冲突处理** —— 幂等跳过／本体 commit parent 取远端**当前** HEAD 且 ref 非强推（非快进即失败）／blob sha 不符**立即抛错**／混合仓远端独有项**永不删**／交叉校验 FAIL **阻塞两条通道**／本体通道失败即**中止**、不继续工具通道。
   - **⚠️ 最易误解点（已写进规则正文）**：**分流不是互斥二选一** —— 本体＝技能仓改动面的**全量**，自研工具＝其中的**子集**，故 `scripts/` 下自研脚本属**双属**：既作本体快照进技能仓，又作独立工具进工具仓。同一文件在两仓的 blob sha 相同，本身就是「版本一致」的天然证据。
@@ -173,7 +189,7 @@ grep -vE "api\.github\.com" all_urls.txt > check_urls.txt
   - **本轮撞出的 2 个真缺陷（均由实测暴露，非推演）**：
     - **① 技能包判定顺序陷阱**：`scan_selftool_header` 初版先扫正文标记、后判 frontmatter → `SKILL.md` 正文首段的 `[自研技能]` **输出标注**抢先命中脚本分支，技能包分支（读 `repo:`）**永不生效**，真实目录下 `SKILL.md` 被误报「漏登记」。修：技能包分支**前置**。
     - **② 技能包映射依赖中文命名**：初版靠 `名称` 里是否含「技能本体/技能包」把登记项映射到 `SKILL.md` —— 一改命名就失效。改为用 frontmatter `repo` 与登记链接**同仓比对**（基于数据本身，不依赖命名习惯）。
-  - **诚实边界（未解决，如实登记）**：① 无跨会话基线时**无法检测「远端被第三方改写」**这类漂移（如需该保护，推送后记录 sha 并用 `--expect-remote` 显式约束）；② 工具仓删除**需人工在网页进行**（contents API 单文件通道未实现删除）；③ `push_router` 只管辖**技能根内**的文件，技能根外的自研工具直接用 `publish_tools.py`。
+  - **诚实边界（未解决，如实登记）**：① 无跨会话基线时**无法检测「远端被第三方改写」**这类漂移（如需该保护，推送后记录 sha 并用 `--expect-remote` 显式约束）；② 工具仓删除**需人工在网页进行**（contents API 单文件通道未实现删除）；③ `push_router` 只管辖**技能根内**的文件，技能根外的自研工具直接用 `publish_tools.py`。→ 三条**至今仍成立**；当时另登记的「推送验收器每轮重写、落在 `tmp/` 不可复用」已在 **v3.2.1 消除**。
 
 - **v3.1.1（2026-09-16）新增「技能库卫生」四条硬约定（SKILL.md 新小节）**（用户指定「现在就做一次归并梳理」→「全做」；起因是一次 32 个技能的全量盘点）：
   - **盘点的反直觉结论**：问题**不是内容重复**，而是**导航缺失 + 元数据不全 + 跨模块口径分叉**。段落级（≥60 字符）比对**零重复**；32 个技能中 24 个是孤岛（全库仅 8 条互引）。故**没有做任何"归并"**——改做三件事：建索引、补元数据、修口径分叉。

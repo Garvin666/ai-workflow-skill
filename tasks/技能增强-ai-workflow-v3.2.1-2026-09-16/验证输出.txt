@@ -1,0 +1,80 @@
+===================================================================
+ai-workflow v3.2.1 推送前自检 —— 原始命令输出（未手抄）
+生成时间：2026-09-16 10:46:49 +0800
+技能根：C://Users//26717//.workbuddy//skills//ai-workflow
+说明：本文件由脚本直接捕获命令输出生成；下面是三条命令的完整原始输出。
+===================================================================
+
+### 命令 1：python scripts/checks.py skill
+-------------------------------------------------------------------
+=== ai-workflow 技能自检 ===
+[ OK ] SKILL.md 存在
+[ OK ] frontmatter 含 name
+[ OK ] frontmatter 含 description
+[ OK ] frontmatter 含 agent_created
+[ OK ] 文档引用完整性 — 检查 59 条引用
+[ OK ] 模板 schema：_示例-数据分析.yaml — 9/9
+[ OK ] 模板 schema：UI组件库搭建.yaml — 9/9
+[ OK ] 模板 schema：学习资料生成.yaml — 9/9
+[ OK ] 模板 schema：小说写作.yaml — 9/9
+[ OK ] 模板 schema：技术调研.yaml — 9/9
+[ OK ] 模板 schema：调研报告.yaml — 9/9
+[ OK ] 模板 schema：选品分析.yaml — 9/9
+[ OK ] 模板 schema：量化分析.yaml — 9/9
+[ OK ] plan-template 必填键 — 齐全
+[ OK ] py_compile：ai_call.py
+[ OK ] py_compile：archive_tasks.py
+[ OK ] py_compile：checks.py
+[ OK ] py_compile：data_query.py
+[ OK ] py_compile：http_fetch.py
+[ OK ] py_compile：office_io.py
+[ OK ] py_compile：publish_tools.py
+[ OK ] py_compile：push_ontology.py
+[ OK ] py_compile：push_router.py
+[ OK ] py_compile：verify_push.py
+=== 结果：24/24 通过，FAIL=0 ===
+
+### 命令 2：python scripts/checks.py plan tasks/技能增强-ai-workflow-v3.2.1-2026-09-16/plan.yaml --base <技能根>
+-------------------------------------------------------------------
+=== ai-workflow 计划对账 ===
+[ OK ] plan.yaml 存在 — tasks\技能增强-ai-workflow-v3.2.1-2026-09-16\plan.yaml
+[ OK ] plan.yaml 可解析
+[ OK ] meta.任务
+[ OK ] meta.验证信号
+[ OK ] meta.工作区根
+[ OK ] steps 非空 — 8 步
+[FAIL] 步骤 7 交付物缺失 — tasks/技能增强-ai-workflow-v3.2.1-2026-09-16/远端推送验收.txt（未在 --base=<工作区根> 下找到；相对路径以 --base 为基准，工作区根之外的文件须写绝对路径）
+[FAIL] 步骤 8 交付物缺失 — tasks/技能增强-ai-workflow-v3.2.1-2026-09-16/远端推送独立验收.txt（未在 --base=<工作区根> 下找到；相对路径以 --base 为基准，工作区根之外的文件须写绝对路径）
+[ OK ] Anti-drop 对账 — 已完成步骤 8 个，交付物确认 6 个
+[ OK ] 决策记录 — 未使用（无外部辅助引入，属正常）
+[ OK ] 计划修订 — 未使用（未发生重规划）
+[ OK ] 自研工具登记 — 1 项
+[ OK ] 熔断状态 — 正常（未声明）
+=== 结果：11/13 通过，FAIL=2 ===
+
+### 命令 3：python tasks/技能增强-ai-workflow-v3.2.1-2026-09-16/tmp/probe_verify.py  （阴性对照）
+-------------------------------------------------------------------
+=== verify_push.py 阴性对照（破坏性输入 → 必须报 FAIL）===
+远端 HEAD=db2a3e58d6；对照共 5 条；每条都要求退出码非 0 且**该条判据自己**被判 FAIL
+
+[OK] 判据 1：期望远端 HEAD 不符
+        预期命中：远端 HEAD == 期望值
+        实际退出码：1 ｜ 命中该判据的 FAIL 行：有 ｜ 总 FAIL 数：1
+
+[OK] 判据 3：基线取过老 → 判出「本次新出现」
+        预期命中：无本次新出现的远端独有项
+        实际退出码：1 ｜ 命中该判据的 FAIL 行：有 ｜ 总 FAIL 数：1
+
+[OK] 判据 5：版本号不符
+        预期命中：远端 SKILL.md 版本 = 期望
+        实际退出码：1 ｜ 命中该判据的 FAIL 行：有 ｜ 总 FAIL 数：1
+
+[OK] 判据 0：脏工作区未放行（不加 --allow-dirty）
+        预期命中：工作区无未提交改动
+        实际退出码：1 ｜ 命中该判据的 FAIL 行：有 ｜ 总 FAIL 数：1
+
+[OK] 基建：工具仓不存在 → 直接退出码 2
+        预期命中：取远端失败
+        实际退出码：2 ｜ 命中该判据的 FAIL 行：有 ｜ 总 FAIL 数：2
+
+=== 对照结果：全部符合预期（5/5 条符合预期）===

@@ -1,13 +1,13 @@
 ---
 name: ai-workflow
-description: AI 标准化多阶段工作方法论，适用于量化分析、跨境电商选品、小说写作、学习资料生成、技术调研等项目：入口分型（消息 / 正式需求 / Bug）与任务分层（轻操作豁免 / 快速通道 / 全流程）→ 查可用 Skill → 上下文收集与任务确认 → 调研与方案评审 → 编排执行（**自主决策层**：能力路由选型 + 自适应计划与重规划 + 决策留痕，机器可校验；计划先行、精检索、子代理 Handoff、**阶段感知模型路由**降本 70–90%）→ 独立审核**抽查制**（默认自查 + 机器门禁；高危产出／用户点名／返修触顶三类必送审，送审时执行者不自审）与返修复查 → 测试交付与验收（含发布协作）→ 结果核验、履历归档与复盘，**自研工具与技能须标注（名称/用途/适用场景）并按「本体 → ai-workflow-skill ／ 自研工具 → ai-workflow-tools」两类规则分流推送 public 仓库、交付附仓库链接**，流程末梢设**熔断机制**（触发即冻结并升级，机器可判定）。内置工作区边界、Token 纪律、评审防偏差与反模式清单。触发词：AI 工作流 / 按流程干活 / 标准流程 / 工作方法论 / ai-workflow。
+description: AI 标准化多阶段工作方法论，适用于量化分析、跨境电商选品、小说写作、学习资料生成、技术调研等项目：入口分型（消息 / 正式需求 / Bug）与任务分层（轻操作豁免 / 快速通道 / 全流程）→ 查可用 Skill → 上下文收集与任务确认 → 调研与方案评审 → 编排执行（**自主决策层**：能力路由选型 + 自适应计划与重规划 + 决策留痕，机器可校验；计划先行、精检索、子代理 Handoff、**阶段感知模型路由**降本 70–90%）→ 独立审核**抽查制**（默认自查 + 机器门禁；高危产出／用户点名／返修触顶三类必送审，送审时执行者不自审）与返修复查 → 测试交付与验收（含发布协作）→ 结果核验、履历归档与复盘，**自研工具与技能须标注（名称/用途/适用场景）并按「本体 → ai-workflow-skill ／ 自研工具 → ai-workflow-tools」两类规则分流推送 public 仓库并做独立验收、交付附仓库链接**，流程末梢设**熔断机制**（触发即冻结并升级，机器可判定）。内置工作区边界、Token 纪律、评审防偏差与反模式清单。触发词：AI 工作流 / 按流程干活 / 标准流程 / 工作方法论 / ai-workflow。
 agent_created: true
 selfbuilt: true
 repo: https://github.com/Garvin666/ai-workflow-skill
-version: 3.2.0
+version: 3.2.1
 ---
 
-# AI 工作流 v3.2.0
+# AI 工作流 v3.2.1
 
 > **[自研技能]** 名称：`ai-workflow` ｜ 用途：为多阶段任务提供标准化流程编排（入口分型 / 任务分层 / 计划先行 / 自主决策层 / 独立审核抽查制 / 熔断），并配一套**机器可校验**的工具与门禁 ｜ 适用场景：产出文件或代码或报告、多步且步骤间有依赖、数据分析、跨文件改造、调研查重、方案评审；纯问答 / 查询 / 翻译 / 单文件读取不适用 ｜ 仓库：https://github.com/Garvin666/ai-workflow-skill
 
@@ -261,6 +261,7 @@ version: 3.2.0
 
 > **分工**：本体（Ontology）→ `ai-workflow-skill`；自研工具 → `ai-workflow-tools`。
 > **一条命令**：`python scripts/push_router.py push --base <rev> --head <rev> [--apply]`（**默认 dry-run**）。
+> **推完必验**：`python scripts/verify_push.py --rev HEAD --prev-remote <推送前远端 HEAD>`（见 ⑤）。
 > ⚠️ **最容易误解的一点：分流不是互斥二选一。** 本体 ＝ 技能仓改动面的**全量**（技能本体 + 任务档案）；自研工具 ＝ 其中的**子集**。所以 `scripts/` 下的自研脚本属**双属** —— 既作为本体快照进技能仓，又作为独立工具进工具仓，两条通道各推一份（内容同源；同一文件在两仓的 blob sha 相同，这本身就是「版本一致」的天然证据）。
 
 #### ① 触发条件
@@ -320,6 +321,38 @@ version: 3.2.0
 | 登记项与技能包的映射 | 用 frontmatter `repo` 与登记链接**同仓比对**，**不**依赖名称里是否含中文关键词（那种判据一改命名就失效） |
 | ⚠️ **已知边界**（如实登记，不假装有保护） | 无跨会话基线时，**无法检测「远端被第三方改写」**这类漂移；如需该保护，推送后记录 sha 并用 `--expect-remote` 显式约束 |
 
+#### ⑤ 推送后的独立验收（v3.2.1，把验收器正式化）
+
+**命令**：`python scripts/verify_push.py --rev HEAD --prev-remote <推送前的远端 HEAD> [--expect-remote <推送后远端 HEAD>]`
+
+调用方只需给两件事：**本地 rev** 与**推送前远端 HEAD**。期望版本号从本地 rev 的 `SKILL.md`
+**自动推导**，自研工具清单从 `tasks/**/plan.yaml` 的 `meta.自研工具` **自动发现**，默认分支从远端
+元数据取 —— 刻意消灭所有"人工记得改"的常量（旧做法是每轮复制一份再手改常量，而"复制粘贴漏改"
+恰是作者自查最抓不住的一类错）。
+
+| # | 判据 | 判 FAIL 的典型情形 |
+| --- | --- | --- |
+| 0 | 工作区干净 + rev 可解析 | 有未提交改动（登记表读的是工作区，可能与已推送版本不同步） |
+| 1 | 远端 HEAD == 期望；≠ 推送前值 | 推送根本没发生（空跑） |
+| 2 | 本地 rev **⊆** 远端，且同名文件 blob sha 逐一相等 | 漏推文件、推了旧内容（sha 不同） |
+| 3 | 远端独有项均由**推送前** base_tree 证明早于本次推送；远端 blob 数未减少 | 本次意外新增/删除了远端文件 |
+| 4 | 每个自研工具在工具仓的 sha == 本地**独立重算**值 | 登记为已推送但远端没有该文件；工具仓是旧版本 |
+| 5 | 远端 `SKILL.md` 版本 == 期望，且含分流小节/触发条件/冲突处理/`selfbuilt` | 文档没推上去，或版本号没对齐 |
+| 6 | **跨仓一致性**：同一文件在技能仓与工具仓 sha 必须相同 | 两仓内容不同源（公开仓可能在放旧版本）—— 被真实事故推出来的判据 |
+| 7 | 两仓均为 public | 可见性被改（规则不允许 private） |
+
+**为什么单独写一个脚本、且与推送脚本零代码共享**：用推送脚本自己的逻辑验推送结果，只能证明
+「它自洽」，不能证明「它对」。本脚本自己算 blob sha（`sha1("blob <len>\0" + data)`）、自己经
+api.github.com 取远端、自己解析本地 tree。它还与 `push_router.py` 构成**方向相反的第二实现**
+—— 分流器是「标注头驱动」（先扫文件、再回查登记），验收器是「登记表驱动」（先读登记、再回查
+文件）；两者同时通过才算交叉印证。
+
+**几种"看起来像失败、其实不是"的情形**（都会显式标 SKIP 或说明，不静默）：
+未传 `--prev-remote` → 判据 3 判 SKIP（无法机器证明，需人工确认）；登记项链接为「待推送」→ SKIP；
+登记项对应的文件只在工作区、未入版本控制（测试替身/中间产物）→ SKIP；`tasks/*/tmp/` 下的
+plan.yaml **不读**（那里是探针伪造的假登记）。
+**推送后未验收 = 阶段 6 未完成**：`Ledger.md` 的交付物列须附验收结论（FAIL 数）。
+
 ### 机器门禁与留痕
 
 - `plan.yaml` 的 `meta.自研工具` 逐项登记（四项必填：**名称 / 用途 / 适用场景 / 仓库链接**），用 `checks.py selftool <plan> --name … --purpose … --scenario … --repo <url>` 追加。
@@ -332,8 +365,8 @@ version: 3.2.0
 | --- | --- |
 | 阶段 3 第 1 步 | 新建自研文件的**同一时间**写标注块，并在 `plan.yaml` 登记一项 |
 | 阶段 5 交付说明 | **附上仓库链接**（便于查阅） |
-| 阶段 6 沉淀 | 自研工具每次更新后重跑 `push --apply` + `verify`，保持版本一致；**改动跨两类时用 `push_router.py push` 一次分流推两仓**（先不加 `--apply` 看计划） |
-| 阶段 6 交付 | 附**两仓**链接与交叉校验结果（`push_router.py classify` 的输出即证据）｜`Ledger.md` 交付物列注明「自研 + 链接」 |
+| 阶段 6 沉淀 | 自研工具每次更新后重跑 `push --apply` + `verify`，保持版本一致；**改动跨两类时用 `push_router.py push` 一次分流推两仓**（先不加 `--apply` 看计划）；**推送后必须跑 `verify_push.py`** 给出机器结论 |
+| 阶段 6 交付 | 附**两仓**链接 + 交叉校验结果（`push_router.py classify` 的输出即证据）+ **独立验收结论**（`verify_push.py` 的 FAIL 数）｜`Ledger.md` 交付物列注明「自研 + 链接」 |
 
 ### 技能库卫生（新增/修改技能时的四条硬约定，v3.1.1 新增）
 
@@ -427,4 +460,4 @@ version: 3.2.0
 | `assets/ledger-template.md` | **交付履历台账**（工作区根 `Ledger.md`）格式与字段说明 |
 | `assets/熔断报告模板.md` | **熔断报告**（触发后产出 `tasks/<任务>/熔断报告.md`）格式与必填五节 |
 
-核心命令：`checks.py skill`（技能自检）｜`checks.py plan <plan.yaml> --base <工作区根>`（对账 + **熔断门禁**）｜`checks.py status`（任务总览，**已熔断任务带 ⚡ 标记**）｜`checks.py mark <plan> [<id> <状态>] [--fuse 正常\|已熔断]`（状态更新；`--fuse` 用于熔断与复位，**不必手改 YAML**）｜`http_fetch.py --github-search "..."`（GitHub 找项目）｜`http_fetch.py --github-code-search "..."`（GitHub 找代码，需 token）｜`data_query.py files|sql|find`（大数据集检索）｜`checks.py decide <plan> --point … --basis … --capability <类> --choice <手段>`（**能力决策留痕**，四个参数均必填）｜`checks.py revise <plan> --trigger R<n> --change …`（**计划修订留痕**）｜`checks.py selftool <plan> --name … --purpose … --scenario … --repo <url>`（**自研工具登记**，四项必填）｜`publish_tools.py push --file <本地路径> [--apply]`（**推送自研工具到 public 仓**，默认 dry-run）｜`publish_tools.py verify`（**校验仓库为 public 且远端 sha 与本地一致**）｜`push_router.py push --base <rev> --head <rev> [--apply]`（**按「本体／自研工具」两类规则分流推两仓**，默认 dry-run）｜`push_router.py classify`（**离线分类 + 标注头×登记表交叉校验**，不联网）｜`push_ontology.py --base <rev> --head <rev> [--apply]`（**本体专用通道**，Git Data API + base_tree，默认 dry-run）。完整参数见 `references/ops.md`。
+核心命令：`checks.py skill`（技能自检）｜`checks.py plan <plan.yaml> --base <工作区根>`（对账 + **熔断门禁**）｜`checks.py status`（任务总览，**已熔断任务带 ⚡ 标记**）｜`checks.py mark <plan> [<id> <状态>] [--fuse 正常\|已熔断]`（状态更新；`--fuse` 用于熔断与复位，**不必手改 YAML**）｜`http_fetch.py --github-search "..."`（GitHub 找项目）｜`http_fetch.py --github-code-search "..."`（GitHub 找代码，需 token）｜`data_query.py files|sql|find`（大数据集检索）｜`checks.py decide <plan> --point … --basis … --capability <类> --choice <手段>`（**能力决策留痕**，四个参数均必填）｜`checks.py revise <plan> --trigger R<n> --change …`（**计划修订留痕**）｜`checks.py selftool <plan> --name … --purpose … --scenario … --repo <url>`（**自研工具登记**，四项必填）｜`publish_tools.py push --file <本地路径> [--apply]`（**推送自研工具到 public 仓**，默认 dry-run）｜`publish_tools.py verify`（**校验仓库为 public 且远端 sha 与本地一致**）｜`push_router.py push --base <rev> --head <rev> [--apply]`（**按「本体／自研工具」两类规则分流推两仓**，默认 dry-run）｜`push_router.py classify`（**离线分类 + 标注头×登记表交叉校验**，不联网）｜`push_ontology.py --base <rev> --head <rev> [--apply]`（**本体专用通道**，Git Data API + base_tree，默认 dry-run）｜`verify_push.py --rev <rev> --prev-remote <sha>`（**推送后的独立验收器**，7 类判据、与推送脚本零代码共享，FAIL 数即交付证据）。完整参数见 `references/ops.md`。
