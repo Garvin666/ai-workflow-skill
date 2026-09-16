@@ -96,6 +96,13 @@ FUSE_SECTIONS = ("触发条件", "已试路径", "卡点根因", "待决策选�
 REF_WHITELIST = {"plan.yaml", "Ledger.md", "memory/YYYY-MM-DD.md", "README.md",
                  # 用户级人格/记忆文件：按约定存在于 ~/.workbuddy/，不在技能目录内，不应按技能内引用校验
                  "USER.md", "MEMORY.md"}
+# 跨根引用前缀（v3.1.1）：这些路径的**根不在技能目录内**（技能库索引 / 工作区代码与数据 /
+# 用户级目录），引用它们只为叙述证据出处，无法也不应做存在性校验。留**前缀规则**而非精确文件名，
+# 否则每写一篇日志引用一个工作区文件就要往白名单塞一条 —— 2026-09-16 实测：补一次变更日志就撞出 3 条 FAIL。
+# ⚠️ 判定顺序是「**先尝试按技能内解析、失败后再判前缀**」（见 check_skill），故本元组不会掩盖
+# 技能内真实存在的同名路径（如 `scripts/checks.py` 仍按技能内引用校验）。
+REF_EXTERNAL_PREFIXES = (".workbuddy/", ".scratch/", "历史数据集/", "backend/", "frontend/",
+                         "indicators/", "daily_scheduler/", "tests/")
 # 命名占位符（如 第NNN章-标题.md、报告-YYYY-MM-DD.md、<主题>.md）不是真实文件路径，跳过
 REF_PLACEHOLDER = re.compile(r"N{2,}|Y{2,}|M{2,}|D{2,}|<|>|\{|\}|xxx|XXX")
 REF_PATTERN = re.compile(r"`([A-Za-z0-9_./\u4e00-\u9fff-]+\.(?:md|yaml|py|ps1))`")
@@ -140,11 +147,16 @@ def check_skill(skill_dir: Path) -> int:
     seen = set()
     for doc in docs:
         for ref in REF_PATTERN.findall(doc.read_text(encoding="utf-8")):
-            if ref in REF_WHITELIST or ref in seen or REF_PLACEHOLDER.search(ref):
+            if ref in seen or REF_PLACEHOLDER.search(ref):
                 continue
             seen.add(ref)
-            if _resolve(ref, skill_dir) is None:
-                missing.append(f"{ref}（来自 {doc.name}）")
+            if _resolve(ref, skill_dir) is not None:
+                continue  # 技能内文件，已确认存在
+            # 走到这里说明按技能内四个位置都找不到。若不是已知的跨根引用，就是真断链。
+            # ⚠️ 顺序要紧：**先解析、后判前缀/白名单** —— 反过来会让技能内同名路径被前缀规则误放行。
+            if ref in REF_WHITELIST or ref.startswith(REF_EXTERNAL_PREFIXES):
+                continue
+            missing.append(f"{ref}（来自 {doc.name}）")
     if missing:
         fail("文档引用完整性", "缺失：" + "；".join(missing))
     else:
