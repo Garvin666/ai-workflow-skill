@@ -1,0 +1,145 @@
+=== ai-workflow v3.4.0 自检回归（原始输出，未加工）===
+
+-- ① 技能自身门禁 --
+$ checks.py skill
+=== ai-workflow 技能自检 ===
+[ OK ] SKILL.md 存在
+[ OK ] frontmatter 含 name
+[ OK ] frontmatter 含 description
+[ OK ] frontmatter 含 agent_created
+[ OK ] 文档引用完整性 — 检查 63 条引用
+[ OK ] 模板 schema：_示例-数据分析.yaml — 9/9
+[ OK ] 模板 schema：UI组件库搭建.yaml — 9/9
+[ OK ] 模板 schema：学习资料生成.yaml — 9/9
+[ OK ] 模板 schema：小说写作.yaml — 9/9
+[ OK ] 模板 schema：技术调研.yaml — 9/9
+[ OK ] 模板 schema：调研报告.yaml — 9/9
+[ OK ] 模板 schema：选品分析.yaml — 9/9
+[ OK ] 模板 schema：量化分析.yaml — 9/9
+[ OK ] plan-template 必填键 — 齐全
+[ OK ] py_compile：ai_call.py
+[ OK ] py_compile：archive_tasks.py
+[ OK ] py_compile：checks.py
+[ OK ] py_compile：data_query.py
+[ OK ] py_compile：gen_skill_index.py
+[ OK ] py_compile：http_fetch.py
+[ OK ] py_compile：office_io.py
+[ OK ] py_compile：perf_baseline.py
+[ OK ] py_compile：publish_tools.py
+[ OK ] py_compile：push_ontology.py
+[ OK ] py_compile：push_router.py
+[ OK ] py_compile：verify_push.py
+=== 结果：26/26 通过，FAIL=0 ===
+[退出码 0]
+
+-- ② 本任务 plan.yaml 对账 --
+$ checks.py plan C:\Users\26717\.workbuddy\skills\ai-workflow\tasks\技能增强-ai-workflow-v3.4.0-2026-09-16 --base C:\Users\26717\.workbuddy\skills\ai-workflow
+=== ai-workflow 计划对账 ===
+[ OK ] plan.yaml 存在 — C:\Users\26717\.workbuddy\skills\ai-workflow\tasks\技能增强-ai-workflow-v3.4.0-2026-09-16\plan.yaml
+[ OK ] plan.yaml 可解析
+[ OK ] meta.任务
+[ OK ] meta.验证信号
+[ OK ] meta.工作区根
+[ OK ] steps 非空 — 8 步
+[ OK ] Anti-drop 对账 — 已完成步骤 6 个，交付物确认 6 个
+[ OK ] 决策记录 — 3 条
+[ OK ] 计划修订 — 未使用（未发生重规划）
+[ OK ] 自研工具登记 — 2 项
+[ OK ] 模型档位合法 — 8 步已标注，取值均在 enum 内
+[ OK ] 熔断状态 — 正常（未声明）
+=== 结果：12/12 通过，FAIL=0 ===
+[退出码 0]
+
+-- ③ 真实历史 plan.yaml 回归（确认新门禁未误伤旧数据）--
+$ checks.py plan tasks/技能增强-ai-workflow-v3.2.1-2026-09-16/plan.yaml --base C:\Users\26717\.workbuddy\skills\ai-workflow
+=== ai-workflow 计划对账 ===
+[ OK ] plan.yaml 存在 — tasks\技能增强-ai-workflow-v3.2.1-2026-09-16\plan.yaml
+[ OK ] plan.yaml 可解析
+[ OK ] meta.任务
+[ OK ] meta.验证信号
+[ OK ] meta.工作区根
+[ OK ] steps 非空 — 8 步
+[ OK ] Anti-drop 对账 — 已完成步骤 8 个，交付物确认 8 个
+[ OK ] 决策记录 — 未使用（无外部辅助引入，属正常）
+[ OK ] 计划修订 — 未使用（未发生重规划）
+[ OK ] 自研工具登记 — 1 项
+[ OK ] 模型档位合法 — 8 步已标注，取值均在 enum 内
+[ OK ] 熔断状态 — 正常（未声明）
+=== 结果：12/12 通过，FAIL=0 ===
+[退出码 0]
+
+$ checks.py plan tasks/技能增强-ai-workflow-v3.2.0-2026-09-16/plan.yaml --base C:\Users\26717\.workbuddy\skills\ai-workflow
+=== ai-workflow 计划对账 ===
+[ OK ] plan.yaml 存在 — tasks\技能增强-ai-workflow-v3.2.0-2026-09-16\plan.yaml
+[ OK ] plan.yaml 可解析
+[ OK ] meta.任务
+[ OK ] meta.验证信号
+[ OK ] meta.工作区根
+[ OK ] steps 非空 — 8 步
+[ OK ] Anti-drop 对账 — 已完成步骤 8 个，交付物确认 8 个
+[ OK ] 决策记录 — 未使用（无外部辅助引入，属正常）
+[ OK ] 计划修订 — 未使用（未发生重规划）
+[ OK ] 自研工具登记 — 2 项
+[ OK ] 模型档位合法 — 8 步已标注，取值均在 enum 内
+[ OK ] 熔断状态 — 正常（未声明）
+=== 结果：12/12 通过，FAIL=0 ===
+[退出码 0]
+
+$ checks.py plan tasks/技能增强-ai-workflow-v2.6.0-2026-09-11/plan.yaml --base C:\Users\26717\.workbuddy\skills\ai-workflow
+=== ai-workflow 计划对账 ===
+[ OK ] plan.yaml 存在 — tasks\技能增强-ai-workflow-v2.6.0-2026-09-11\plan.yaml
+[ OK ] plan.yaml 可解析
+[ OK ] meta.任务
+[ OK ] meta.验证信号
+[ OK ] meta.工作区根
+[ OK ] steps 非空 — 5 步
+[ OK ] Anti-drop 对账 — 已完成步骤 5 个，交付物确认 5 个
+[ OK ] 决策记录 — 未使用（无外部辅助引入，属正常）
+[ OK ] 计划修订 — 未使用（未发生重规划）
+[ OK ] 自研工具登记 — 未使用（本任务无自研产出，属正常）
+[ OK ] 模型档位合法 — 步骤均未标注（字段可选）
+[ OK ] 熔断状态 — 正常（未声明）
+=== 结果：12/12 通过，FAIL=0 ===
+[退出码 0]
+
+$ checks.py plan tasks/对抗互审-ai-workflow-v2.5.1-2026-09-11/plan.yaml --base C:\Users\26717\.workbuddy\skills\ai-workflow
+=== ai-workflow 计划对账 ===
+[ OK ] plan.yaml 存在 — tasks\对抗互审-ai-workflow-v2.5.1-2026-09-11\plan.yaml
+[ OK ] plan.yaml 可解析
+[ OK ] meta.任务
+[ OK ] meta.验证信号
+[ OK ] meta.工作区根
+[ OK ] steps 非空 — 7 步
+[ OK ] Anti-drop 对账 — 已完成步骤 6 个，交付物确认 6 个
+[ OK ] 决策记录 — 未使用（无外部辅助引入，属正常）
+[ OK ] 计划修订 — 未使用（未发生重规划）
+[ OK ] 自研工具登记 — 未使用（本任务无自研产出，属正常）
+[ OK ] 模型档位合法 — 步骤均未标注（字段可选）
+[ OK ] 熔断状态 — 正常（未声明）
+=== 结果：12/12 通过，FAIL=0 ===
+[退出码 0]
+
+-- ④ 工作区总览 --
+$ checks.py status --workspace C:\Users\26717\.workbuddy\skills\ai-workflow
+任务目录                                      层级   步骤完成   交付物     最后修改
+--------------------------------------------------------------------------------------
+UI组件库搭建-2026-09-10                       L2     12/12      12/12         6 天
+对抗互审-ai-workflow-v2.5.1-2026-09-11        L2     6/7        7/7           5 天
+技能增强-ai-workflow-v2.4.3-2026-09-10        L2     6/6        6/6           6 天
+技能增强-ai-workflow-v2.5.1-2026-09-10        L2     8/8        11/11         6 天
+技能增强-ai-workflow-v2.5.2-2026-09-11        L2     7/8        15/15         5 天
+技能增强-ai-workflow-v2.5.3-2026-09-11        L2     8/8        13/13         5 天
+技能增强-ai-workflow-v2.6.0-2026-09-11        L2     5/5        5/5           5 天
+技能增强-ai-workflow-v3.0-2026-09-15          L2     10/10      10/10         1 天
+技能增强-ai-workflow-v3.1.0-2026-09-15        L2     10/10      10/10         0 天
+技能增强-ai-workflow-v3.2.0-2026-09-16        L2     8/8        9/9           0 天
+技能增强-ai-workflow-v3.2.1-2026-09-16        L2     8/8        8/8           0 天
+技能增强-ai-workflow-v3.4.0-2026-09-16        L2     6/8        22/24         0 天
+
+[WARN] 任务目录 12 个 > 阈值 10，建议归档最旧的若干个（参考 SKILL.md 阶段 6 归档规则）
+
+[ OK ] 无超过 30 天的陈旧任务
+[ OK ] 任务总览 — 12 个任务目录
+[退出码 0]
+
+=== 汇总：退出码非 0 的段数 = 0 ===

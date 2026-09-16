@@ -1,0 +1,35 @@
+=== 基线：after  （2026-09-16 12:18:41，n=3 取最小） ===
+  python -c pass              103.0 ms   （解释器启动地板）
+  gh auth token               134.1 ms
+  checks.py skill             232.0 ms
+  checks.py plan              195.1 ms
+  checks.py status            252.0 ms
+  mark 逐条 x8              1543.8 ms
+  mark --batch（1 次）        201.3 ms
+    → 省 1.34s（87%）
+  py_compile 12 脚本
+    legacy（产生 __pycache__ 再删）    953.7 ms   = 产生 175.8 + 清理 777.9（12 文件）
+    cfile 指向临时目录                 77.0 ms   __pycache__ 残留=False
+  --github-repo 缓存命中      244.2
+  search --dry-run            232.5 ms   （不发请求，不需凭据）
+  __pycache__ 现存        C:\Users\26717\.workbuddy\skills\ai-workflow\scripts\__pycache__ 存在=False
+
+[ OK ] 已写入 C:\Users\26717\.workbuddy\skills\ai-workflow\tasks\技能增强-ai-workflow-v3.4.0-2026-09-16\perf_baseline_after.json
+
+=== 对比：before → after ===
+  环境一致性：python 启动 104.2 ms vs 103.0 ms（比值 1.01×）→ ✅ 同模式
+  项目                          before     after          变化
+  python 启动                    104.2     103.0       -1.2%
+  gh auth token                117.5     134.1      +14.1%
+  checks.py skill             1008.0     232.0      -77.0%
+    └ 同树旧实现(v3.3.0)             None    1114.8           —
+  checks.py plan               187.3     195.1       +4.2%
+  checks.py status             263.8     252.0       -4.5%
+  mark 逐条                     1577.1    1543.8       -2.1%
+  mark --batch                 195.8     201.3       +2.8%
+  search --dry-run             367.3     232.5      -36.7%
+  py_compile legacy 合计       829.0     953.7      +15.0%
+    其中：清理 __pycache__      708.0     777.9   （P1 目标=0）
+  http_fetch 缓存命中            399.0     244.2      -38.8%
+
+  ⚠️ 上表只含本机可测的确定性部分（脚本/子进程/IO）；LLM 推理耗时不在本机产生，未计。

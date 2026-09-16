@@ -25,7 +25,7 @@ skill 子命令检查项:
     2. 文档间引用完整性（SKILL.md 与 references/*.md 中 `路径.ext` 引用是否真实存在）
     3. assets/templates/*.yaml 统一 schema 字段齐全（9 字段，含 workspace 工作区根）
     4. assets/plan-template.yaml 必填键存在
-    5. scripts/*.py 语法编译通过（py_compile；`.pyc` 输出到**系统临时目录**，不产生 __pycache__）
+    5. scripts/*.py 语法编译通过（py_compile，检查后自动清理 __pycache__）
 
 plan 子命令检查项:
     1. YAML 可解析（需 pyyaml：setup_env.ps1 已纳入依赖）
@@ -40,8 +40,6 @@ plan 子命令检查项:
        工作区根之外的文件必须写绝对路径（旧的跨目录兜底通道已移除）
     7. 自研工具留痕（v3.1.0）：meta「自研工具」可选，一旦填写每项必含
        名称/用途/适用场景/仓库链接（空值或占位符链接判 FAIL；『待推送』判 SKIP 需人工确认）
-    8. 模型档位合法（v3.4.0 / P9-c）：steps[].「模型档位」可选，留空即跳过；
-       一旦填写必须在 strong/mid/cheap/default 内（取值定义见 references/routing-guide.md）
 
 退出码: 0 = 全部通过；1 = 有 FAIL（不可交付）；2 = 用法错误
 """
@@ -49,8 +47,8 @@ import argparse
 import json
 import py_compile
 import re
+import shutil
 import sys
-import tempfile
 import time
 from datetime import datetime
 from pathlib import Path
@@ -79,9 +77,6 @@ VALID_FUSE = ("正常", "已熔断")
 # 纯本地任务本就无外部辅助，强制填空会退化成走过场（见 references/adaptive-planning.md 第三节）。
 VALID_CAPABILITY = ("知识", "算力", "事实", "手脚")
 VALID_TRIGGER = ("R1", "R2", "R3", "R4", "R5", "R6")
-# P9-c（v3.4.0）：`模型档位` 取值 —— 与 references/routing-guide.md 的 enum 同源。
-# 可选字段，留空合法；填了必须在此集内（含 `default` = 显式声明按阶段默认档位）。
-VALID_MODEL_TIERS = ("strong", "mid", "cheap", "default")
 # 决策记录的必填项。⚠️ 此元组是**唯一事实源**：FAIL 文案由它生成，
 # 避免"文案写 5 个字段、代码只强制 3 个"这类描述↔实现脱节（v3.0.0 返修项 P4）。
 DECISION_KEYS = ("决策点", "能力类", "依据", "选择")
@@ -187,38 +182,15 @@ def check_skill(skill_dir: Path) -> int:
     pyfiles = sorted((skill_dir / "scripts").glob("*.py"))
     if not pyfiles:
         fail("脚本存在", "scripts/*.py 为空")
-    # ⭐ v3.4.0 / P1：**不要"为了清理而先产生"** —— 把 .pyc 写到**系统临时目录**，
-    # 从根上不产生 `scripts/__pycache__`，原先的清理逻辑随之取消。
-    #   为什么必须改：`py_compile.compile(str(py))` 默认把 .pyc 写进脚本同目录的
-    #   `__pycache__`，于是自检每轮都"先造 10 个文件、再 rmtree 删掉它们"。而本机
-    #   `PYTHONPATH` 注入的 shim（`…\cli\vendor\shim`）会把**非临时目录**的 rmtree
-    #   改走回收站（spawn 子进程）—— 受控实验：同一个 rmtree 删 8 个 4KB 文件，按父目录
-    #   分别为 19.5 / 564.2 / 855.8 ms（43.9×）。实测本机 legacy 路径 = 产生 121 ms +
-    #   清理 708 ms = 829 ms；改 `cfile` 后 87 ms 且零残留（原始数据见
-    #   `.workbuddy/tmp/perf_baseline_*.json` 与 `rm.txt`）。
-    #   诚实标注：该收益**依环境而变**（裸终端里同一个 rmtree 只要 ≈19 ms），
-    #   但"不产生"在任何环境下都只有好处、没有坏处。
-    with tempfile.TemporaryDirectory(prefix="aiwf_pyc_") as pyc_dir:
-        for py in pyfiles:
-            try:
-                py_compile.compile(str(py), cfile=str(Path(pyc_dir) / (py.stem + ".pyc")), doraise=True)
-                ok(f"py_compile：{py.name}")
-            except py_compile.PyCompileError as e:
-                fail(f"py_compile：{py.name}", str(e).splitlines()[0][:120])
-    # 兜底：清掉**历史遗留**的 `__pycache__`（本版不主动造，但旧版本可能已经留下）。
-    # 用逐文件 unlink 而非递归 rmtree —— ① shim 只劫持 `shutil.rmtree`，unlink 不受影响；
-    # ② 目标只是"别留下垃圾"，**扩大删除面与优化目标相反**。
+    for py in pyfiles:
+        try:
+            py_compile.compile(str(py), doraise=True)
+            ok(f"py_compile：{py.name}")
+        except py_compile.PyCompileError as e:
+            fail(f"py_compile：{py.name}", str(e).splitlines()[0][:120])
     cache = skill_dir / "scripts" / "__pycache__"
     if cache.exists():
-        for f in sorted(cache.iterdir(), reverse=True):
-            try:
-                f.rmdir() if f.is_dir() else f.unlink()
-            except OSError:
-                pass
-        try:
-            cache.rmdir()
-        except OSError:
-            pass
+        shutil.rmtree(cache, ignore_errors=True)
     return 0
 
 
@@ -780,33 +752,6 @@ def cmd_selftool(plan_path: Path, name: str, purpose: str, scenario: str, repo: 
     return 0
 
 
-def _check_model_tiers(steps: list) -> None:
-    """校验每步 `模型档位` 的取值（P9-c，v3.4.0）。
-
-    与 `_check_autonomy` / `_check_selftools` **同口径**：字段可选，**留空即合法**；
-    但一旦填了，就必须在 `VALID_MODEL_TIERS` 内 —— 否则"填了"只是装饰，无法参与成本核对。
-
-    ⚠️ 为什么把 `default` 收进合法集而不是改写历史 plan：真实数据（v3.2.0 的 plan.yaml）里
-    就有 `default`。改历史记录去迁就新门禁，等于**为新判据篡改证据**；正解是把 `default`
-    定义为「显式声明按阶段默认档位」并写进 `plan-template.yaml` 与 `routing-guide.md`，
-    让**文档与实际用法一致**。门禁只拦真正的越界值（如拼错的 `cheep`、`fast`）。
-    """
-    bad, seen = [], []
-    for i, s in enumerate(steps, 1):
-        if not isinstance(s, dict):
-            continue
-        v = str(s.get("模型档位", "") or "").strip()
-        if not v:
-            continue
-        seen.append(v)
-        if v not in VALID_MODEL_TIERS:
-            bad.append(f"步骤 {s.get('id', i)}={v!r}")
-    if bad:
-        fail("模型档位合法", "非法取值：" + "；".join(bad) + f"（合法：{'/'.join(VALID_MODEL_TIERS)}；留空=跳过）")
-    else:
-        ok("模型档位合法", f"{len(seen)} 步已标注，取值均在 enum 内" if seen else "步骤均未标注（字段可选）")
-
-
 def check_plan(plan_path: Path, base: Path) -> int:
     yaml = _require_yaml()
 
@@ -860,7 +805,6 @@ def check_plan(plan_path: Path, base: Path) -> int:
 
     _check_autonomy(meta)
     _check_selftools(meta)
-    _check_model_tiers(steps)
     _check_fuse(meta, steps, plan_path)
     return 0
 

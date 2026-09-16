@@ -1,0 +1,81 @@
+=== push_router classify（离线，不联网）===
+技能根：C:\Users\26717\.workbuddy\skills\ai-workflow
+来源：git diff 5f2f21a..3313342
+
+── 分流判定 ──
+  [本体          ] SKILL.md
+  [本体          ] _backup-v3.2.1/SKILL.v3.2.1.md
+  [本体          ] _backup-v3.3.0/SKILL.v3.3.0.md
+  [本体          ] _backup-v3.3.0/assets.plan-template.v3.3.0.yaml
+  [本体          ] _backup-v3.3.0/references/ops.v3.3.0.md
+  [本体          ] _backup-v3.3.0/references/orchestration.v3.3.0.md
+  [本体          ] _backup-v3.3.0/scripts/checks.v3.3.0.py
+  [本体          ] _backup-v3.3.0/scripts/http_fetch.v3.3.0.py
+  [本体          ] assets/plan-template.yaml
+  [本体          ] references/changelog.md
+  [本体          ] references/ops.md
+  [本体          ] references/orchestration.md
+  [本体          ] references/push-routing.md
+  [本体          ] references/routing-guide.md
+  [本体          ] references/security-guide.md
+  [本体          ] scripts/checks.py
+  [本体+自研工具     ] scripts/gen_skill_index.py
+  [本体          ] scripts/http_fetch.py
+  [本体+自研工具     ] scripts/perf_baseline.py
+  [本体+自研工具     ] scripts/push_ontology.py
+  [本体+自研工具     ] scripts/push_router.py
+  [本体          ] scripts/setup_env.ps1
+  [本体+自研工具     ] scripts/verify_push.py
+  [本体          ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/perf_baseline_after.json
+  [本体          ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/基线对比-before-after.txt
+  [本体          ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/扫描缓存残留.py
+  [本体          ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/断言-P3-P8-输出.txt
+  [本体          ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/断言-P3-P8.py
+  [本体          ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/生成验证输出.py
+  [本体          ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/缓存残留清理-待确认.txt
+  [本体          ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/逐字节一致-新旧checks-skill.py
+  [本体          ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/逐字节一致-新旧checks-skill.txt
+  [本体          ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/验证输出.txt
+
+── 交叉校验（标注头 vs plan.yaml 登记表）──
+  [OK  ] SKILL.md                                   有标注头且已登记，但登记链接指向**本体仓**（https://github.com/Garvin666/ai-workflow-skill）→ 只走本体通道，不推 tools 仓
+  [OK  ] _backup-v3.2.1/SKILL.v3.2.1.md             普通本体文件（无自研标注，无需登记）
+  [OK  ] _backup-v3.3.0/SKILL.v3.3.0.md             普通本体文件（无自研标注，无需登记）
+  [OK  ] _backup-v3.3.0/assets.plan-template.v3.3.0.yaml 普通本体文件（无自研标注，无需登记）
+  [OK  ] _backup-v3.3.0/references/ops.v3.3.0.md    普通本体文件（无自研标注，无需登记）
+  [OK  ] _backup-v3.3.0/references/orchestration.v3.3.0.md 普通本体文件（无自研标注，无需登记）
+  [OK  ] _backup-v3.3.0/scripts/checks.v3.3.0.py    普通本体文件（无自研标注，无需登记）
+  [OK  ] _backup-v3.3.0/scripts/http_fetch.v3.3.0.py 普通本体文件（无自研标注，无需登记）
+  [OK  ] assets/plan-template.yaml                  普通本体文件（无自研标注，无需登记）
+  [OK  ] references/changelog.md                    普通本体文件（无自研标注，无需登记）
+  [OK  ] references/ops.md                          普通本体文件（无自研标注，无需登记）
+  [OK  ] references/orchestration.md                普通本体文件（无自研标注，无需登记）
+  [OK  ] references/push-routing.md                 普通本体文件（无自研标注，无需登记）
+  [OK  ] references/routing-guide.md                普通本体文件（无自研标注，无需登记）
+  [OK  ] references/security-guide.md               普通本体文件（无自研标注，无需登记）
+  [OK  ] scripts/checks.py                          普通本体文件（无自研标注，无需登记）
+  [OK  ] scripts/gen_skill_index.py                 标注头齐全，已登记（来源 tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/plan.yaml）→ 双属：本体 + 自研工具
+  [OK  ] scripts/http_fetch.py                      普通本体文件（无自研标注，无需登记）
+  [OK  ] scripts/perf_baseline.py                   标注头齐全，已登记（来源 tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/plan.yaml）→ 双属：本体 + 自研工具
+  [OK  ] scripts/push_ontology.py                   标注头齐全，已登记（来源 tasks/技能增强-ai-workflow-v3.2.0-2026-09-16/plan.yaml）→ 双属：本体 + 自研工具
+  [OK  ] scripts/push_router.py                     标注头齐全，已登记（来源 tasks/技能增强-ai-workflow-v3.2.0-2026-09-16/plan.yaml）→ 双属：本体 + 自研工具
+  [OK  ] scripts/setup_env.ps1                      普通本体文件（无自研标注，无需登记）
+  [OK  ] scripts/verify_push.py                     标注头齐全，已登记（来源 tasks/技能增强-ai-workflow-v3.2.1-2026-09-16/plan.yaml）→ 双属：本体 + 自研工具
+  [OK  ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/perf_baseline_after.json 普通本体文件（无自研标注，无需登记）
+  [OK  ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/基线对比-before-after.txt 普通本体文件（无自研标注，无需登记）
+  [OK  ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/扫描缓存残留.py 普通本体文件（无自研标注，无需登记）
+  [OK  ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/断言-P3-P8-输出.txt 普通本体文件（无自研标注，无需登记）
+  [OK  ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/断言-P3-P8.py 普通本体文件（无自研标注，无需登记）
+  [OK  ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/生成验证输出.py 普通本体文件（无自研标注，无需登记）
+  [OK  ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/缓存残留清理-待确认.txt 普通本体文件（无自研标注，无需登记）
+  [OK  ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/逐字节一致-新旧checks-skill.py 普通本体文件（无自研标注，无需登记）
+  [OK  ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/逐字节一致-新旧checks-skill.txt 普通本体文件（无自研标注，无需登记）
+  [OK  ] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/验证输出.txt 普通本体文件（无自研标注，无需登记）
+  [SKIP] 登记表（共 11 项）                                另有 4 项未涉及本次改动面（历史登记或本次未改动，非错误）：publish_tools.py、marked_ok.py、marked_incomplete.py、registered_ghost.py
+  登记表共 11 项（来自 tasks/**/plan.yaml）
+
+── 推送计划 ──
+  本体     → Garvin666/ai-workflow-skill@main ：33 项（通道 push_ontology.py，Git Data API + base_tree）
+  自研工具 → Garvin666/ai-workflow-tools@main ：5 项（通道 publish_tools.py，contents API 逐文件）：scripts/gen_skill_index.py、scripts/perf_baseline.py、scripts/push_ontology.py、scripts/push_router.py、scripts/verify_push.py
+
+[OK] 交叉校验 0 失败

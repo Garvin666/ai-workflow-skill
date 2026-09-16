@@ -1,0 +1,27 @@
+{
+  "label": "after",
+  "runs": 3,
+  "timestamp": "2026-09-16 12:18:41",
+  "python_start_ms": 103.0,
+  "gh_auth_token_ms": 134.1,
+  "checks_skill_ms": 232.0,
+  "checks_skill_old_ms": 1114.8,
+  "checks_plan_ms": 195.1,
+  "checks_status_ms": 252.0,
+  "mark_single_ms": 1543.8,
+  "mark_batch_ms": 201.3,
+  "plan_steps": 8,
+  "pycompile": {
+    "n_scripts": 12,
+    "legacy_produce_ms": 175.8,
+    "legacy_cache_files": 12,
+    "legacy_cleanup_ms": 777.9,
+    "legacy_total_ms": 953.7,
+    "to_tmpdir_ms": 77.0,
+    "cache_left": false
+  },
+  "http_fetch": {
+    "cached_hit_ms": 244.2
+  },
+  "search_dryrun_ms": 232.5
+}

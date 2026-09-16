@@ -61,14 +61,6 @@ RATE_LIMIT_MAX_RETRY = int(os.environ.get("AIWF_GITHUB_MAX_RETRY", "2"))  # 限�
 CACHE_TTL = int(os.environ.get("AIWF_HTTP_TTL", "3600"))  # 本地缓存有效秒数，0 = 关闭缓存
 CACHE_DIR = Path(os.environ.get("AIWF_CACHE_DIR", str(Path.home() / ".workbuddy" / "cache" / "ai-workflow" / "http")))
 GH_CONCURRENCY = int(os.environ.get("AIWF_GH_CONCURRENCY", "5"))
-# ---- P8（v3.4.0）：限流桶上限按「有没有凭据」分档 ----
-# 之前两端点都**无条件**按匿名上限自限，而带凭据时 GitHub 实际是 5000/h（核心）与 30/min（搜索）。
-# 后果：多仓库指标对比（"≥3 个方向必须并行"是流程硬规则）时自限桶会先满，随后每次调用最多
-# 白等 RATE_LIMIT_MAX_WAIT（默认 60s）——把上限设在真实配额的 1/10 处纯属自伤。
-GH_CORE_LIMIT_ANON = int(os.environ.get("AIWF_GH_CORE_LIMIT_ANON", "60"))
-GH_CORE_LIMIT_AUTH = int(os.environ.get("AIWF_GH_CORE_LIMIT_AUTH", "4500"))   # 官方 5000/h，留安全边际
-GH_SEARCH_LIMIT_ANON = int(os.environ.get("AIWF_GH_SEARCH_LIMIT_ANON", "10"))
-GH_SEARCH_LIMIT_AUTH = int(os.environ.get("AIWF_GH_SEARCH_LIMIT_AUTH", "30"))  # 官方认证 30/min
 
 # ---- 链接探活持久缓存（消除「验证税」：同 URL 跨任务/跨进程只探活一次）----
 # 缓存目录落在基础设施例外允许的 ~/.workbuddy/cache/ai-workflow/ 下，与正文缓存(http)分开
@@ -79,11 +71,6 @@ LINKCHECK_CACHE_DIR = Path(os.environ.get("AIWF_LINKCHECK_CACHE",
 _SSL_CTX = ssl.create_default_context()
 # N5：进程内记忆已解析的 GitHub 凭据，避免无 env 时每次抓取都 spawn `gh auth token` 子进程
 _TOKEN_CACHE: str | None = None
-# P3（v3.4.0）：_resolve_token 会被 collect_repo_rows 的多线程并发调用；无锁时会重复 spawn
-# 多个 `gh auth token` 子进程（本机单价 ≈120 ms，非沙箱终端 ≈790 ms）
-_TOKEN_LOCK = threading.Lock()
-# ratelimit.json 里的**非机密布尔位**：本机是否成功解析出过凭据（只存 True/False，不存凭据）
-_AUTH_HINT_KEY = "_auth_ok"
 
 
 def _link_cache_key(url: str) -> str:
@@ -216,42 +203,6 @@ def _rl_save(state: dict) -> None:
         pass
 
 
-def _auth_hint() -> bool:
-    """**不 spawn 子进程**地判断"本机大概有没有可用凭据"。只用于两件事：
-    ① 选限流桶上限（P8）② 信息性告警的措辞。**不用于任何授权决策** —— 真正的授权只由
-    `_resolve_token()` 决定；本函数返回 False 不代表请求一定匿名发出去。
-
-    依据（按代价从低到高，任一成立即 True）：
-      ① `GITHUB_TOKEN` / `GH_TOKEN` 环境变量；
-      ② `ratelimit.json` 里的 `_auth_ok` 位 —— `_resolve_token()` 成功解析过一次后写入的
-         **布尔值**（不含凭据本身，故不违反凭据落盘纪律）；
-      ③ 不检查 `gh` 是否存在：装了 gh ≠ 已登录，据此判"有凭据"会选错桶。宁可保守按匿名。
-    """
-    for env_name in ("GITHUB_TOKEN", "GH_TOKEN"):
-        v = os.environ.get(env_name)
-        if v and v.strip():
-            return True
-    try:
-        return bool(_rl_load().get(_AUTH_HINT_KEY))
-    except Exception:
-        return False
-
-
-def _mark_auth_ok() -> None:
-    """把"本机确实解析出过凭据"记成一个**非机密布尔位**，供**后续进程**免 spawn 选对限流桶。
-
-    只写 True，**不写凭据本身**（凭据纪律：不落盘、不进记忆）。失败静默 —— 这只是提示位，
-    写不进去最多退化为按匿名桶保守自限，绝不能因此影响抓取。
-    """
-    try:
-        with _RL_LOCK:
-            state = _rl_load()
-            state[_AUTH_HINT_KEY] = True
-            _rl_save(state)
-    except Exception:
-        pass
-
-
 def _rl_throttle(bucket: str, limit: int, window: int) -> None:
     """按桶节流：窗口内已记录 >= limit 次调用则睡到最早一次过期（最长 RATE_LIMIT_MAX_WAIT）。
 
@@ -296,69 +247,47 @@ def _resolve_token(cli_token: str | None = None) -> str | None:
 
     N5：进程内记忆已解析的凭据（含「无凭据」的 None），避免无 env 时每次抓取都
     spawn `gh auth token` 子进程。cli_token 为调用方显式传入，不进缓存（可能每次不同）。
-
-    P3（v3.4.0）：① 加 `_TOKEN_LOCK` —— 本函数会被 `collect_repo_rows` 的多线程并发调用，
-    无锁时会重复 spawn 多个 gh 子进程；② 解析成功后写 `_auth_ok` 提示位（**布尔值**，非凭据），
-    使**后续进程**能免 spawn 选对限流桶（P8）。
-    ⚠️ 调用方**必须**只在"确实要发请求"之后才调用本函数 —— 缓存命中路径不需要凭据，
-    提前调用就是白付一张 gh 子进程（实测本机 ≈120 ms，非沙箱终端 ≈790 ms）。
     """
     if cli_token:
         return cli_token
     global _TOKEN_CACHE
     if _TOKEN_CACHE is not None:  # 已解析过（含 None），直接复用，不 spawn 子进程
         return _TOKEN_CACHE
-    with _TOKEN_LOCK:  # P3：双检锁，避免并发重复 spawn
-        if _TOKEN_CACHE is not None:
+    for env_name in ("GITHUB_TOKEN", "GH_TOKEN"):
+        v = os.environ.get(env_name)
+        if v and v.strip():
+            _TOKEN_CACHE = v.strip()
             return _TOKEN_CACHE
-        for env_name in ("GITHUB_TOKEN", "GH_TOKEN"):
-            v = os.environ.get(env_name)
-            if v and v.strip():
-                _TOKEN_CACHE = v.strip()
-                _mark_auth_ok()
+    try:
+        import subprocess
+        r = subprocess.run(["gh", "auth", "token"], capture_output=True, text=True, timeout=10)
+        cand = (r.stdout or "").strip()
+        if r.returncode == 0 and cand:
+            if _looks_like_token(cand):
+                print("[INFO] 未设环境变量，改用 gh CLI 凭据（gh auth token）提高限额", file=sys.stderr)
+                _TOKEN_CACHE = cand
                 return _TOKEN_CACHE
-        try:
-            import subprocess
-            r = subprocess.run(["gh", "auth", "token"], capture_output=True, text=True, timeout=10)
-            cand = (r.stdout or "").strip()
-            if r.returncode == 0 and cand:
-                if _looks_like_token(cand):
-                    print("[INFO] 未设环境变量，改用 gh CLI 凭据（gh auth token）提高限额", file=sys.stderr)
-                    _TOKEN_CACHE = cand
-                    _mark_auth_ok()
-                    return _TOKEN_CACHE
-                print(f"[WARN] gh auth token 输出不像凭据（{len(cand)} 字符），已忽略；"
-                      "若需认证请设置 GITHUB_TOKEN 或运行 gh auth login", file=sys.stderr)
-        except (OSError, ValueError, subprocess.SubprocessError):
-            pass
-        _TOKEN_CACHE = None  # 记忆「无凭据」，避免每次重试都 spawn 子进程
-        return None
+            print(f"[WARN] gh auth token 输出不像凭据（{len(cand)} 字符），已忽略；"
+                  "若需认证请设置 GITHUB_TOKEN 或运行 gh auth login", file=sys.stderr)
+    except (OSError, ValueError, subprocess.SubprocessError):
+        pass
+    _TOKEN_CACHE = None  # 记忆「无凭据」，避免每次重试都 spawn 子进程
+    return None
 
 
 def fetch(url: str, token: str | None = None, use_cache: bool = True, ttl: int = CACHE_TTL,
-          headers_extra: dict | None = None, out_file: str | None = None,
-          throttle: tuple[str, int, int] | None = None) -> bytes | None:
+          headers_extra: dict | None = None, out_file: str | None = None) -> bytes | None:
     """抓取 URL 返回字节体。
 
     N4：`out_file` 给定时（原始二进制下载）走流式落盘——不把整响应读入内存，也不写入
     内存缓存（避免大文件内存/磁盘翻倍），直接 shutil.copyfileobj 写盘后返回 None。
     文本/grep/stdout/collect 等需整体的路径不传 out_file，照常返回 bytes。
-
-    P3（v3.4.0）：凭据解析只发生在**确实要发请求**之后（缓存命中直接返回，不 spawn gh）。
-
-    P8（v3.4.0）：`throttle=(桶名, 上限, 窗口秒)` —— 由本函数在**缓存未命中**时才调用
-    `_rl_throttle`。调用方原先都在 fetch 之前无条件节流，于是**缓存命中也被计入桶**
-    （既虚耗配额，又会让"60 次缓存命中"反过来触发一次最长 60s 的睡眠）。限流只对
-    "真发出去的请求"计数才是对的。
     """
     if use_cache and out_file is None:
         cached = cache_get(url, ttl)
         if cached is not None:
             print(f"[INFO] 缓存命中（{len(cached)} 字节，TTL {ttl}s）：{url}", file=sys.stderr)
             return cached
-
-    if throttle is not None:
-        _rl_throttle(*throttle)
 
     headers = dict(HEADERS)
     if headers_extra:
@@ -444,11 +373,8 @@ def github_repo_metrics(slug: str, token: str | None = None, use_cache: bool = T
     if slug.count("/") != 1:
         print(f"[ERROR] 仓库格式应为 owner/repo，收到: {slug}", file=sys.stderr)
         raise SystemExit(2)
-    # P8：桶上限按「有没有凭据」分档（匿名 60/h vs 认证 4500/h），避免带凭据时自限在 1/75 处白等；
-    # P3：节流与凭据解析都交给 fetch 在**缓存未命中**之后做 —— 缓存命中不需要凭据、也不该配额计数。
-    limit = GH_CORE_LIMIT_AUTH if _auth_hint() else GH_CORE_LIMIT_ANON
-    raw = fetch(f"https://api.github.com/repos/{slug}", token=token, use_cache=use_cache, ttl=ttl,
-                throttle=("gh_core", limit, 3600))
+    _rl_throttle("gh_core", 60, 3600)
+    raw = fetch(f"https://api.github.com/repos/{slug}", token=token, use_cache=use_cache, ttl=ttl)
     data = json.loads(raw.decode("utf-8"))
     out = {k: data.get(k) for k in GITHUB_FIELDS}
     lic = data.get("license") or {}
@@ -498,12 +424,8 @@ def github_search(query: str, sort: str = "stars", limit: int = 30,
         print(f"[WARN] --search-sort='{sort}' 不在 {SEARCH_SORTS}，回退 best match", file=sys.stderr)
         sort = ""
     limit = max(1, min(int(limit), SEARCH_PER_PAGE_MAX))
-    # P3：这里**不能**用 `not token` 判断 —— main() 已不再 eager 解析凭据，token=None 只表示
-    # "没显式传"，不代表本机没有 gh CLI 凭据（那会让告警误导）。改用不 spawn 子进程的
-    # `_auth_hint()` 保守措辞：说"未发现"而不是"未设"。
-    if not token and not _auth_hint():
-        print("[WARN] 未发现可用凭据（GITHUB_TOKEN / GH_TOKEN / 之前解析成功的 gh CLI）："
-              "搜索限流仅 10 次/分钟（认证为 30 次/分钟），连续搜索易被打满", file=sys.stderr)
+    if not token:
+        print("[WARN] 未设 GITHUB_TOKEN：搜索限流仅 10 次/分钟（认证为 30 次/分钟），连续搜索易被打满", file=sys.stderr)
 
     params = {"q": q, "per_page": str(limit)}
     if sort:
@@ -516,9 +438,8 @@ def github_search(query: str, sort: str = "stars", limit: int = 30,
         print(f"[DRY-RUN] 认证：{'已提供 token' if token else '缺失（匿名限流 10 次/分钟）'}")
         print(f"[DRY-RUN] 注意：该端点官方上限 {SEARCH_RESULT_CAP} 条结果 / 扫描 {SEARCH_SCOPE_CAP} 个仓库")
         return []
-    search_limit = GH_SEARCH_LIMIT_AUTH if _auth_hint() else GH_SEARCH_LIMIT_ANON
-    raw = fetch(url, token=token, use_cache=use_cache, ttl=ttl,
-                throttle=("gh_search", search_limit, 60))
+    _rl_throttle("gh_search", 10, 60)
+    raw = fetch(url, token=token, use_cache=use_cache, ttl=ttl)
     try:
         data = json.loads(raw.decode("utf-8"))
     except json.JSONDecodeError:
@@ -589,26 +510,18 @@ def github_code_search(query: str, limit: int = 30, token: str | None = None,
     if dry_run:
         print(f"[DRY-RUN] 将请求：{url}")
         print(f"[DRY-RUN] 附加头：Accept: {CODE_SEARCH_ACCEPT}")
-        # 不发请求就不需要凭据，也不再 eager 解析（P3）
-        print(f"[DRY-RUN] 认证：{'已显式提供 token' if token else '未显式提供；真实请求时按 GITHUB_TOKEN → GH_TOKEN → gh auth token 自动解析（该端点必须有凭据，否则 401）'}")
+        print(f"[DRY-RUN] 认证：{'已提供 token' if token else '缺失（该端点需要 token，否则 401）'}")
         return []
 
-    # P3：**缓存命中不需要凭据**，所以先探一次缓存，只有确实要发请求时才解析并强制校验。
-    # 否则"重复搜同一条代码"也会白付一张 gh 子进程（本机 ≈120 ms，非沙箱终端 ≈790 ms）。
     if not token:
-        probe = cache_get(url, ttl) if use_cache else None
-        if probe is None:
-            token = _resolve_token()
-    if not token:
-        print("[ERROR] /search/code 强制要求认证，当前没有可用凭据 —— 匿名请求会返回 401。", file=sys.stderr)
+        print("[ERROR] /search/code 强制要求认证，当前没有 GITHUB_TOKEN —— 匿名请求会返回 401。", file=sys.stderr)
         print("[HINT ] 三选一：① 设置环境变量 GITHUB_TOKEN=<PAT>；② 设置 GH_TOKEN；③ 运行 gh auth login 后用 gh CLI 凭据（脚本自动读取）。", file=sys.stderr)
         print("[HINT ] 只想按仓库名/描述找项目，用 --github-search（匿名可用）。", file=sys.stderr)
         raise SystemExit(2)
 
-    search_limit = GH_SEARCH_LIMIT_AUTH if _auth_hint() else GH_SEARCH_LIMIT_ANON
+    _rl_throttle("gh_search", 10, 60)
     raw = fetch(url, token=token, use_cache=use_cache, ttl=ttl,
-                headers_extra={"Accept": CODE_SEARCH_ACCEPT},
-                throttle=("gh_search", search_limit, 60))
+                headers_extra={"Accept": CODE_SEARCH_ACCEPT})
     try:
         data = json.loads(raw.decode("utf-8"))
     except json.JSONDecodeError:
@@ -811,10 +724,7 @@ def main() -> None:
         return
 
     if args.github_search:
-        # P3：**不在此 eager 解析凭据** —— 缓存命中根本不需要凭据，过早解析等于白付一张
-        # `gh auth token` 子进程（本机 ≈120 ms／非沙箱终端 ≈790 ms）。真实要发请求时由
-        # `fetch()` 惰性解析；`--github-code-search` 的强制认证校验也已改为"缓存未命中才校验"。
-        token = args.token
+        token = _resolve_token(args.token)
         rows = github_search(args.github_search, args.search_sort, args.search_limit,
                              token=token, use_cache=use_cache, ttl=args.ttl, dry_run=args.dry_run)
         if args.dry_run:
@@ -837,10 +747,7 @@ def main() -> None:
         return
 
     if args.github_code_search:
-        # P3：**不在此 eager 解析凭据** —— 缓存命中根本不需要凭据，过早解析等于白付一张
-        # `gh auth token` 子进程（本机 ≈120 ms／非沙箱终端 ≈790 ms）。真实要发请求时由
-        # `fetch()` 惰性解析；`--github-code-search` 的强制认证校验也已改为"缓存未命中才校验"。
-        token = args.token
+        token = _resolve_token(args.token)
         rows = github_code_search(args.github_code_search, args.search_limit,
                                   token=token, use_cache=use_cache, ttl=args.ttl,
                                   dry_run=args.dry_run)
@@ -864,10 +771,7 @@ def main() -> None:
         return
 
     if args.github_repo:
-        # P3：**不在此 eager 解析凭据** —— 缓存命中根本不需要凭据，过早解析等于白付一张
-        # `gh auth token` 子进程（本机 ≈120 ms／非沙箱终端 ≈790 ms）。真实要发请求时由
-        # `fetch()` 惰性解析；`--github-code-search` 的强制认证校验也已改为"缓存未命中才校验"。
-        token = args.token
+        token = _resolve_token(args.token)
         slugs = [s for s in args.github_repo.split(",") if s.strip()]
         t0 = time.time()
         rows = collect_repo_rows(slugs, token, use_cache, args.ttl)

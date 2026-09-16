@@ -51,7 +51,7 @@ if ($allPresent) {
     Write-Host "[ OK ] all deps present, skipping pip install" -ForegroundColor Green
 } else {
     Write-Host "[....] pip install $($deps -join ' ')"
-    $pipLog = Join-Path $PSScriptRoot "pip_debug.log"
+    $pipLog = Join-Path ([System.IO.Path]::GetTempPath()) "aiwf_pip_debug.log"
     & $venvPython -m pip install --disable-pip-version-check $deps 1> $pipLog 2>&1
     if (Test-Path $pipLog) {
         $errLines = (Get-Content $pipLog) | Where-Object { $_ -match "error|ERROR|Traceback" }
