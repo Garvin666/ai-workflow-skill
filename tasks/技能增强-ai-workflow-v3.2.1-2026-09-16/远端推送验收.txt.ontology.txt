@@ -1,0 +1,30 @@
+=== push_ontology（本体 → Garvin666/ai-workflow-skill@main）===
+模式：APPLY（真实推送）
+本地 git 根：C:\Users\26717\.workbuddy\skills\ai-workflow
+改动面：2862ccd..HEAD
+
+本地：写入 8 项 / 删除 0 项
+远端 HEAD = 5281dca15e2103a5466f90dbc65c1de89ba1ed3e
+base_tree = 91a9c79d14e1e096774cb9c7190bae2ec5cfe645
+远端 blob 路径 246 个
+
+  [写] SKILL.md
+        新建 blob  78c839b1b9
+  [写] references/ops.md
+        新建 blob  fd4ad76435
+  [写] scripts/push_ontology.py
+        新建 blob  b7cb418875
+  [写] scripts/push_router.py
+        新建 blob  afeb98acd5
+  [=] scripts/verify_push.py  同内容跳过
+  [写] tasks/技能增强-ai-workflow-v3.2.1-2026-09-16/远端推送验收-轮1日志落盘事故.txt
+        新建 blob  9f28580170
+  [写] tasks/技能增强-ai-workflow-v3.2.1-2026-09-16/远端推送验收.txt
+        新建 blob  9f28580170
+  [=] tasks/技能增强-ai-workflow-v3.2.1-2026-09-16/验证输出.txt  同内容跳过
+
+小计：新建 6 / 复用 0 / 同内容跳过 2 / 删除 0 / 删除跳过 0
+
+新 tree   = a758fe699926db299ad0bc326a175649ac04b0a6
+新 commit = af231a86797e25435736f0960da97c06be1c0f90
+ref main 已更新：5281dca15e → af231a8679

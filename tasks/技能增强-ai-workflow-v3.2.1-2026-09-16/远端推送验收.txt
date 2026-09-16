@@ -6,22 +6,35 @@
 ── 分流判定 ──
   [本体          ] SKILL.md
   [本体          ] references/ops.md
+  [本体+自研工具     ] scripts/push_ontology.py
+  [本体+自研工具     ] scripts/push_router.py
   [本体+自研工具     ] scripts/verify_push.py
+  [本体          ] tasks/技能增强-ai-workflow-v3.2.1-2026-09-16/远端推送验收-轮1日志落盘事故.txt
+  [本体          ] tasks/技能增强-ai-workflow-v3.2.1-2026-09-16/远端推送验收.txt
   [本体          ] tasks/技能增强-ai-workflow-v3.2.1-2026-09-16/验证输出.txt
 
 ── 交叉校验（标注头 vs plan.yaml 登记表）──
   [OK  ] SKILL.md                                   有标注头且已登记，但登记链接指向**本体仓**（https://github.com/Garvin666/ai-workflow-skill）→ 只走本体通道，不推 tools 仓
   [OK  ] references/ops.md                          普通本体文件（无自研标注，无需登记）
+  [OK  ] scripts/push_ontology.py                   标注头齐全，已登记（来源 tasks/技能增强-ai-workflow-v3.2.0-2026-09-16/plan.yaml）→ 双属：本体 + 自研工具
+  [OK  ] scripts/push_router.py                     标注头齐全，已登记（来源 tasks/技能增强-ai-workflow-v3.2.0-2026-09-16/plan.yaml）→ 双属：本体 + 自研工具
   [OK  ] scripts/verify_push.py                     标注头齐全，已登记（来源 tasks/技能增强-ai-workflow-v3.2.1-2026-09-16/plan.yaml）→ 双属：本体 + 自研工具
+  [OK  ] tasks/技能增强-ai-workflow-v3.2.1-2026-09-16/远端推送验收-轮1日志落盘事故.txt 普通本体文件（无自研标注，无需登记）
+  [OK  ] tasks/技能增强-ai-workflow-v3.2.1-2026-09-16/远端推送验收.txt 普通本体文件（无自研标注，无需登记）
   [OK  ] tasks/技能增强-ai-workflow-v3.2.1-2026-09-16/验证输出.txt 普通本体文件（无自研标注，无需登记）
-  [SKIP] 登记表（共 9 项）                                 另有 6 项未涉及本次改动面（历史登记或本次未改动，非错误）：publish_tools.py、push_ontology.py、push_router.py、marked_ok.py…
+  [SKIP] 登记表（共 9 项）                                 另有 4 项未涉及本次改动面（历史登记或本次未改动，非错误）：publish_tools.py、marked_ok.py、marked_incomplete.py、registered_ghost.py
   登记表共 9 项（来自 tasks/**/plan.yaml）
 
 ── 推送计划 ──
-  本体     → Garvin666/ai-workflow-skill@main ：4 项（通道 push_ontology.py，Git Data API + base_tree）
-  自研工具 → Garvin666/ai-workflow-tools@main ：1 项（通道 publish_tools.py，contents API 逐文件）：scripts/verify_push.py
+  本体     → Garvin666/ai-workflow-skill@main ：8 项（通道 push_ontology.py，Git Data API + base_tree）
+  自研工具 → Garvin666/ai-workflow-tools@main ：3 项（通道 publish_tools.py，contents API 逐文件）：scripts/push_ontology.py、scripts/push_router.py、scripts/verify_push.py
 
 ── 通道 1/2：本体 → Garvin666/ai-workflow-skill ──
-  退出码 = 1
+  退出码 = 0
 
-[FAIL] 本体通道失败/阻塞 → 不再继续自研工具通道（避免半推送状态扩大）
+── 通道 2/2：自研工具 → Garvin666/ai-workflow-tools ──
+  退出码 = 0
+  退出码 = 0
+  退出码 = 0
+
+分流推送完成：本体 8 项 → Garvin666/ai-workflow-skill ｜ 自研工具 3 项 → Garvin666/ai-workflow-tools
