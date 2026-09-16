@@ -1,0 +1,56 @@
+ai-workflow v3.2.0 分流推送 · 独立验收留痕
+执行时间：2026-09-16 08:01:25
+本地 commit：e60b5f7   远端：skill 仓 8f14ac61 → fa5e91f6 ｜ tools 仓 7dd805e4 → dce80cdf
+
+验收器：tasks/技能增强-ai-workflow-v3.2.0-2026-09-16/tmp/verify_push_v3_2_0.py
+        **自写，与 push_ontology.py / push_router.py / publish_tools.py 零代码共享**
+        （blob sha 自算 / 远端数据自取 / 本地 tree 自行解析）—— 作者自查不作数。
+
+两个已知口径坑（已内建处理）：
+  ① 本地侧一律 git -c core.quotePath=false ls-tree —— 否则中文路径转义会凭空造出「假缺失」
+  ② 混合仓不适用「集合相等」：正确口径 = 本地 ⊆ 远端 + 远端独有项须证明早于本次推送
+
+==================== 验收器实时输出 ====================
+=== ai-workflow v3.2.0 分流推送 · 独立验收 ===
+验收器：自写，与 push_ontology.py / push_router.py / publish_tools.py 零代码共享
+本地 rev：e60b5f7   期望远端 HEAD：fa5e91f647
+
+-- 判据 1：远端 skill 仓 HEAD 已前进到期望值 --
+[OK] 远端 HEAD == 期望 — 实际 fa5e91f647
+[OK] 远端 HEAD ≠ 推送前值（确非空跑） — 推送前 8f14ac61a0
+
+-- 判据 2：本地树 ⊆ 远端树（全量逐文件 blob sha 比对）--
+[OK] 远端 tree 未截断（recursive 全量）
+[OK] 本地全部文件存在于远端 — 本地 176 项 / 远端 242 项 / 缺失 0
+[OK] 同名文件 blob sha 逐一相等 — 不一致 0
+
+-- 判据 3：远端独有项均为推送前既有（混合仓工作区档案侧）--
+[OK] 无本次新出现的远端独有项 — 远端独有 66 项，其中本次新出现 0 项
+[OK] 远端 blob 数较推送前增加 — 239 → 242
+
+-- 判据 4：工具仓 blob sha == 本地独立重算值（CRLF→LF 归一化）--
+[OK] 工具仓 scripts/push_ontology.py 版本一致 — 远端 8900d79d63 / 独立重算 8900d79d63（11997 字节，CRLF 0 处）
+[OK] 工具仓 scripts/push_router.py 版本一致 — 远端 7bbcd79f8c / 独立重算 7bbcd79f8c（24702 字节，CRLF 0 处）
+
+-- 判据 5：远端 SKILL.md 自证为 v3.2.0 且含分流小节 --
+[OK] 远端 SKILL.md 版本 = 3.2.0
+[OK] 远端 SKILL.md 含「两类资源的分流推送路由」小节
+[OK] 远端 SKILL.md 含触发条件（四要素之一）
+[OK] 远端 SKILL.md 含冲突处理策略（四要素之一）
+[OK] 远端 SKILL.md 保留自研技能标注（frontmatter）
+
+-- 判据 6：两仓均为 public --
+[OK] Garvin666/ai-workflow-skill public — visibility=public
+[OK] Garvin666/ai-workflow-tools public — visibility=public
+
+=== 结果：全部通过 FAIL=0 ===
+RC=0
+======================================================
+
+结论：两仓均已更新且内容与本地一致；本次未引入任何远端独有项、未删除任何远端文件；
+      两仓 public；远端 SKILL.md 自证为 v3.2.0 且含分流规则四要素。
+
+自研工具（按 v3.1.0 规则标注 + 登记 + 推送 public 仓）：
+  · push_ontology.py  https://github.com/Garvin666/ai-workflow-tools/blob/main/scripts/push_ontology.py
+  · push_router.py    https://github.com/Garvin666/ai-workflow-tools/blob/main/scripts/push_router.py
+技能本体：https://github.com/Garvin666/ai-workflow-skill

@@ -436,9 +436,12 @@ def cmd_push(a) -> int:
         out("  本次改动面无自研工具文件，跳过。")
     else:
         for rel in plan["selftools"]:
-            cmd = [py, str(HERE / "publish_tools.py"), "push",
-                   "--file", str(root / rel), "--dest", rel,
-                   "--repo", a.tools_repo, "--branch", a.tools_branch]
+            # ⚠️ publish_tools.py 的 --repo / --branch 是**顶层**参数，必须放在子命令**之前**；
+            # 放在 push 之后会被 argparse 判 unrecognized → 退出码 2（v3.2.0 实测踩到：
+            # dry-run 阶段就暴露了，没有等到真写远端才发现）。
+            cmd = [py, str(HERE / "publish_tools.py"),
+                   "--repo", a.tools_repo, "--branch", a.tools_branch,
+                   "push", "--file", str(root / rel), "--dest", rel]
             if a.apply:
                 cmd.append("--apply")
             if a.message:

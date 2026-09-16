@@ -1,0 +1,90 @@
+ai-workflow v3.2.0 分流推送验收（本体 → ai-workflow-skill ｜ 自研工具 → ai-workflow-tools）
+执行时间：2026-09-16 07:59:47   执行者：球球
+授权：用户 2026-09-16 选择「合并推 v3.1.1 + v3.2.0」（v3.1.1 为同日并行会话完成、此前未提交的成果）
+本地 commit：e1d2a23 → e60b5f7（6 文件，+1036 −9）
+
+=== 远端 HEAD（推送前）===
+skill 仓：8f14ac61a08507167c2992e827571990f86e9e88
+tools 仓：7dd805e45a699b95456773ab81ea41cd48552515
+
+=== 分流推送（push_router.py push --apply）===
+=== push_ontology（本体 → Garvin666/ai-workflow-skill@main）===
+模式：APPLY（真实推送）
+本地 git 根：C:\Users\26717\.workbuddy\skills\ai-workflow
+改动面：e1d2a23..e60b5f7
+
+本地：写入 6 项 / 删除 0 项
+远端 HEAD = 8f14ac61a08507167c2992e827571990f86e9e88
+base_tree = 57e8f294877714340c7f6e3ce3e1266418e2b0d3
+远端 blob 路径 239 个
+
+  [写] SKILL.md
+        新建 blob  155b3a4a2b
+  [写] references/ops.md
+        新建 blob  3575097e8b
+  [写] scripts/checks.py
+        新建 blob  d736a7ab6c
+  [写] scripts/push_ontology.py
+        新建 blob  8900d79d63
+  [写] scripts/push_router.py
+        新建 blob  221a2344bc
+  [写] tasks/技能增强-ai-workflow-v3.2.0-2026-09-16/验证输出.txt
+        新建 blob  ea9ffb63d3
+
+小计：新建 6 / 复用 0 / 同内容跳过 0 / 删除 0 / 删除跳过 0
+
+新 tree   = 46327c57454ce6e8f8b67aabc11dd6c291c0e605
+新 commit = fa5e91f6475aa608088c424ac62a714b1ced6726
+ref main 已更新：8f14ac61a0 → fa5e91f647
+[PLAN] C:\Users\26717\.workbuddy\skills\ai-workflow\scripts\push_ontology.py  →  scripts/push_ontology.py  |  新建：本地 8900d79d63fb → 远端 无
+[OK] 仓库可见性 — Garvin666/ai-workflow-tools public（private=false）
+[OK] 已推送 scripts/push_ontology.py — 11997 字节
+[PLAN] C:\Users\26717\.workbuddy\skills\ai-workflow\scripts\push_router.py  →  scripts/push_router.py  |  新建：本地 7bbcd79f8c3e → 远端 无
+[OK] 仓库可见性 — Garvin666/ai-workflow-tools public（private=false）
+[OK] 已推送 scripts/push_router.py — 24702 字节
+=== push_router push（分流推送）===
+技能根：C:\Users\26717\.workbuddy\skills\ai-workflow
+改动面：e1d2a23..e60b5f7
+模式：APPLY（真实推送两仓）
+
+── 分流判定 ──
+  [本体          ] SKILL.md
+  [本体          ] references/ops.md
+  [本体          ] scripts/checks.py
+  [本体+自研工具     ] scripts/push_ontology.py
+  [本体+自研工具     ] scripts/push_router.py
+  [本体          ] tasks/技能增强-ai-workflow-v3.2.0-2026-09-16/验证输出.txt
+
+── 交叉校验（标注头 vs plan.yaml 登记表）──
+  [OK  ] SKILL.md                                   有标注头且已登记，但登记链接指向**本体仓**（https://github.com/Garvin666/ai-workflow-skill）→ 只走本体通道，不推 tools 仓
+  [OK  ] references/ops.md                          普通本体文件（无自研标注，无需登记）
+  [OK  ] scripts/checks.py                          普通本体文件（无自研标注，无需登记）
+  [OK  ] scripts/push_ontology.py                   标注头齐全，已登记（来源 tasks/技能增强-ai-workflow-v3.2.0-2026-09-16/plan.yaml）→ 双属：本体 + 自研工具
+  [OK  ] scripts/push_router.py                     标注头齐全，已登记（来源 tasks/技能增强-ai-workflow-v3.2.0-2026-09-16/plan.yaml）→ 双属：本体 + 自研工具
+  [OK  ] tasks/技能增强-ai-workflow-v3.2.0-2026-09-16/验证输出.txt 普通本体文件（无自研标注，无需登记）
+  [SKIP] 登记表（共 8 项）                                 另有 4 项未涉及本次改动面（历史登记或本次未改动，非错误）：publish_tools.py、marked_ok.py、marked_incomplete.py、registered_ghost.py
+  登记表共 8 项（来自 tasks/**/plan.yaml）
+
+── 推送计划 ──
+  本体     → Garvin666/ai-workflow-skill@main ：6 项（通道 push_ontology.py，Git Data API + base_tree）
+  自研工具 → Garvin666/ai-workflow-tools@main ：2 项（通道 publish_tools.py，contents API 逐文件）：scripts/push_ontology.py、scripts/push_router.py
+
+── 通道 1/2：本体 → Garvin666/ai-workflow-skill ──
+
+  $ C:\Users\26717\.workbuddy\binaries\python\envs\ai-workflow\Scripts\python.exe C:\Users\26717\.workbuddy\skills\ai-workflow\scripts\push_ontology.py --base e1d2a23 --head e60b5f7 --repo Garvin666/ai-workflow-skill --branch main --root C:\Users\26717\.workbuddy\skills\ai-workflow --apply
+  退出码 = 0
+
+── 通道 2/2：自研工具 → Garvin666/ai-workflow-tools ──
+
+  $ C:\Users\26717\.workbuddy\binaries\python\envs\ai-workflow\Scripts\python.exe C:\Users\26717\.workbuddy\skills\ai-workflow\scripts\publish_tools.py --repo Garvin666/ai-workflow-tools --branch main push --file C:\Users\26717\.workbuddy\skills\ai-workflow\scripts\push_ontology.py --dest scripts/push_ontology.py --apply
+  退出码 = 0
+
+  $ C:\Users\26717\.workbuddy\binaries\python\envs\ai-workflow\Scripts\python.exe C:\Users\26717\.workbuddy\skills\ai-workflow\scripts\publish_tools.py --repo Garvin666/ai-workflow-tools --branch main push --file C:\Users\26717\.workbuddy\skills\ai-workflow\scripts\push_router.py --dest scripts/push_router.py --apply
+  退出码 = 0
+
+分流推送完成：本体 6 项 → Garvin666/ai-workflow-skill ｜ 自研工具 2 项 → Garvin666/ai-workflow-tools
+RC=0
+
+=== 远端 HEAD（推送后）===
+skill 仓：fa5e91f6475aa608088c424ac62a714b1ced6726
+tools 仓：dce80cdf45eee00fd7132c9508d7fe88a668a0c8
