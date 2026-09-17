@@ -1215,6 +1215,164 @@ def _check_model_tiers(steps: list) -> None:
         ok("模型档位合法", f"{len(seen)} 步已标注，取值均在 enum 内" if seen else "步骤均未标注（字段可选）")
 
 
+# --------------------------------------------------------------------------- #
+# v4.0.0 / U5 + U2：不可逆副作用登记 与 用户放行留痕
+# --------------------------------------------------------------------------- #
+IRREVERSIBLE_HINT = ("推送", "发布", "上线", "删除", "清空", "force", "覆盖写",
+                     "对外发送", "生产配置", "迁移", "回滚", "重建")
+
+
+def _check_irreversible(meta: dict, steps: list) -> None:
+    """U5：不可逆副作用登记 —— **可选字段，填了就必须合法**。
+
+    口径沿用 `_check_autonomy` / `_check_selftools`：不强制填空，填了就不能糊弄。
+      * 命中不可逆关键词却留空 → **SKIP**（"是否该有副作用"无法机器判断，不做 FAIL ——
+        逼执行者编造比留空更糟）
+      * 登记项缺 `可否回滚`，或取值越界 → **FAIL**
+    """
+    items = meta.get("不可逆副作用") or []
+    if not isinstance(items, list):
+        fail("meta.不可逆副作用 合法", f"应为列表，实际 {type(items).__name__}")
+        return
+    if not items:
+        blob = " ".join(str(s.get(k, "") or "") for s in steps
+                        for k in ("做什么", "交付物", "验证方式"))
+        hit = [h for h in IRREVERSIBLE_HINT if h in blob]
+        if hit:
+            skip("meta.不可逆副作用",
+                 f"步骤文本命中不可逆关键词（{'、'.join(hit[:3])}）但本字段留空"
+                 f" —— 需人工确认是否该登记（不 FAIL：无法机器判断「是否该有副作用」）")
+        return
+    bad = []
+    for i, it in enumerate(items, 1):
+        if not isinstance(it, dict):
+            bad.append(f"第 {i} 项应为映射")
+            continue
+        v = str(it.get("可否回滚", "") or "").strip()
+        if not v:
+            bad.append(f"第 {i} 项缺『可否回滚』（未知必须显式写，空值不等于『应该没问题』）")
+        elif v not in ("可回滚", "不可回滚", "未知"):
+            bad.append(f"第 {i} 项『可否回滚』=『{v}』（只允许 可回滚/不可回滚/未知）")
+    if bad:
+        fail("meta.不可逆副作用", "；".join(bad[:3]))
+    else:
+        ok("meta.不可逆副作用", f"登记 {len(items)} 项，合法")
+
+
+def _check_user_release(meta: dict) -> None:
+    """U2：用户放行留痕 —— **非门禁**，只提高伪造成本。
+
+    ⚠️ 本字段做不到真正的机器强制（执行者可自填）。字段注释与 SKILL.md 都必须
+    原样保留这一事实，否则就是造「看起来有门禁其实没有」的假安全感 —— 比不做更糟。
+    """
+    # 适用范围：L2 全量；**L1 可省**（命中模板即跳过追问循环，无独立放行环节 —— 清单 §2.3）
+    if str(meta.get("任务层级", "") or "").strip() == "L1":
+        return
+    items = meta.get("用户放行") or []
+    if not isinstance(items, list):
+        fail("meta.用户放行 合法", f"应为列表，实际 {type(items).__name__}")
+        return
+    if not items:
+        skip("meta.用户放行", "未记录 —— 本字段**不是门禁**（可自填，机器无法强制），留空只作提示")
+        return
+    bad = []
+    for i, it in enumerate(items, 1):
+        if not isinstance(it, dict):
+            bad.append(f"第 {i} 项应为映射")
+            continue
+        for k in ("时间", "摘要"):
+            if not str(it.get(k, "") or "").strip():
+                bad.append(f"第 {i} 项缺『{k}』")
+    if bad:
+        fail("meta.用户放行", "；".join(bad[:3]))
+    else:
+        ok("meta.用户放行", f"登记 {len(items)} 项（**留痕，非门禁**）")
+
+
+# --------------------------------------------------------------------------- #
+# v4.0.0 / U3 + U8：执行 trace 与任务级指标（共用 jsonl 追加设施）
+# --------------------------------------------------------------------------- #
+def _jsonl_append(path: Path, rec: dict) -> None:
+    """追加一行 jsonl，目录不存在则建。**追加不覆盖**（与 mark/decide/revise 同风格）。"""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+
+
+def _task_dir(plan_path: Path) -> Path:
+    return plan_path if plan_path.is_dir() else plan_path.parent
+
+
+def cmd_trace(plan_path: Path, step: str | None, action: str, command: str,
+              result: str, elapsed: float | None, replay: bool) -> int:
+    """U3：执行 trace —— `plan.yaml` 记的是**离散状态点**（做到哪/为什么引入/为什么变了），
+    不含时序；trace 补上时序，让阶段 6 的复盘四问从"回忆"变"查账"。
+
+    ⚠️ **约定：`trace.jsonl` 不进 `交付物` 字段** —— 它是留痕不是交付物。
+    若写进交付物，`_is_file_like()` 会命中 `.jsonl` 并按存在性判定，把留痕误当产物。
+    """
+    tf = _task_dir(plan_path) / "trace.jsonl"
+    if replay:
+        if not tf.exists():
+            print("[INFO] 无 trace 记录 —— %s 不存在" % tf)
+            return 0
+        n = 0
+        for i, ln in enumerate(tf.read_text(encoding="utf-8").splitlines(), 1):
+            if ln.strip():
+                print("%3d  %s" % (i, ln[:200]))
+                n += 1
+        print("=== trace 回放：%d 条 ===" % n)
+        return 0
+    if not step:
+        print("[ERROR] --step 必填（--replay 时不需要）", file=sys.stderr)
+        return 2
+    rec = {"ts": time.strftime("%Y-%m-%d %H:%M"), "step": str(step),
+           "action": action or "", "cmd": command or "", "result": result or ""}
+    if elapsed is not None:
+        rec["elapsed_s"] = elapsed
+    _jsonl_append(tf, rec)
+    print("[OK] trace 已追加 —— %s（step=%s）" % (tf, step))
+    return 0
+
+
+def cmd_metrics(plan_path: Path, finalize: bool) -> int:
+    """U8：任务级指标沉淀 —— 收尾时把本任务的指标追加进工作区级 `tasks/_metrics.jsonl`。
+
+    目的：此前**没有任何任务级统计**（返修轮次、熔断频次、门禁 FAIL 率、步骤耗时全无），
+    技能自身演进缺数据依据。
+    """
+    if not finalize:
+        print("[ERROR] 目前只支持 --finalize（收尾时汇总一次，避免中途写入半成品）", file=sys.stderr)
+        return 2
+    pp = plan_path if plan_path.is_dir() else plan_path.parent
+    if pp.is_dir():
+        pp = pp / "plan.yaml"
+    if not pp.exists():
+        print("[ERROR] 找不到 plan.yaml —— %s" % pp, file=sys.stderr)
+        return 2
+    yaml = _require_yaml()
+    data = yaml.safe_load(pp.read_text(encoding="utf-8")) or {}
+    meta = data.get("meta") or {}
+    steps = data.get("steps") or []
+    st = [str(s.get("状态", "") or "") for s in steps]
+    rec = {
+        "task": str(meta.get("任务", "") or "")[:80],
+        "level": str(meta.get("任务层级", "") or "") or "?",
+        "date": time.strftime("%Y-%m-%d"),
+        "revisions": len(meta.get("计划修订") or []),
+        "fused": str(meta.get("熔断状态", "") or "").strip() == "已熔断",
+        "steps": len(steps),
+        "done": sum(1 for x in st if x == "完成"),
+        "irreversible": len(meta.get("不可逆副作用") or []),
+        "released": len(meta.get("用户放行") or []),
+    }
+    tf = _task_dir(pp) / "_metrics.jsonl"
+    _jsonl_append(tf, rec)
+    print("[OK] 指标已追加 —— %s" % tf)
+    print("    " + json.dumps(rec, ensure_ascii=False)[:220])
+    return 0
+
+
 def check_plan(plan_path: Path, base: Path) -> int:
     yaml = _require_yaml()
 
@@ -1267,6 +1425,8 @@ def check_plan(plan_path: Path, base: Path) -> int:
     ok("Anti-drop 对账", f"已完成步骤 {done_total} 个，交付物确认 {deliverable_ok} 个")
 
     _check_scope(meta, steps, base)
+    _check_irreversible(meta, steps)
+    _check_user_release(meta)
     _check_autonomy(meta)
     _check_selftools(meta, steps, base)
     _check_stage_gates(steps)
@@ -1320,6 +1480,19 @@ def main() -> None:
     p.add_argument("--scenario", required=True, help="适用场景：什么情况该用；什么情况不该用")
     p.add_argument("--repo", required=True, help="仓库链接：http(s) 真实地址；尚未推送时填『待推送』（交付前须回填）")
 
+    p = sub.add_parser("trace", help="追加一条执行 trace（v4.0.0 / U3：补 plan.yaml 缺失的时序）")
+    p.add_argument("plan", help="plan.yaml 路径或任务目录")
+    p.add_argument("--step", help="步骤 id（--replay 时不需要）")
+    p.add_argument("--action", default="", help="本步动作摘要")
+    p.add_argument("--command", default="", help="实际执行的命令（避免与子命令名 cmd 冲突，故拼全）")
+    p.add_argument("--result", default="", help="结果摘要")
+    p.add_argument("--elapsed", type=float, help="耗时（秒）")
+    p.add_argument("--replay", action="store_true", help="回放该任务的完整时序")
+
+    p = sub.add_parser("metrics", help="任务级指标沉淀（v4.0.0 / U8：写入 tasks/_metrics.jsonl）")
+    p.add_argument("plan", help="plan.yaml 路径或任务目录")
+    p.add_argument("--finalize", action="store_true", help="收尾时汇总写入一次")
+
     args = ap.parse_args()
     if args.cmd == "skill":
         code = check_skill(Path(args.skill_dir))
@@ -1339,9 +1512,16 @@ def main() -> None:
     elif args.cmd == "revise":
         code = cmd_revise(Path(args.plan), args.trigger, args.change, args.unchanged)
         name = "计划修订"
-    else:  # selftool
+    elif args.cmd == "selftool":
         code = cmd_selftool(Path(args.plan), args.name, args.purpose, args.scenario, args.repo)
         name = "自研工具登记"
+    elif args.cmd == "trace":
+        code = cmd_trace(Path(args.plan), args.step, args.action, args.command,
+                         args.result, args.elapsed, args.replay)
+        name = "执行 trace"
+    else:  # metrics
+        code = cmd_metrics(Path(args.plan), args.finalize)
+        name = "指标沉淀"
 
     if args.cmd in ("skill", "plan"):
         print(f"=== ai-workflow {name} ===")
