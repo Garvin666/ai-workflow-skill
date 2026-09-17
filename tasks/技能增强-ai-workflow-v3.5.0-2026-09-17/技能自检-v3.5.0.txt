@@ -1,0 +1,35 @@
+=== ai-workflow 技能自检 ===
+[ OK ] SKILL.md 存在
+[ OK ] frontmatter 含 name
+[ OK ] frontmatter 含 description
+[ OK ] frontmatter 含 agent_created
+[ OK ] 文档引用完整性 — 检查 74 条引用
+[ OK ] 模板 schema：_示例-数据分析.yaml — 9/9
+[ OK ] 模板 schema：UI组件库搭建.yaml — 9/9
+[ OK ] 模板 schema：学习资料生成.yaml — 9/9
+[ OK ] 模板 schema：小说写作.yaml — 9/9
+[ OK ] 模板 schema：技术调研.yaml — 9/9
+[ OK ] 模板 schema：算法评估升级.yaml — 9/9
+[ OK ] 模板 schema：调研报告.yaml — 9/9
+[ OK ] 模板 schema：选品分析.yaml — 9/9
+[ OK ] 模板 schema：量化分析.yaml — 9/9
+[ OK ] plan-template 必填键 — 齐全
+[ OK ] py_compile：ai_call.py
+[ OK ] py_compile：archive_tasks.py
+[ OK ] py_compile：checks.py
+[ OK ] py_compile：data_query.py
+[ OK ] py_compile：gen_skill_index.py
+[ OK ] py_compile：http_fetch.py
+[ OK ] py_compile：office_io.py
+[ OK ] py_compile：outbound_scan.py
+[ OK ] py_compile：perf_baseline.py
+[ OK ] py_compile：publish_tools.py
+[ OK ] py_compile：push_ontology.py
+[ OK ] py_compile：push_router.py
+[ OK ] py_compile：verify_push.py
+[ OK ] 口径守卫：模型档位 — references/routing-guide.md ↔ cheap/default/mid/strong（4 项一致）
+[ OK ] 口径守卫：步骤状态 — assets/plan-template.yaml ↔ 受阻/完成/待办/熔断/进行中（5 项一致）
+[ OK ] 口径守卫：能力类 — references/capability-routing.md ↔ 事实/手脚/知识/算力（4 项一致）
+[ OK ] 口径守卫：重规划触发 — references/adaptive-planning.md ↔ R1/R2/R3/R4/R5/R6（6 项一致）
+[ OK ] 口径守卫：熔断状态 — SKILL.md ↔ 已熔断/正常（2 项一致）
+=== 结果：通过 33/33，FAIL=0，SKIP=0，WARN=0 ===

@@ -1,0 +1,42 @@
+=== 工作区侧弃权提交记录 2026-09-17 ===
+--- HEAD 变化 ---
+修复前: 7011bf070e8eaa2fedae86b522f468519de89f33
+修复后: 8fb80fcf8a13a9086370a6f52c3025404d6d8f80
+--- 提交详情 ---
+commit 8fb80fcf8a13a9086370a6f52c3025404d6d8f80
+Author: Garvin666 <308229273+Garvin666@users.noreply.github.com>
+Date:   Thu Sep 17 09:26:33 2026 +0800
+
+    工作区侧弃权：.gitignore 退出跟踪（修法 2，消除同路径撞车）
+    
+    背景：同一远端路径 .gitignore 被两条本地来源各自主张，且策略方向相反——
+    技能侧（技能根）忽略 tasks/*/plan.yaml、tasks/*/tmp/；工作区侧（本仓）跟踪它们。
+    远端只存一份 → 后推者覆盖先推者，另一侧的 verify_push.py 判据 2「同名文件 blob
+    sha 逐一相等」恒 FAIL（实测本地 5138ffeea1 ≠ 远端 3d53038d4d，远端当前为技能侧版本）。
+    
+    修法 2（本次选定）：工作区侧放弃对该路径的主张。
+    - 本仓原有忽略规则已逐条迁入 .git/info/exclude（并追加 .gitignore 自身）
+    - .gitignore 保留在磁盘上（非破坏性），仅退出跟踪；已由 .git/info/exclude 排除
+    - 忽略语义自此为本地私有、不再随仓分发（本修法的已知代价）
+    
+    效果：本仓 rev 树不再含 .gitignore → 通道 B 判据 2 由 FAIL 1 → FAIL 0；
+    远端保持技能侧版本，通道 A 不受影响。两条通道的「内容来源不同源」不再命中同一路径。
+    
+    ⚠️ 不要恢复 .gitignore 的跟踪 —— 一旦恢复，撞车与判据 2 的 FAIL 会复发。
+    ⚠️ 不要在 .git/info/exclude 加入 tasks/*/plan.yaml —— 本仓对该路径是跟踪语义（现有 11 项）。
+    
+    证据与快照：技能根下 tasks/修复-gitignore同路径撞车-2026-09-17/
+
+ .gitignore | 18 ------------------
+ 1 file changed, 18 deletions(-)
+
+--- rev 树中 gitignore 计数（应为 0）---
+0
+--- 工作树状态 ---
+?? Ledger.md
+?? tasks/评估-ai-workflow工作流-2026-09-17/
+?? 评估-ai-workflow工作流-2026-09-17.md
+--- 磁盘 .gitignore 仍在 ---
+-rw-r--r-- 1 26717 197609 206 Sep 11 21:56 .gitignore
+--- 忽略来源 ---
+.git/info/exclude:35:.gitignore	.gitignore

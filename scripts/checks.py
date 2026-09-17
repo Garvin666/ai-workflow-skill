@@ -26,6 +26,9 @@ skill 子命令检查项:
     3. assets/templates/*.yaml 统一 schema 字段齐全（9 字段，含 workspace 工作区根）
     4. assets/plan-template.yaml 必填键存在
     5. scripts/*.py 语法编译通过（py_compile；`.pyc` 输出到**系统临时目录**，不产生 __pycache__）
+    6. 口径守卫（v3.5.0 / P0-3）：**解析手册与模板**里定义的取值，断言其与下方代码常量为同一集合 ——
+       消灭"同源只靠注释声明、不靠测试保证"。覆盖 5 个物理量：模型档位 / 步骤状态 / 能力类 /
+       重规划触发 / 熔断状态。**解析不到即 FAIL**（守着一条读不到的规则等于没有规则）。
 
 plan 子命令检查项:
     1. YAML 可解析（需 pyyaml：setup_env.ps1 已纳入依赖）
@@ -42,6 +45,16 @@ plan 子命令检查项:
        名称/用途/适用场景/仓库链接（空值或占位符链接判 FAIL；『待推送』判 SKIP 需人工确认）
     8. 模型档位合法（v3.4.0 / P9-c）：steps[].「模型档位」可选，留空即跳过；
        一旦填写必须在 strong/mid/cheap/default 内（取值定义见 references/routing-guide.md）
+    9. 交付物越界（v3.5.0 / P0-1，红线③机器化）：交付物解析后落在 `meta.工作区根` 之外 →
+       FAIL；`meta.越界授权` 登记的路径作白名单，基础设施例外路径（技能目录 / venv / 缓存）自动豁免。
+       ⚠️ **旧模板兼容**：plan 里**没有**「越界授权」键（早于 v3.3.0 的产物）时只出 WARN 不阻断 ——
+       不为一个新判据去追认历史计划（那等于拿新规则改写旧证据）。
+    10. 自研工具漏登记（v3.5.0 / P1-1）：本任务交付物中带 `[自研工具]`/`[自研技能]` 标注头、
+       却未登记进 `meta.自研工具` → **WARN**（不是 FAIL：标注头只是充分线索，登记才是判据）。
+    11. 阶段门禁（v3.5.0 / P2-2）：阶段 2「方案评审」与阶段 4「数值口径」各一条最低成本门禁，
+       **只出 WARN**（首版刻意不设 FAIL，避免造出随机 FAIL 源）。
+
+状态取值: OK / FAIL / SKIP / **WARN**（WARN 只提示、不计入 FAIL，也不改变退出码）
 
 退出码: 0 = 全部通过；1 = 有 FAIL（不可交付）；2 = 用法错误
 """
@@ -112,7 +125,24 @@ REF_EXTERNAL_PREFIXES = (".workbuddy/", ".scratch/", "历史数据集/", "backen
 REF_PLACEHOLDER = re.compile(r"N{2,}|Y{2,}|M{2,}|D{2,}|<|>|\{|\}|xxx|XXX")
 REF_PATTERN = re.compile(r"`([A-Za-z0-9_./\u4e00-\u9fff-]+\.(?:md|yaml|py|ps1))`")
 
+# ── 红线③机器化（v3.5.0 / P0-1）───────────────────────────────────────────────
+# 基础设施例外路径：SKILL.md「工作区边界」节列的三个例外，**不算越界**，故自动豁免。
+# 用「路径片段」而非完整前缀匹配：例外表的根是 `~`（用户级），而交付物写的是盘符绝对路径，
+# 安装位置可迁，硬编码 `C:\Users\<名>\.workbuddy\...` 会在换机后失效（那种判据一改环境就假红）。
+INFRA_EXCEPTIONS = (
+    "/.workbuddy/skills/",
+    "/.workbuddy/binaries/python/envs/ai-workflow/",
+    "/.workbuddy/cache/ai-workflow/",
+)
+SCOPE_AUTH_KEY = "越界授权"
+SCOPE_HINT = ("（相对路径以 --base 为基准，故越界只可能来自绝对路径或 `..` 上跳；"
+              "确需在工作区根之外产出时，须先取得用户**当次**授权并登记 `meta.越界授权`）")
+
 results: list[tuple[str, str, str]] = []  # (状态, 检查项, 说明)
+
+# 四种状态的行首标记。**一处定义**（原先两份字面量分别写在两个打印分支里，
+# 加 WARN 时必须同时改两处 —— 这正是"复制粘贴漏改"最容易命中的形状）。
+MARKS = {"OK": "[ OK ]", "FAIL": "[FAIL]", "SKIP": "[SKIP]", "WARN": "[WARN]"}
 
 
 def ok(item: str, note: str = "") -> None:
@@ -125,6 +155,25 @@ def fail(item: str, note: str = "") -> None:
 
 def skip(item: str, note: str = "") -> None:
     results.append(("SKIP", item, note))
+
+
+def warn(item: str, note: str = "") -> None:
+    """WARN（v3.5.0）：**只提示，不计入 FAIL、不改变退出码**。
+
+    用途是给"首版不稳、或线索还不构成判据"的检查一个不误伤的位置 —— 首版就上 FAIL 的
+    门禁，一旦判据不成立就会变成随机 FAIL 源，进而被整体绕过（见 security-guide.md §九 末条）。
+    """
+    results.append(("WARN", item, note))
+
+
+def result_line() -> str:
+    """汇总行。**四个计数分开写**，不写"X/Y 通过" —— 那种写法会把 WARN 和 SKIP 混进
+    "通过"里，读者只盯 FAIL=0 就会把"没查"当成"查过了"（本工作区已复现过该误读：
+    读 FAIL=0 时必须连带读"已完成 N 个"）。`FAIL=` 子串保持原样，外部脚本仍可解析。
+    """
+    n = {k: sum(1 for r in results if r[0] == k) for k in MARKS}
+    return (f"=== 结果：通过 {n['OK']}/{len(results)}，FAIL={n['FAIL']}，"
+            f"SKIP={n['SKIP']}，WARN={n['WARN']} ===")
 
 
 def _resolve(ref: str, skill_dir: Path) -> Path | None:
@@ -219,6 +268,10 @@ def check_skill(skill_dir: Path) -> int:
             cache.rmdir()
         except OSError:
             pass
+
+    # v3.5.0 / P0-3：口径守卫 —— 手册/模板里写的取值必须与代码常量同源。放在最后，
+    # 因为前面几项都是"代码自身"的完整性判据，这一项是"文档 ↔ 代码"的一致性判据。
+    _check_parity(skill_dir)
     return 0
 
 
@@ -258,7 +311,7 @@ def _require_yaml():
     except ModuleNotFoundError:
         print("[ERROR] 缺少 pyyaml，请先运行 scripts/setup_env.ps1 安装依赖", file=sys.stderr)
         print("[HINT ] 若 venv 已建好，请直接用 venv 解释器运行：", file=sys.stderr)
-        print("        C:\\Users\\26717\\.workbuddy\\binaries\\python\\envs\\ai-workflow\\Scripts\\python.exe checks.py ...",
+        print("        %USERPROFILE%\\.workbuddy\\binaries\\python\\envs\\ai-workflow\\Scripts\\python.exe checks.py ...",
               file=sys.stderr)
         raise SystemExit(2)
     return yaml
@@ -592,20 +645,161 @@ def _check_autonomy(meta: dict) -> None:
         (ok if not bad else fail)("计划修订", f"{len(rev)} 条" if not bad else "；".join(bad))
 
 
-def _check_selftools(meta: dict) -> None:
+SELFTOOL_MARKERS = ("[自研工具]", "[自研技能]")
+
+# ⚠️ 只扫**代码脚本**。文档类（`.md`/`.markdown`/`.txt`/`.yaml`/`.yml`/`.json`）一律不参与：
+# 标注头在本技能族里是**必须在文档中写出示例**的格式（`references/push-routing.md` 的标注模板、
+# `ops.md` 的脚本文档表、`assets/plan-template.yaml` 的字段注释），把这些「为说明格式而写出的
+# 标记字符串」判成漏登记，会把门禁变成假的 —— 且会让人不敢在文档里引用这个标记。
+# 与 `scripts/push_router.py` 的 `scan_selftool_header` **刻意同口径、同收窄**（两处判据不一致
+# 本身就是本技能点名的病灶）。
+# ⭐ 本轮实测教训（自撞缺陷，v3.4.0 只修了一半）：v3.4.0 的「缺陷一」把 `.md` 排除掉了，却**漏了
+# `.yaml`**，于是 `assets/plan-template.yaml` 里一句注释中的 `[自研工具]` 同时被判成「漏登记」——
+# `checks.py` 出 WARN、`push_router.py` 出 FAIL（会阻塞推送）。**同一条理由必须对整个文档类生效，
+# 而不是只对上一次被投诉的那个后缀生效**；按后缀逐个打补丁，就是等着下一次换个后缀再犯一遍。
+CODE_EXT = (".py", ".ps1", ".sh", ".bat", ".js", ".ts")
+
+
+def _selftool_marker_in(path: Path) -> tuple[str, str] | None:
+    """检出文件是否带自研标注头；命中返回 `(标记, 名称)`，否则 None。
+
+    · `SKILL.md` 走 **frontmatter 分支**（技能包），名称取 frontmatter 的 `name` ——
+      与 `push_router.scan_selftool_header` 的技能包分支一致。按 name 比对是必须的：总账里该技能
+      记为 `ai-workflow（技能本体）`，而 basename `SKILL.md` 与它不可能字符串相等，
+      按 basename 查会得到**永久假告警**（`_selftool_registered` 会按「（」截断后比对）。
+    · 其余**非代码后缀直接返回 None**（理由见 `CODE_EXT` 上方注释）。
+    · 代码脚本只认**前 40 行内的注释行**（`#`/`//`/`/*`/`*`/`--`），避免正文提到标记即命中。
+    """
+    try:
+        raw = path.read_bytes()
+    except OSError:
+        return None
+    if b"\0" in raw[:4096]:
+        return None
+    text = raw.decode("utf-8", "replace")
+
+    if path.name == "SKILL.md" and text.startswith("---"):
+        end = text.find("\n---", 3)
+        fm = text[3:end] if end > 0 else text[:2000]
+        if re.search(r"^\s*selfbuilt\s*:\s*true\s*$", fm, re.M):
+            m = re.search(r"^\s*name\s*:\s*(\S+)", fm, re.M)
+            return "[自研技能]", (m.group(1).strip("\"'") if m else path.parent.name)
+        return None
+
+    if path.suffix.lower() not in CODE_EXT:
+        return None
+
+    for line in text.splitlines()[:40]:
+        s = line.strip()
+        if not (s.startswith("#") or s.startswith("//") or s.startswith("/*")
+                or s.startswith("*") or s.startswith("--")):
+            continue
+        for m in SELFTOOL_MARKERS:
+            if m in s:
+                nm = re.search(r"\[自研[^\]]*\]\s*(\S+)", line)
+                return m, (nm.group(1) if nm else path.stem)
+    return None
+
+
+def _selftool_scan_candidates(steps: list, base: Path) -> list[Path]:
+    """扫描面 = **本任务的交付物**里已存在的**代码脚本**（后缀见 `CODE_EXT`）。
+
+    ⚠️ **范围取舍（显式声明，不是默默收窄）**：
+    · 不递归、不扫 `tasks/*/tmp/`。理由是 `tmp/` 属探针与中间产物，且 `.gitignore` 已排除它
+      → **它不会外发**，与「公开留痕」无关；纳入它只会让门禁在自测时被夹具替身误报
+      （本工作区正是拿夹具自测流程的）。
+    · **文档类不进扫描面**（`.md`/`.txt`/`.yaml`/`.yml`/`.json`）—— 理由见 `CODE_EXT` 上方注释。
+    """
+    seen: set[str] = set()
+    out: list[Path] = []
+    for s in steps:
+        if not isinstance(s, dict):
+            continue
+        for tok in _step_tokens(s):
+            if not _is_file_like(tok):
+                continue
+            for cand in _candidate_paths(tok, base):
+                rel = str(cand).replace("\\", "/").lower()
+                if "/tmp/" in rel or rel in seen or not cand.is_file():
+                    continue
+                if cand.suffix.lower() not in CODE_EXT:
+                    continue
+                seen.add(rel)
+                out.append(cand)
+    return out
+
+
+_SELFTOOL_LEDGER_CACHE: dict[str, list] = {}
+
+
+def _selftool_ledger(base: Path) -> list:
+    """**自研工具登记总账** = 本工作区全部 `tasks/**/plan.yaml` 的 `meta.自研工具` 合并。
+
+    为什么必须查总账而不是只查本任务的表（本轮实测教训）：
+    自研工具的登记发生在**创建它的那次任务**里，后续任务**修改**它时不会再登记一遍。
+    只查本任务表 → 每个碰到既有工具的任务都会报一次假告警（实测：`push_router.py` 在 v3.2.0
+    已登记，本任务只是改了它，却被判「未登记」）。门禁真正要抓的是
+    「**任何登记表里都找不到**」，那才是漏登记。
+
+    排除 `*/tmp/*`（探针伪造的假登记）与 `_backup-*`（历史快照，不是登记）；按 base 缓存。
+    """
+    key = str(base).replace("\\", "/").lower()
+    if key in _SELFTOOL_LEDGER_CACHE:
+        return _SELFTOOL_LEDGER_CACHE[key]
+    yaml = _require_yaml()
+    items: list = []
+    tasks = base / "tasks"
+    if tasks.is_dir():
+        for pp in sorted(tasks.rglob("plan.yaml")):
+            rel = pp.relative_to(base).as_posix()
+            if "/tmp/" in rel or rel.startswith("_backup") or "/_backup" in rel:
+                continue
+            try:
+                data = yaml.safe_load(pp.read_text(encoding="utf-8-sig"))
+            except Exception:            # noqa: BLE001 - 单份 plan 读不了不应中断总账汇总
+                continue
+            if isinstance(data, dict):
+                got = (data.get("meta") or {}).get("自研工具")
+                if isinstance(got, list):
+                    items.extend(x for x in got if isinstance(x, dict))
+    _SELFTOOL_LEDGER_CACHE[key] = items
+    return items
+
+
+def _selftool_registered(name: str, items: list) -> bool:
+    """登记表里能否找到该文件（先按名称，再按登记链接的仓内路径 basename）。"""
+    base = Path(name).name.lower()
+    for it in items:
+        if not isinstance(it, dict):
+            continue
+        nm = str(it.get("名称", "") or "").strip().split("（")[0].strip().lower()
+        if nm and nm == base:
+            return True
+        m = re.search(r"/blob/[^/]+/(.+?)(?:[?#].*)?$", str(it.get("仓库链接", "") or ""))
+        if m and Path(m.group(1)).name.lower() == base:
+            return True
+    return False
+
+
+def _check_selftools(meta: dict, steps: list | None = None, base: Path | None = None) -> None:
     """自研工具与技能留痕校验（v3.1.0）：字段**可选**，一旦填写必须结构完整。
 
     与 `_check_autonomy` 同口径 —— 多数任务本就没有自研产出，"没写"是正常状态；
     此处只校验"写了的是否合法"：四项必填非空 + 仓库链接须为真实 http(s) 地址
     （占位符判 FAIL；『待推送』判 SKIP 并明确提示，因为它是中间态而非完成态）。
+
+    v3.5.0 / P1-1 增补：**反向检测**（交付物带标注头却未登记 → WARN）与**文案订正**。
+    订正的依据是一次真实误读：原文案写"未使用（本任务无自研产出，**属正常**）"，读起来像
+    "已验证本任务无自研产出"，但旧实现**根本没有扫过任何代码** —— 它只是没读到登记项。
+    「无登记」不等于「无自研产出」，这句话必须说出来，否则这条判据会被当成"已验证"。
     """
     items = meta.get("自研工具")
-    if items is None or (isinstance(items, list) and not items):
-        ok("自研工具登记", "未使用（本任务无自研产出，属正常）")
-        return
+    if items is None:
+        items = []
     if not isinstance(items, list):
         fail("自研工具格式", f"应为列表（每项必含 {'/'.join(SELFTOOL_KEYS)}）")
         return
+
     bad, pending = [], []
     for i, t in enumerate(items, 1):
         if not isinstance(t, dict):
@@ -622,13 +816,37 @@ def _check_selftools(meta: dict) -> None:
         if not re.match(r"^https?://", url) or SELFTOOL_PLACEHOLDER.search(url):
             bad.append(f"第{i}项仓库链接『{url[:40]}』非法：须为 http(s) 真实地址、禁止占位符"
                        f"（未推送前可填『{SELFTOOL_PENDING}』，但交付前必须回填）")
+
+    # 反向检测：交付物里的自研标注头 ↔ **本 plan 的登记表 ∪ 全工作区登记总账**
+    # ⚠️ 两侧都不能少（本轮被夹具的阴性对照抓到过）：只查总账 → 落在 `tasks/*/tmp/` 里的 plan
+    # 自己的登记会被总账排除（总账刻意不读 tmp，因为那是探针伪造假登记的地方），
+    # 于是「刚补登记却仍报警」；只查本 plan → 见 _selftool_ledger 的说明（既有工具被误判）。
+    unreg: list[str] = []
+    if steps is not None and base is not None:
+        ledger = list(items) + _selftool_ledger(base)
+        for p in _selftool_scan_candidates(steps, base):
+            hit = _selftool_marker_in(p)
+            if hit and not _selftool_registered(hit[1], ledger):
+                unreg.append(f"{p.name}{hit[0]}")
+
     if bad:
         fail("自研工具登记", "；".join(bad))
     elif pending:
         skip("自研工具登记", f"{len(items)} 项，其中 {len(pending)} 项链接仍为『{SELFTOOL_PENDING}』"
                             f"（{'、'.join(pending)}）—— 交付前须回填真实仓库链接")
-    else:
+    elif items:
         ok("自研工具登记", f"{len(items)} 项")
+    else:
+        ok("自研工具登记", "未登记 —— ⚠️ 这是「**未检测**」不是「**已验证无自研**」：本判据只比对"
+                           "**本任务交付物**里的自研标注头，且只扫**代码脚本**（不含 `tasks/*/tmp/`、"
+                           "不遍历全盘代码、不扫文档类）；**未入交付物的自写脚本不会被发现**")
+
+    if unreg:
+        warn("自研工具漏登记", f"检出 {len(unreg)} 个带自研标注头、且**全工作区登记总账里都查不到**的交付物："
+                               f"{'、'.join(unreg[:4])} —— 用 `checks.py selftool` 补登记后本告警消失"
+                               f"（查表范围 = 本工作区所有 `tasks/**/plan.yaml` 的 `meta.自研工具`；"
+                               f"只扫代码脚本，文档类不参与 —— 理由见 `CODE_EXT` 注释。此处只 WARN："
+                               f"标注头是线索、登记才是判据，且推送前还有一道 FAIL 级交叉校验）")
 
 
 def _yaml_scalar(s: str) -> str:
@@ -780,6 +998,196 @@ def cmd_selftool(plan_path: Path, name: str, purpose: str, scenario: str, repo: 
     return 0
 
 
+# ── 红线③机器化（v3.5.0 / P0-1）──────────────────────────────────────────────
+def _norm_abs(p) -> str:
+    """归一为「绝对、小写、正斜杠、无尾斜杠」串，用于跨写法比较（`C:\\A` / `c:/a/` 视为同一路径）。"""
+    try:
+        s = str(Path(p).expanduser().resolve())
+    except (OSError, RuntimeError):
+        s = str(p)
+    return s.replace("\\", "/").rstrip("/").lower()
+
+
+def _under(child: str, parent: str) -> bool:
+    return bool(parent) and (child == parent or child.startswith(parent + "/"))
+
+
+def _step_tokens(s: dict) -> list[str]:
+    """与 audit_step 同一套切分口径（花括号展开 → 分隔符切分 → 剥括号注释）。"""
+    raw = str(s.get("交付物", "") or "").strip()
+    out: list[str] = []
+    for variant in _expand_braces(raw):
+        out.extend(_clean_token(t) for t in re.split(r"[、,;；]|\s／\s", variant) if t.strip())
+    return out
+
+
+def _check_scope(meta: dict, steps: list, base: Path) -> None:
+    """交付物越界判据（v3.5.0 / P0-1）：把红线③从**纪律**变成**门禁**。
+
+    判据：交付物解析后的绝对路径落在 `meta.工作区根` 之外，且既不在 `meta.越界授权` 登记的
+    白名单内、也不属基础设施例外 → FAIL。
+
+    ⚠️ **旧模板只警示不阻断**（关键设计，非妥协）：plan 里没有 `越界授权` 键说明它早于
+    v3.3.0 的模板 —— 那种 plan 里出现根外交付物是**历史事实**，用新判据去追认它，等于拿新
+    规则改写旧证据（技能在 P9-c 已立此口径：改历史记录去迁就新门禁是**为新判据篡改证据**）。
+    故：无该键 → WARN 并列明；有该键（哪怕是空列表）→ 严格执行 FAIL。
+    """
+    root_txt = str(meta.get("工作区根", "") or "").strip()
+    root = _norm_abs(Path(root_txt)) if root_txt else _norm_abs(base)
+    allowed: list[str] = []
+    auth = meta.get(SCOPE_AUTH_KEY)
+    if isinstance(auth, list):
+        for it in auth:
+            if isinstance(it, dict):
+                v = str(it.get("路径", "") or "").strip()
+                if v:
+                    allowed.append(_norm_abs(Path(v)))
+    has_key = SCOPE_AUTH_KEY in meta
+
+    outside, authed = [], []
+    for s in steps:
+        if not isinstance(s, dict):
+            continue
+        for tok in _step_tokens(s):
+            if not _is_file_like(tok):
+                continue
+            for cand in _candidate_paths(tok, base):
+                n = _norm_abs(cand)
+                if _under(n, root) or any(x in n for x in INFRA_EXCEPTIONS):
+                    continue
+                rec = (s.get("id", "?"), tok, str(cand))
+                (authed if any(_under(n, a) for a in allowed) else outside).append(rec)
+
+    if not outside:
+        note = "全部落在工作区根内（或属基础设施例外）"
+        if authed:
+            note = f"根外 {len(authed)} 项，均在 meta.{SCOPE_AUTH_KEY} 登记范围内"
+        ok("交付物越界检查", note)
+        return
+    detail = "；".join(f"步骤 {i}『{t}』→ {p}" for i, t, p in outside[:4])
+    if not has_key:
+        warn("交付物越界检查", f"{len(outside)} 项落在工作区根 {root} 之外，但本 plan 无"
+                               f"『{SCOPE_AUTH_KEY}』键（早于 v3.3.0 的旧模板）→ 只警示不阻断：{detail}{SCOPE_HINT}")
+        return
+    fail("交付物越界检查", f"{len(outside)} 项越界且未获授权：{detail}{SCOPE_HINT}")
+
+
+# ── 口径守卫（v3.5.0 / P0-3）──────────────────────────────────────────────────
+# 每个量 = (判据名, 来源文件, 解析函数, 代码内常量)。**解析函数刻意各写一个**——
+# 五个量的字面格式完全不同（表格单元格 / 注释行 / 圆括号后辍），套一个通用正则必然过脆；
+# 但每个都锚在**结构化位置**（行首一列的加粗词、`取值:` 之后的枚举），不做自由文本搜索。
+def _p_tiers(text: str) -> set:
+    """routing-guide.md 档位表首列：`| **strong** | …`。"""
+    return set(re.findall(r"^\|\s*\*\*([a-z]+)\*\*\s*\|", text, re.M))
+
+
+def _p_status(text: str) -> set:
+    """plan-template.yaml 注释行：`# status 取值: 待办 / 进行中 / …`。"""
+    m = re.search(r"^#\s*status\s*取值\s*[:：]\s*(.+)$", text, re.M)
+    return {x.strip() for x in re.split(r"[/／]", m.group(1)) if x.strip()} if m else set()
+
+
+def _p_caps(text: str) -> set:
+    """capability-routing.md 能力表首列：`| ① | **知识** | …` —— 剥掉『（隔离）』这类后辍。"""
+    return {m.strip() for m in re.findall(r"^\|\s*[①②③④]\s*\|\s*\*\*([^*（(]+)", text, re.M)}
+
+
+def _p_triggers(text: str) -> set:
+    """adaptive-planning.md 触发表首列：`| **R1** | …`。"""
+    return set(re.findall(r"^\|\s*\*\*(R\d)\*\*\s*\|", text, re.M))
+
+
+def _p_fuse(text: str) -> set:
+    """SKILL.md 熔断状态表：`| \\`正常\\` | 存储态 | …` —— 只取「存储态」行，
+    刻意排除同表里「复位 = 迁移动作」那行（复位不是存储态，这正是该节反复强调的一点）。"""
+    return set(re.findall(r"^\|\s*`([^`]+)`\s*\|\s*存储态\s*\|", text, re.M))
+
+
+PARITY_ITEMS = (
+    ("模型档位", "references/routing-guide.md", _p_tiers, VALID_MODEL_TIERS),
+    ("步骤状态", "assets/plan-template.yaml", _p_status, VALID_STATUS),
+    ("能力类", "references/capability-routing.md", _p_caps, VALID_CAPABILITY),
+    ("重规划触发", "references/adaptive-planning.md", _p_triggers, VALID_TRIGGER),
+    ("熔断状态", "SKILL.md", _p_fuse, VALID_FUSE),
+)
+
+
+def _check_parity(skill_dir: Path) -> None:
+    """口径守卫（v3.5.0 / P0-3）：断言「手册/模板里写的取值 == 代码内常量」。
+
+    存在意义：`VALID_MODEL_TIERS` 的旧注释写着"与 routing-guide.md 的 enum **同源**"，但
+    **同源是靠注释声明的、不是靠测试保证的** —— 改一处忘一处不会抛异常，只会静默分叉。
+    本条把该声明变成可机器判定的断言（技能库卫生第 4 条"同一物理量的判据必须跨模块同源
+    + 配守卫测试"的落地；该条自 v3.3.0 起已扩展到全流程适用）。
+
+    解析不到即 FAIL：**守着一条读不到的规则等于没有规则**，且"读不到"必须显式，不能静默降级成 OK。
+    阴性对照（验收用）：把 `routing-guide.md` 的 `cheap` 改成 `cheapx` → 本判据必须变红。
+    """
+    cache: dict[Path, str] = {}
+    for label, rel, parser, expected in PARITY_ITEMS:
+        p = skill_dir / rel
+        if p not in cache:
+            try:
+                cache[p] = p.read_text(encoding="utf-8") if p.exists() else ""
+            except OSError:
+                cache[p] = ""
+        text = cache[p]
+        if not text:
+            fail(f"口径守卫：{label}", f"源文件缺失或读不到：{rel}（守卫读不到规则 = 没有规则）")
+            continue
+        got = parser(text)
+        want = set(expected)
+        if not got:
+            fail(f"口径守卫：{label}", f"在 {rel} 中解析不到取值定义（格式可能已变；守卫读不到规则 = 没有规则）")
+        elif got != want:
+            fail(f"口径守卫：{label}", f"{rel} 解析得 {'/'.join(sorted(got))} ≠ 代码常量 {'/'.join(sorted(want))}"
+                                      f"（同一物理量两处不同源 —— 要么统一，要么显式声明二者关系）")
+        else:
+            ok(f"口径守卫：{label}", f"{rel} ↔ {'/'.join(sorted(want))}（{len(want)} 项一致）")
+
+
+# ── 阶段 2 / 4 最低成本门禁（v3.5.0 / P2-2）───────────────────────────────────
+STAGE2_STEP_RE = re.compile(r"方案评审|候选方案|方案对比|对比表|备选方案")
+STAGE2_SIGNAL_RE = re.compile(r"(≥|>=|不少于|至少)\s*2|2\s*个\s*(候选|方案|备选)|方案\s*[AB一二]|候选\s*[AB]|横向对比|双跑")
+STAGE4_EXT = (".docx", ".xlsx", ".pdf", ".pptx")
+STAGE4_SIGNAL_RE = re.compile(r"口径|一致性|估算|写回|读回|office_io|交叉核对|抽\s*2\s*处|抽两处|抽查|脱敏")
+
+
+def _check_stage_gates(steps: list) -> None:
+    """阶段 2 / 4 的两条最低成本门禁（v3.5.0 / P2-2）：**只出 WARN**。
+
+    背景（《报告》§5.3）：门禁密度实测 —— 阶段 2 与阶段 4 均为 **0 门禁**，而这两处恰是
+    「决策质量的关键节点」与技能自认「最容易静默失真」处。原因不是"不该有"，是"没人去建"。
+
+    ⚠️ **诚实标注（三条限制，别当成已验证的保护）**：
+      ① 步骤没有"阶段"字段，故此处用**代理判据**（关键词 / 交付物后缀）推断它属哪一阶段；
+      ② 它检的是**验证方式里有没有对应信号词**，不是"数值真的一致"—— 能挡住"忘了写"，挡不住"写了没做"；
+      ③ **首版只 WARN、不判 FAIL**：判据尚未经受真实数据检验，直接上 FAIL 会造出随机 FAIL 源
+         （security-guide.md §九 末条：门禁出问题绝大多数是**误判**而非漏判）。
+    """
+    g2, g4 = [], []
+    for s in steps:
+        if not isinstance(s, dict):
+            continue
+        sid = str(s.get("id", "?"))
+        do = str(s.get("做什么", "") or "")
+        ver = str(s.get("验证方式", "") or "")
+        exp = str(s.get("预期产出", "") or "")
+        deliv = str(s.get("交付物", "") or "").lower()
+        if STAGE2_STEP_RE.search(do) and not STAGE2_SIGNAL_RE.search(ver + " " + exp):
+            g2.append(sid)
+        if any(e in deliv for e in STAGE4_EXT) and not STAGE4_SIGNAL_RE.search(ver):
+            g4.append(sid)
+    if g2:
+        warn("阶段 2 门禁（方案评审 ≥2 候选）",
+             f"步骤 {'、'.join(g2)} 提到方案评审，但「验证方式/预期产出」里读不到「≥2 候选」的可判定信号"
+             f" —— 补信号，或写明为何只有一条路（本判据首版只 WARN）")
+    if g4:
+        warn("阶段 4 门禁（数值口径 / 估算标注 / 脱敏）",
+             f"步骤 {'、'.join(g4)} 产出 Office 类交付物，但「验证方式」里读不到口径一致 / 估算标注 / "
+             f"写回读回 / 脱敏类信号 —— 这三条正是流程自认最易静默失真处（本判据首版只 WARN）")
+
+
 def _check_model_tiers(steps: list) -> None:
     """校验每步 `模型档位` 的取值（P9-c，v3.4.0）。
 
@@ -858,8 +1266,10 @@ def check_plan(plan_path: Path, base: Path) -> int:
 
     ok("Anti-drop 对账", f"已完成步骤 {done_total} 个，交付物确认 {deliverable_ok} 个")
 
+    _check_scope(meta, steps, base)
     _check_autonomy(meta)
-    _check_selftools(meta)
+    _check_selftools(meta, steps, base)
+    _check_stage_gates(steps)
     _check_model_tiers(steps)
     _check_fuse(meta, steps, plan_path)
     return 0
@@ -936,19 +1346,17 @@ def main() -> None:
     if args.cmd in ("skill", "plan"):
         print(f"=== ai-workflow {name} ===")
         for status, item, note in results:
-            mark = {"OK": "[ OK ]", "FAIL": "[FAIL]", "SKIP": "[SKIP]"}[status]
-            print(f"{mark} {item}" + (f" — {note}" if note else ""))
+            print(f"{MARKS[status]} {item}" + (f" — {note}" if note else ""))
         n_fail = sum(1 for r in results if r[0] == "FAIL")
         if code != 0 and not results:
             # 环境/输入不满足，检查根本没跑起来 —— 绝不能输出"全绿"误导调用方
             print("=== 结果：未执行（环境或输入不满足，见上方 [ERROR]）===")
             return code
-        print(f"=== 结果：{len(results) - n_fail}/{len(results)} 通过，FAIL={n_fail} ===")
+        print(result_line())
         return 1 if n_fail else code
     else:  # status / mark：表格/明细已即时打印，这里只回显结果行（status 的熔断汇总行在此可见）
         for status, item, note in results:
-            mark = {"OK": "[ OK ]", "FAIL": "[FAIL]", "SKIP": "[SKIP]"}[status]
-            print(f"{mark} {item}" + (f" — {note}" if note else ""))
+            print(f"{MARKS[status]} {item}" + (f" — {note}" if note else ""))
         n_fail = sum(1 for r in results if r[0] == "FAIL")
         return 1 if n_fail else code
 

@@ -1,0 +1,191 @@
+=== v3.5.0 全量验证 · 原始输出留档 ===
+> ⚠️ **本文件已按 `security-guide.md` 出站清单第 4 项脱敏**：本机主目录路径换成 `<主目录>`
+> 占位符。**脱敏 ≠ 过滤** —— 只替换身份前缀，判定内容与行序一字未动；在本地重跑
+> §①/§② 的命令即可得到原样输出。**理由**：本文件要随技能仓外发，若它把诊断出的
+> 机器路径原样抄一遍，就等于把泄露又复制一份（《出站扫描清单》同理）。
+
+--- ① 技能自检：checks.py skill ---
+rc=0
+=== ai-workflow 技能自检 ===
+[ OK ] SKILL.md 存在
+[ OK ] frontmatter 含 name
+[ OK ] frontmatter 含 description
+[ OK ] frontmatter 含 agent_created
+[ OK ] 文档引用完整性 — 检查 74 条引用
+[ OK ] 模板 schema：_示例-数据分析.yaml — 9/9
+[ OK ] 模板 schema：UI组件库搭建.yaml — 9/9
+[ OK ] 模板 schema：学习资料生成.yaml — 9/9
+[ OK ] 模板 schema：小说写作.yaml — 9/9
+[ OK ] 模板 schema：技术调研.yaml — 9/9
+[ OK ] 模板 schema：算法评估升级.yaml — 9/9
+[ OK ] 模板 schema：调研报告.yaml — 9/9
+[ OK ] 模板 schema：选品分析.yaml — 9/9
+[ OK ] 模板 schema：量化分析.yaml — 9/9
+[ OK ] plan-template 必填键 — 齐全
+[ OK ] py_compile：ai_call.py
+[ OK ] py_compile：archive_tasks.py
+[ OK ] py_compile：checks.py
+[ OK ] py_compile：data_query.py
+[ OK ] py_compile：gen_skill_index.py
+[ OK ] py_compile：http_fetch.py
+[ OK ] py_compile：office_io.py
+[ OK ] py_compile：outbound_scan.py
+[ OK ] py_compile：perf_baseline.py
+[ OK ] py_compile：publish_tools.py
+[ OK ] py_compile：push_ontology.py
+[ OK ] py_compile：push_router.py
+[ OK ] py_compile：verify_push.py
+[ OK ] 口径守卫：模型档位 — references/routing-guide.md ↔ cheap/default/mid/strong（4 项一致）
+[ OK ] 口径守卫：步骤状态 — assets/plan-template.yaml ↔ 受阻/完成/待办/熔断/进行中（5 项一致）
+[ OK ] 口径守卫：能力类 — references/capability-routing.md ↔ 事实/手脚/知识/算力（4 项一致）
+[ OK ] 口径守卫：重规划触发 — references/adaptive-planning.md ↔ R1/R2/R3/R4/R5/R6（6 项一致）
+[ OK ] 口径守卫：熔断状态 — SKILL.md ↔ 已熔断/正常（2 项一致）
+=== 结果：通过 33/33，FAIL=0，SKIP=0，WARN=0 ===
+
+--- ② 本任务对账：checks.py plan（含熔断门禁 / 越界检查 / 自研工具）---
+> 本节 = 步骤 9 回写为「完成」**之后**的重跑结果（初跑时为 8/8，收尾重跑为 9/9）。
+rc=0
+=== ai-workflow 计划对账 ===
+[ OK ] plan.yaml 存在 — tasks\技能增强-ai-workflow-v3.5.0-2026-09-17\plan.yaml
+[ OK ] plan.yaml 可解析
+[ OK ] meta.任务
+[ OK ] meta.验证信号
+[ OK ] meta.工作区根
+[ OK ] steps 非空 — 9 步
+[ OK ] Anti-drop 对账 — 已完成步骤 9 个，交付物确认 9 个
+[ OK ] 交付物越界检查 — 全部落在工作区根内（或属基础设施例外）
+[ OK ] 决策记录 — 未使用（无外部辅助引入，属正常）
+[ OK ] 计划修订 — 2 条
+[SKIP] 自研工具登记 — 1 项，其中 1 项链接仍为『待推送』（第1项『outbound_scan.py』）—— 交付前须回填真实仓库链接
+[ OK ] 模型档位合法 — 9 步已标注，取值均在 enum 内
+[ OK ] 熔断状态 — 正常（未声明）
+=== 结果：通过 12/13，FAIL=0，SKIP=1，WARN=0 ===
+
+--- ③ 历史 plan 回归：v3.4.0 基线 vs v3.5.0 对照（全表见 基线对照-历史plan.txt）---
+基线 rev：3dfcea3（技能仓 HEAD，改动前）
+结论：21 份 plan 中，新增 FAIL 的 0 份
+
+--- ④ 本轮改动面（git status --porcelain，技能根；未跟踪目录已展开为文件）---
+  [M] Ledger.md
+  [M] SKILL.md
+  [M] assets/plan-template.yaml
+  [M] references/changelog.md
+  [M] references/push-routing.md
+  [M] references/security-guide.md
+  [M] scripts/checks.py
+  [M] scripts/push_router.py
+  [??] assets/templates/算法评估升级.yaml
+  [??] scripts/outbound_scan.py
+  [??] tasks/修复-gitignore同路径撞车-2026-09-17/plan.yaml
+  [??] tasks/修复-gitignore同路径撞车-2026-09-17/口径更新待办.md
+  [??] tasks/修复-gitignore同路径撞车-2026-09-17/对账输出.txt
+  [??] tasks/修复-gitignore同路径撞车-2026-09-17/弃权提交记录.txt
+  [??] tasks/修复-gitignore同路径撞车-2026-09-17/通道B-验收.txt
+  [??] tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/对账输出-收尾2026-09-17.txt
+  [??] tasks/技能增强-ai-workflow-v3.5.0-2026-09-17/plan.yaml
+  [??] tasks/技能增强-ai-workflow-v3.5.0-2026-09-17/出站扫描-本机绝对路径-清单.md
+  [??] tasks/技能增强-ai-workflow-v3.5.0-2026-09-17/回归-历史plan-v3.5.0.txt
+  [??] tasks/技能增强-ai-workflow-v3.5.0-2026-09-17/基线对照-历史plan.txt
+  [??] tasks/技能增强-ai-workflow-v3.5.0-2026-09-17/对账输出.txt
+  [??] tasks/技能增强-ai-workflow-v3.5.0-2026-09-17/技能自检-v3.5.0.txt
+
+（展开未跟踪目录 2 个；已排除 tasks/*/tmp/* 共 25 项）
+
+--- ⑤ 出站扫描（对本轮改动面；这正是 push_router 推送前那道判据）---
+扫描 21 个文件；**原始命中行含本机路径，已落 `tmp/出站扫描-本轮改动面-原始.txt`（tmp 不外发）**，
+此处只登记判定结果（计数 + 文件名），不给本交付物再造一处泄露。
+
+| 文件 | FAIL | WARN |
+| --- | --- | --- |
+| `tasks/修复-gitignore同路径撞车-2026-09-17/plan.yaml` | 2 | 9 |
+| `Ledger.md` | 1 | 5 |
+| `scripts/checks.py` | 1 | 4 |
+| `tasks/技能增强-ai-workflow-v3.5.0-2026-09-17/plan.yaml` | 1 | 3 |
+| `references/changelog.md` | 0 | 4 |
+| `scripts/outbound_scan.py` | 0 | 2 |
+| `tasks/技能增强-ai-workflow-v3.5.0-2026-09-17/出站扫描-本机绝对路径-清单.md` | 0 | 2 |
+| `SKILL.md` | 0 | 1 |
+| `tasks/修复-gitignore同路径撞车-2026-09-17/口径更新待办.md` | 0 | 1 |
+| `tasks/修复-gitignore同路径撞车-2026-09-17/通道B-验收.txt` | 0 | 1 |
+| `tasks/技能增强-ai-workflow-v3.5.0-2026-09-17/回归-历史plan-v3.5.0.txt` | 0 | 1 |
+
+`=== 出站扫描：FAIL=5，WARN=33，豁免行=0（扫描 21 个文件）===`；rc=1
+
+**结论：新门禁会阻塞本轮推送。** 它不是误判——命中的路径真实存在，推送后它们会再次
+出现在公开仓。但**拦截面比预想大得多**，且暴露一个设计级问题（详见交付说明与
+`出站扫描-本机绝对路径-清单.md`）：
+
+1. `meta.工作区根` 这类**操作性绝对路径字段**被判 FAIL —— 而它必须是可解析的绝对路径，
+   否则 `checks.py --base` 与计划语义失效。**这一项无法靠「换成占位符」消解**，需要口径决策。
+2. 门禁判据（全量 FAIL）与清单里的处置建议（**选项 ① 只改本体面**）**口径不一致** —— 门禁要求改全部、建议只改本体面，二者必居其一要改。
+
+**在口径拍板前，本轮改动不应推送。**
+
+--- ⑥ 计划修订留痕（见 plan.yaml meta.计划修订）---
+  R1：实测推翻两处实现假设 + 连带发现一处文档口径矛盾（本轮一并修）
+  R2：原定阴性对照无原始输出 → 换判定方式（本地 git 确定性复核）取证
+
+--- ⑦ 本文件自检（写盘后定点复核）---
+`tasks/技能增强-ai-workflow-v3.5.0-2026-09-17/对账输出.txt` → **FAIL=0，WARN=0**
+
+本文件**不计入** ⑤ 的改动面统计（扫描先于写盘，计入只会得到自指过期数据）；
+它按出站清单第 4 项脱敏后应自行通过门禁 —— **FAIL=0 即「诊断报告没有把泄露再抄一遍」**。
+
+--- ⑧ 收尾复核（步骤 9 完成后重跑；本段落盘时间晚于 ①②⑤⑦）---
+**一、步骤 9 状态回写**：`进行中` → `完成`，并在 plan.yaml 末追加收尾说明注释
+（记录本轮「未推送」这一事实，避免后续会话把 SKIP 误读成"忘了推送"）。
+
+**二、两项门禁重跑**（同一 venv 解释器，命令与 ①/② 相同）：
+| 门禁 | 结果 | 关键行 |
+| --- | --- | --- |
+| `checks.py skill` | **33/33，FAIL=0，SKIP=0，WARN=0**，rc=0 | 口径守卫 5 项全一致；`py_compile` 13 个脚本含新增 `outbound_scan.py` |
+| `checks.py plan`（本任务） | **12/13，FAIL=0，SKIP=1，WARN=0**，rc=0 | Anti-drop **已完成步骤 9 个 / 交付物确认 9 个**；越界检查 OK |
+| `checks.py plan`（历史回归 21 份） | **新增 FAIL 0 份** | 基线 rev `3dfcea3`，逐份比对 FAIL 数（见 ③） |
+
+- SKIP=1 的唯一来源 = `meta.自研工具` 的 `outbound_scan.py` 仓库链接仍为「待推送」→
+  **这是本轮「未推送」的直接后果，属预期状态，不是缺陷**；推送时回填链接即转 OK。
+- P2-2 阶段 2/4 新门禁本轮 **WARN=0**（本计划未触发信号）—— 不触发不等于未生效，
+  生效性由 `tmp/verify-P2-2.txt` 的 4 例正负对照证明。
+
+**三、磁盘事实核验（防"摘要声称 ≠ 磁盘存在"）**：24 项声称产物 **全部存在，缺失 0**；
+源码字符串检索确认五项判据主体均在位（`_check_scope` / `_check_parity` / `_selftool_ledger`
+/ `_check_stage_gates` / `def warn(`）。
+
+**四、三处计数异常已逐行核实，两处是核验探针不准、非文件缺陷**（据实登记，不因"结论有利"省略）：
+1. `outbound_scan.py` 标注头「名称」检索未命中 → 实际名称在第 3 行 `# [自研工具] outbound_scan.py`
+   （本技能约定的写法），**五项齐全**；是探针在找「名称」二字。
+2. `SKILL.md` 出现 3 次「自行判断」→ L16 为**刻意内联的原文＋覆盖说明**（可回溯设计），
+   L50 讲的是「引入外部辅助」**另一主题**（2+1=3 自洽），**无残留旧口径**。
+3. `checks.py` 出现 2 次「属正常」→ L609 属**另一检查项**（决策记录）、L792 是**说明性注释引旧文**；
+   `自研工具登记` 项的文案**确已改为「未检测」**（L840）。
+
+**五、长期记忆订正（工作区 `.workbuddy/memory/MEMORY.md`，4 处）**：
+① 版本链补 v3.5.0 与「自检项数不可跨版本相减」（26→33 的漂移已说明）；
+② 原「遗留：push-routing 文档滞后」条 → 改为**已消除**并保留原表述；
+③ 第 11 项文案订正记录 + 提醒 `决策记录` 项仍在用「属正常」句式，勿混；
+④ 新增 3 条可迁移铁律（新门禁先拦自己 / 诊断报告自身成泄露源 / 夹具与判据同生共死）。
+
+**六、仍阻塞推送（与 ⑤ 同结论，未变）**：本轮改动面出站扫描 **FAIL=5 / WARN=33**，
+两处口径待用户拍板（`meta.工作区根` 字段处置；门禁全量判 FAIL vs 处置建议只改本体面）。
+**本轮全程未推送远端，`outbound_scan.py` 仓库链接保持「待推送」。**
+
+**七、核验探针自身的一次假绿（据实登记，不省略）**：写盘后定点复核**首跑报「13 个文件 FAIL=0」**，
+与 ⑤ 节记录的 FAIL=5 **矛盾**。追查根因：`scan_file()` 返回的是 **`list[dict]`**（键 `行号/级别/片段/豁免`），
+而探针按**对象属性**取数（`getattr(res, "fail", [])`）→ 属性不存在 → **静默回落到空列表** →
+输出全 0。**改用正确 API 后**重跑（并先打印 `type()`/`len()` 自证形状）得真值：
+
+| 被核文件 | FAIL | WARN |
+| --- | --- | --- |
+| `tasks/技能增强-ai-workflow-v3.5.0-2026-09-17/plan.yaml` | 1（L7 `meta.工作区根`） | 3 |
+| `scripts/checks.py` | 1（L314 venv 解释器提示串） | 4 |
+| `Ledger.md` | 1（L25 越界追溯叙述） | 6 |
+| 其余 10 个文件（含**本文件**） | **0** | — |
+
+- **关键结论未变**：本交付物 `对账输出.txt` **FAIL=0 / WARN=0** → §⑦「诊断报告没有把泄露再抄一遍」成立。
+- ⚠️ **差异已登记**：`Ledger.md` 的 WARN 由 ⑤ 节的 **5** 变为 **6**，FAIL 仍为 1 —— 因 ⑤ 之后
+  Ledger 备注区又追加了内容。**不因"结论未被推翻"就静默略过这 1 处漂移。**
+- ⭐ **可迁移**：**核验脚本必须自证取数形状**（`type()` / `len()` / 先单点试取）——
+  取错形状时它不报错，只会**安静地全绿**，而"假绿比 FAIL 更危险"。
+  与本技能已登记的同源教训（通用 python 缺 pyyaml → 21 条 plan 全 `rc≠0` 零标记被误读成"全绿"）**同一类**。
+- **未自行施工**：该条建议写入 `references/quality-gates.md`（属改既有技能文档），
+  超出本轮九项授权范围，**登记为候选不擅自实施**。

@@ -1,0 +1,14 @@
+=== ai-workflow 计划对账 ===
+[ OK ] plan.yaml 存在 — tasks\修复-gitignore同路径撞车-2026-09-17\plan.yaml
+[ OK ] plan.yaml 可解析
+[ OK ] meta.任务
+[ OK ] meta.验证信号
+[ OK ] meta.工作区根
+[ OK ] steps 非空 — 5 步
+[ OK ] Anti-drop 对账 — 已完成步骤 5 个，交付物确认 5 个
+[ OK ] 决策记录 — 2 条
+[ OK ] 计划修订 — 未使用（未发生重规划）
+[ OK ] 自研工具登记 — 未使用（本任务无自研产出，属正常）
+[ OK ] 模型档位合法 — 5 步已标注，取值均在 enum 内
+[ OK ] 熔断状态 — 正常（未声明）
+=== 结果：12/12 通过，FAIL=0 ===

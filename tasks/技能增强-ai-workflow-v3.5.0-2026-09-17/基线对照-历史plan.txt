@@ -1,0 +1,28 @@
+=== 基线对照：v3.4.0 vs v3.5.0，同一批 plan 的 FAIL 数 ===
+基线 rev：3dfcea3（技能仓 HEAD，改动前）
+
+plan                                                                     v3.4   v3.5 判定
+----------------------------------------------------------------------------------------------------
+tasks/_archive/2026-09/估值快照源接入-2026-09-10/plan.yaml                         0      0 OK
+tasks/_archive/2026-09/估值残余限制完善-2026-09-10/plan.yaml                        0      0 OK
+tasks/_archive/2026-09/体验评估-ai-workflow-v2.5.0-2026-09-10/plan.yaml         8      8 OK
+asks/_archive/2026-09/体验评估-ai-workflow-v2.5.0-2026-09-10/toy/plan.yaml      2      2 OK
+tasks/_archive/2026-09/市场扫描扩展-2026-09-10/plan.yaml                          1      1 OK
+tasks/_archive/2026-09/技能增强-ai-workflow-v2.4.4-2026-09-10/plan.yaml         0      0 OK
+tasks/_archive/2026-09/技能增强-ai-workflow-v2.5.0-2026-09-10/plan.yaml         0      0 OK
+tasks/UI组件库搭建-2026-09-10/plan.yaml                                          0      0 OK
+tasks/修复-gitignore同路径撞车-2026-09-17/plan.yaml                                0      0 OK
+tasks/对抗互审-ai-workflow-v2.5.1-2026-09-11/plan.yaml                          0      0 OK
+tasks/技能增强-ai-workflow-v2.4.3-2026-09-10/plan.yaml                          1      1 OK
+tasks/技能增强-ai-workflow-v2.5.1-2026-09-10/plan.yaml                          0      0 OK
+tasks/技能增强-ai-workflow-v2.5.2-2026-09-11/plan.yaml                          0      0 OK
+tasks/技能增强-ai-workflow-v2.5.3-2026-09-11/plan.yaml                          0      0 OK
+tasks/技能增强-ai-workflow-v2.6.0-2026-09-11/plan.yaml                          0      0 OK
+tasks/技能增强-ai-workflow-v3.0-2026-09-15/plan.yaml                            0      0 OK
+tasks/技能增强-ai-workflow-v3.1.0-2026-09-15/plan.yaml                          0      0 OK
+tasks/技能增强-ai-workflow-v3.2.0-2026-09-16/plan.yaml                          0      0 OK
+tasks/技能增强-ai-workflow-v3.2.1-2026-09-16/plan.yaml                          0      0 OK
+tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/plan.yaml                          0      0 OK
+tasks/技能增强-ai-workflow-v3.5.0-2026-09-17/plan.yaml                          0      0 OK
+
+结论：21 份 plan 中，新增 FAIL 的 0 份

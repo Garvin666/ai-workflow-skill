@@ -1,0 +1,48 @@
+=== 推送结果 · 独立验收 ===
+验收器：verify_push.py
+零代码共享：不 import push_ontology.py / push_router.py / publish_tools.py
+本地 rev：HEAD    技能根（= 本地 git 根）：E:\ChatGPT\工作流
+
+-- 判据 0：验收前提（工作区干净 + rev 合法）--
+[WARN] 工作区无未提交改动 —— 3 项未提交；登记表读的是工作区文件，与已推送版本可能不同步（已用 --allow-dirty 放行）
+        ?? Ledger.md
+        ?? tasks/评估-ai-workflow工作流-2026-09-17/
+        ?? 评估-ai-workflow工作流-2026-09-17.md
+[ OK ] 本地 rev 可解析 —— HEAD → 72 个 blob
+[transport] gh api（子进程）
+
+-- 判据 1：远端本体仓 HEAD --
+[ OK ] 远端 HEAD 已取到 —— 287d1dc2e3（未指定 --expect-remote，不做等值断言）
+[SKIP] 远端 HEAD ≠ 推送前值 —— 未传 --prev-remote
+
+-- 判据 2：本地 rev ⊆ 远端（全量逐文件 blob sha 比对）--
+[ OK ] 本地全部文件存在于远端 —— 本地 72 项 / 远端 281 项 / 缺失 0 项
+[ OK ] 同名文件 blob sha 逐一相等 —— 不一致 0 项
+
+-- 判据 3：远端独有项均为推送前既有（混合仓的工作区档案侧）--
+[SKIP] 远端独有项早于本次推送 —— 未传 --prev-remote —— 无法机器证明，需人工确认
+
+-- 判据 4 / 6：自研工具（由 meta.自研工具 自动发现）--
+[SKIP] 读到自研工具登记 —— 0 项（来自 0 份 plan.yaml 汇总）
+
+   汇总：指向工具仓 0 项 / 指向本体仓 0 项
+
+-- 判据 5：发布物自证（远端 SKILL.md 自身 + 它指向的下沉手册）--
+[ OK ] 期望版本已确定 —— 3.4.0（来自 --expect-version；本地 rev 无 SKILL.md，未走推导）
+[ OK ] 期望版本已确定 —— 3.4.0（来自 --expect-version）
+[ OK ] 远端 SKILL.md 版本 = 期望 —— 命中 version: 3.4.0
+[ OK ] 远端 SKILL.md 含「selfbuilt: true」
+[ OK ] 远端 SKILL.md 含「references/push-routing.md」
+[ OK ] 远端 SKILL.md 含「references/changelog.md」
+[ OK ] 远端 references/push-routing.md 含「两类资源的分流推送路由」
+[ OK ] 远端 references/push-routing.md 含「触发条件」
+[ OK ] 远端 references/push-routing.md 含「判定依据」
+[ OK ] 远端 references/push-routing.md 含「冲突处理策略」
+[ OK ] 远端 references/push-routing.md 含「推送后的独立验收」
+
+-- 判据 7：两仓均为 public --
+[ OK ] Garvin666/ai-workflow-skill public —— visibility=public
+[ OK ] Garvin666/ai-workflow-tools public —— visibility=public
+
+=== 结果：全部通过 FAIL=0（OK 17 / FAIL 0 / SKIP 3 / WARN 1）===
+    ⚠️ SKIP 项需人工确认，不当作通过

@@ -1,0 +1,115 @@
+=== 历史 plan 全量回归（新增判据是否引入新 FAIL）===
+扫描 21 份 plan.yaml（排除 _backup-* 与 */tmp/*）
+
+tasks/_archive/2026-09/估值快照源接入-2026-09-10/plan.yaml                      OK=13  FAIL=0  SKIP=0   WARN=0   rc=0
+tasks/_archive/2026-09/估值残余限制完善-2026-09-10/plan.yaml                     OK=13  FAIL=0  SKIP=0   WARN=0   rc=0
+tasks/_archive/2026-09/体验评估-ai-workflow-v2.5.0-2026-09-10/plan.yaml      OK=13  FAIL=8  SKIP=0   WARN=0   rc=1  ← RC≠0
+tasks/_archive/2026-09/体验评估-ai-workflow-v2.5.0-2026-09-10/toy/plan.yaml  OK=13  FAIL=2  SKIP=0   WARN=0   rc=1  ← RC≠0
+tasks/_archive/2026-09/市场扫描扩展-2026-09-10/plan.yaml                       OK=11  FAIL=1  SKIP=0   WARN=1   rc=1  ← RC≠0
+tasks/_archive/2026-09/技能增强-ai-workflow-v2.4.4-2026-09-10/plan.yaml      OK=13  FAIL=0  SKIP=0   WARN=0   rc=0
+tasks/_archive/2026-09/技能增强-ai-workflow-v2.5.0-2026-09-10/plan.yaml      OK=13  FAIL=0  SKIP=0   WARN=1   rc=0
+tasks/UI组件库搭建-2026-09-10/plan.yaml                                       OK=13  FAIL=0  SKIP=0   WARN=0   rc=0
+tasks/修复-gitignore同路径撞车-2026-09-17/plan.yaml                             OK=13  FAIL=0  SKIP=0   WARN=0   rc=0
+tasks/对抗互审-ai-workflow-v2.5.1-2026-09-11/plan.yaml                       OK=13  FAIL=0  SKIP=0   WARN=0   rc=0
+tasks/技能增强-ai-workflow-v2.4.3-2026-09-10/plan.yaml                       OK=12  FAIL=1  SKIP=0   WARN=0   rc=1  ← RC≠0
+tasks/技能增强-ai-workflow-v2.5.1-2026-09-10/plan.yaml                       OK=13  FAIL=0  SKIP=2   WARN=0   rc=0
+tasks/技能增强-ai-workflow-v2.5.2-2026-09-11/plan.yaml                       OK=13  FAIL=0  SKIP=0   WARN=0   rc=0
+tasks/技能增强-ai-workflow-v2.5.3-2026-09-11/plan.yaml                       OK=12  FAIL=0  SKIP=0   WARN=1   rc=0
+tasks/技能增强-ai-workflow-v2.6.0-2026-09-11/plan.yaml                       OK=13  FAIL=0  SKIP=0   WARN=0   rc=0
+tasks/技能增强-ai-workflow-v3.0-2026-09-15/plan.yaml                         OK=13  FAIL=0  SKIP=0   WARN=0   rc=0
+tasks/技能增强-ai-workflow-v3.1.0-2026-09-15/plan.yaml                       OK=13  FAIL=0  SKIP=0   WARN=0   rc=0
+tasks/技能增强-ai-workflow-v3.2.0-2026-09-16/plan.yaml                       OK=13  FAIL=0  SKIP=0   WARN=0   rc=0
+tasks/技能增强-ai-workflow-v3.2.1-2026-09-16/plan.yaml                       OK=13  FAIL=0  SKIP=0   WARN=0   rc=0
+tasks/技能增强-ai-workflow-v3.4.0-2026-09-16/plan.yaml                       OK=13  FAIL=0  SKIP=0   WARN=0   rc=0
+tasks/技能增强-ai-workflow-v3.5.0-2026-09-17/plan.yaml                       OK=12  FAIL=0  SKIP=1   WARN=0   rc=0
+
+合计：OK=268，FAIL=12，SKIP=3，WARN=3
+rc≠0 的 plan 数：4
+
+--- 含 FAIL 的 plan 逐条原文（本机主目录路径已按出站清单第 4 项换成占位符）---
+
+### tasks/_archive/2026-09/体验评估-ai-workflow-v2.5.0-2026-09-10/plan.yaml
+```
+=== ai-workflow 计划对账 ===
+[ OK ] plan.yaml 存在 — <主目录>\.workbuddy\skills\ai-workflow\tasks\_archive\2026-09\体验评估-ai-workflow-v2.5.0-2026-09-10\plan.yaml
+[ OK ] plan.yaml 可解析
+[ OK ] meta.任务
+[ OK ] meta.验证信号
+[ OK ] meta.工作区根
+[ OK ] steps 非空 — 6 步
+[FAIL] 步骤 1 交付物缺失 — tasks/体验评估-ai-workflow-v2.5.0-2026-09-10/plan.yaml（未在 --base=<工作区根> 下找到；相对路径以 --base 为基准，工作区根之外的文件须写绝对路径）
+[FAIL] 步骤 2 交付物缺失 — tasks/体验评估-ai-workflow-v2.5.0-2026-09-10/体验官A-冷启动.md（未在 --base=<工作区根> 下找到；相对路径以 --base 为基准，工作区根之外的文件须写绝对路径）
+[FAIL] 步骤 2 交付物缺失 — tasks/体验评估-ai-workflow-v2.5.0-2026-09-10/体验官B-可执行.md（未在 --base=<工作区根> 下找到；相对路径以 --base 为基准，工作区根之外的文件须写绝对路径）
+[FAIL] 步骤 3 交付物缺失 — tasks/体验评估-ai-workflow-v2.5.0-2026-09-10/体验报告.md（未在 --base=<工作区根> 下找到；相对路径以 --base 为基准，工作区根之外的文件须写绝对路径）
+[FAIL] 步骤 4 交付物缺失 — tasks/体验评估-ai-workflow-v2.5.0-2026-09-10/独立审核意见.md（未在 --base=<工作区根> 下找到；相对路径以 --base 为基准，工作区根之外的文件须写绝对路径）
+[FAIL] 步骤 5 交付物缺失 — tasks/体验评估-ai-workflow-v2.5.0-2026-09-10/体验报告.md（未在 --base=<工作区根> 下找到；相对路径以 --base 为基准，工作区根之外的文件须写绝对路径）
+[FAIL] 步骤 5 交付物缺失 — tasks/体验评估-ai-workflow-v2.5.0-2026-09-10/可优化方向.md（未在 --base=<工作区根> 下找到；相对路径以 --base 为基准，工作区根之外的文件须写绝对路径）
+[FAIL] 步骤 6 交付物缺失 — tasks/体验评估-ai-workflow-v2.5.0-2026-09-10/可优化方向.md（未在 --base=<工作区根> 下找到；相对路径以 --base 为基准，工作区根之外的文件须写绝对路径）
+[ OK ] Anti-drop 对账 — 已完成步骤 6 个，交付物确认 0 个
+[ OK ] 交付物越界检查 — 全部落在工作区根内（或属基础设施例外）
+[ OK ] 决策记录 — 未使用（无外部辅助引入，属正常）
+[ OK ] 计划修订 — 未使用（未发生重规划）
+[ OK ] 自研工具登记 — 未登记 —— ⚠️ 这是「**未检测**」不是「**已验证无自研**」：本判据只比对**本任务交付物**里的自研标注头，且只扫**代码脚本**（不含 `tasks/*/tmp/`、不遍历全盘代码、不扫文档类）；**未入交付物的自写脚本不会被发现**
+[ OK ] 模型档位合法 — 步骤均未标注（字段可选）
+[ OK ] 熔断状态 — 正常（未声明）
+=== 结果：通过 13/21，FAIL=8，SKIP=0，WARN=0 ===
+```
+
+### tasks/_archive/2026-09/体验评估-ai-workflow-v2.5.0-2026-09-10/toy/plan.yaml
+```
+=== ai-workflow 计划对账 ===
+[ OK ] plan.yaml 存在 — <主目录>\.workbuddy\skills\ai-workflow\tasks\_archive\2026-09\体验评估-ai-workflow-v2.5.0-2026-09-10\toy\plan.yaml
+[ OK ] plan.yaml 可解析
+[ OK ] meta.任务
+[ OK ] meta.验证信号
+[ OK ] meta.工作区根
+[ OK ] steps 非空 — 2 步
+[FAIL] 步骤 1 交付物缺失 — tasks/体验评估-ai-workflow-v2.5.0-2026-09-10/toy/sales.csv（未在 --base=<工作区根> 下找到；相对路径以 --base 为基准，工作区根之外的文件须写绝对路径）
+[FAIL] 步骤 2 交付物缺失 — tasks/体验评估-ai-workflow-v2.5.0-2026-09-10/toy/sales.xlsx（未在 --base=<工作区根> 下找到；相对路径以 --base 为基准，工作区根之外的文件须写绝对路径）
+[ OK ] Anti-drop 对账 — 已完成步骤 2 个，交付物确认 0 个
+[ OK ] 交付物越界检查 — 全部落在工作区根内（或属基础设施例外）
+[ OK ] 决策记录 — 未使用（无外部辅助引入，属正常）
+[ OK ] 计划修订 — 未使用（未发生重规划）
+[ OK ] 自研工具登记 — 未登记 —— ⚠️ 这是「**未检测**」不是「**已验证无自研**」：本判据只比对**本任务交付物**里的自研标注头，且只扫**代码脚本**（不含 `tasks/*/tmp/`、不遍历全盘代码、不扫文档类）；**未入交付物的自写脚本不会被发现**
+[ OK ] 模型档位合法 — 步骤均未标注（字段可选）
+[ OK ] 熔断状态 — 正常（未声明）
+=== 结果：通过 13/15，FAIL=2，SKIP=0，WARN=0 ===
+```
+
+### tasks/_archive/2026-09/市场扫描扩展-2026-09-10/plan.yaml
+```
+=== ai-workflow 计划对账 ===
+[ OK ] plan.yaml 存在 — <主目录>\.workbuddy\skills\ai-workflow\tasks\_archive\2026-09\市场扫描扩展-2026-09-10\plan.yaml
+[ OK ] plan.yaml 可解析
+[ OK ] meta.任务
+[ OK ] meta.验证信号
+[FAIL] meta.工作区根 — 为空
+[ OK ] steps 非空 — 7 步
+[ OK ] Anti-drop 对账 — 已完成步骤 7 个，交付物确认 7 个
+[WARN] 交付物越界检查 — 7 项落在工作区根 c:/users/26717/.workbuddy/skills/ai-workflow 之外，但本 plan 无『越界授权』键（早于 v3.3.0 的旧模板）→ 只警示不阻断：步骤 1『E:/ChatGPT/量化分析与数据分析/backend/services/history_data.py』→ E:\ChatGPT\量化分析与数据分析\backend\services\history_data.py；步骤 2『E:/ChatGPT/量化分析与数据分析/indicators/features.py』→ E:\ChatGPT\量化分析与数据分析\indicators\features.py；步骤 3『E:/ChatGPT/量化分析与数据分析/indicators/scan.py』→ E:\ChatGPT\量化分析与数据分析\indicators\scan.py；步骤 4『E:/ChatGPT/量化分析与数据分析/indicators/screener.py』→ E:\ChatGPT\量化分析与数据分析\indicators\screener.py（相对路径以 --base 为基准，故越界只可能来自绝对路径或 `..` 上跳；确需在工作区根之外产出时，须先取得用户**当次**授权并登记 `meta.越界授权`）
+[ OK ] 决策记录 — 未使用（无外部辅助引入，属正常）
+[ OK ] 计划修订 — 未使用（未发生重规划）
+[ OK ] 自研工具登记 — 未登记 —— ⚠️ 这是「**未检测**」不是「**已验证无自研**」：本判据只比对**本任务交付物**里的自研标注头，且只扫**代码脚本**（不含 `tasks/*/tmp/`、不遍历全盘代码、不扫文档类）；**未入交付物的自写脚本不会被发现**
+[ OK ] 模型档位合法 — 步骤均未标注（字段可选）
+[ OK ] 熔断状态 — 正常（未声明）
+=== 结果：通过 11/13，FAIL=1，SKIP=0，WARN=1 ===
+```
+
+### tasks/技能增强-ai-workflow-v2.4.3-2026-09-10/plan.yaml
+```
+=== ai-workflow 计划对账 ===
+[ OK ] plan.yaml 存在 — <主目录>\.workbuddy\skills\ai-workflow\tasks\技能增强-ai-workflow-v2.4.3-2026-09-10\plan.yaml
+[ OK ] plan.yaml 可解析
+[ OK ] meta.任务
+[ OK ] meta.验证信号
+[FAIL] meta.工作区根 — 为空
+[ OK ] steps 非空 — 6 步
+[ OK ] Anti-drop 对账 — 已完成步骤 6 个，交付物确认 6 个
+[ OK ] 交付物越界检查 — 全部落在工作区根内（或属基础设施例外）
+[ OK ] 决策记录 — 未使用（无外部辅助引入，属正常）
+[ OK ] 计划修订 — 未使用（未发生重规划）
+[ OK ] 自研工具登记 — 未登记 —— ⚠️ 这是「**未检测**」不是「**已验证无自研**」：本判据只比对**本任务交付物**里的自研标注头，且只扫**代码脚本**（不含 `tasks/*/tmp/`、不遍历全盘代码、不扫文档类）；**未入交付物的自写脚本不会被发现**
+[ OK ] 模型档位合法 — 步骤均未标注（字段可选）
+[ OK ] 熔断状态 — 正常（未声明）
+=== 结果：通过 12/13，FAIL=1，SKIP=0，WARN=0 ===
+```
