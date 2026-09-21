@@ -1501,13 +1501,18 @@ def _check_category_decl(skill_dir: Path) -> None:
 
 
 PARITY_ITEMS = (
-    ("模型档位", "references/routing-guide.md", _p_tiers, VALID_MODEL_TIERS),
-    ("步骤状态", "assets/plan-template.yaml", _p_status, VALID_STATUS),
-    ("能力类", "references/capability-routing.md", _p_caps, VALID_CAPABILITY),
-    ("重规划触发", "references/adaptive-planning.md", _p_triggers, VALID_TRIGGER),
-    ("熔断状态", "SKILL.md", _p_fuse, VALID_FUSE),
-    ("反思触发", "references/reflection-retry.md", _p_reflect_trigger, VALID_REFLECT_TRIGGER),
-    ("终止策略", "references/reflection-retry.md", _p_reflect_term, VALID_TERMINATION),
+    # v4.4.0+（P0-1，2026-09-21）：每项源规格**追加 `references/data-model.md`** ——
+    # 把该文件作为各枚举的**受守卫镜像**（中心注册表）。多源取并集比对，故 data-model.md
+    # 里多写/写错一个取值 → 并集变大 → FAIL；这是「枚举集中 + 可机检」的落地。
+    # ⚠️ 多源（tuple）时 is_single=False，单个文件缺失不单独 FAIL（只由"全部缺失"分支兜底），
+    #    这与 v4.2.0 为「入口判定主类」引入多源的语义一致。
+    ("模型档位", ("references/routing-guide.md", "references/data-model.md"), _p_tiers, VALID_MODEL_TIERS),
+    ("步骤状态", ("assets/plan-template.yaml", "references/data-model.md"), _p_status, VALID_STATUS),
+    ("能力类", ("references/capability-routing.md", "references/data-model.md"), _p_caps, VALID_CAPABILITY),
+    ("重规划触发", ("references/adaptive-planning.md", "references/data-model.md"), _p_triggers, VALID_TRIGGER),
+    ("熔断状态", ("SKILL.md", "references/data-model.md"), _p_fuse, VALID_FUSE),
+    ("反思触发", ("references/reflection-retry.md", "references/data-model.md"), _p_reflect_trigger, VALID_REFLECT_TRIGGER),
+    ("终止策略", ("references/reflection-retry.md", "references/data-model.md"), _p_reflect_term, VALID_TERMINATION),
     # ⚠️「入口判定主类」**不在本表内**（v4.2.0 第五轮换口径后由 `_check_category_decl` 单独判）：
     # 本表的模型是「若干源 → 一个解析器 → 一个集合」，多源时取并集比对；而主类那项需要
     # **跨文件的唯一性判定（源规格面内）**（声明块须恰一处），并集模型表达不了它 ——

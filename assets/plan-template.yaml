@@ -1,5 +1,6 @@
 # 执行计划模板（阶段 3 落盘为 tasks/<任务类型>-<日期>/plan.yaml）
 # 键名统一为中文，与 SKILL.md 阶段 3 第 1 条一致。
+# 结构 schema 与枚举注册表见 references/data-model.md（下方 status 行是口径守卫锚点 `_p_status`，勿改格式）。
 # status 取值: 待办 / 进行中 / 完成 / 受阻 / 熔断
 #   「熔断」= 本步已停止自动化、等待用户决策（见 SKILL.md「熔断机制」）。
 #   一旦出现该状态，或下方「熔断状态: 已熔断」，checks.py plan 将直接判 FAIL，

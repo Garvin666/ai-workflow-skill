@@ -49,7 +49,7 @@ version: 4.4.0
 
 ## 自主决策层（贯穿全流程，v3.0.0 新增）
 
-本技能不只是一条固定流程 —— 它在执行中自行判断**该不该引入外部辅助、该引入哪一种**，并在事实基础变化时**自行调整计划**。两份手册**按需加载，勿预读**：
+本技能不只是一条固定流程 —— 它在执行中自行判断**该不该引入外部辅助、该引入哪一种**，并在事实基础变化时**自行调整计划**。两份手册**按需加载，勿预读**；四类决策（能力/重规划/方法/反思触发/终止策略）的**集中决策表**见 `references/decision-tables.md`（P1-1）：
 
 | 机制 | 一句话 | 手册 |
 | --- | --- | --- |
@@ -238,7 +238,7 @@ version: 4.4.0
 
 - **最大重试次数**：默认 3，整数 ≥1；
 - **触发条件**：默认 T1–T3 全开，可精简（`references/reflection-retry.md` 列明每项语义与不触发项）；
-- **终止策略**：达到上限后的去向，**枚举且唯一取值源** —— `升级返修复查`（默认）/ `触发熔断` / `升级用户决策` / `重规划R`；
+- **终止策略**：达到上限后的去向，**取值域见 `references/reflection-retry.md`（唯一取值源）与 `references/data-model.md` §2.2，勿在此重述**；默认 `升级返修复查`；
 - **退避**（可选，应对限流类）/ **反思最低要求**（可选，缺反思格式不计为有效重试）。
 
 **每轮反思强制四要素**（防"再试一次"式无脑重试；与「缺陷修复双条件」「熔断报告根因区分」同构）：① 失败现象（原始输出/差异）② 根因假设（区分"证据支持/推测"）③ 调整方案（与上一轮有何不同）④ 验证方式（仍用本步验证方式或临时补充）。
@@ -419,6 +419,8 @@ version: 4.4.0
 
 ### 状态（**两个存储态 + 一次复位迁移**，唯一叫法）
 
+> **唯一口径源**：状态与迁移以 `references/state-model.md` 为准（含状态机图、迁移表、守卫「已机判 / 仍靠纪律」对应表）；本节为摘要。
+
 存储态只有两个，`VALID_FUSE` 的值域就是这两项；"复位"是一次**迁移动作**而非第三个存储态（这点必须说准，否则会误以为 `plan.yaml` 里能写"复位"）：
 
 | 状态 | 类型 | 含义 | 谁可进入 |
@@ -455,7 +457,7 @@ version: 4.4.0
 - **只有用户明示才能复位**（无 owner 的开放断路器＝一堆卡死的工作）；主代理不得自行解除。
 - **复位动作（两步，缺一不可；两步**都由 `mark` 支持**，不需要手改 YAML）**：
   1. meta：`checks.py mark <plan> --fuse 正常`（把 `熔断状态` 写回 `正常`；该键缺失时自动插入）；
-  2. 步骤：`checks.py mark <plan> <id> <非熔断状态>`（`VALID_STATUS` 为 待办/进行中/完成/受阻/熔断）。
+  2. 步骤：`checks.py mark <plan> <id> <非熔断状态>`（`VALID_STATUS` 取值见 `references/data-model.md` §2.2，须与 `scripts/checks.py` 常量同源）。
   - 合成一句即：`checks.py mark <plan> <id> 完成 --fuse 正常`。
   - ⚠️ **只做第 1 步复位不了**——门禁会继续以 `[FAIL] … 步骤 <id> 状态为『熔断』` 阻断（fail-closed）。
 - **复位后必须重跑 `checks.py plan <plan> --base <工作区根>` 确认 FAIL 清零**，并把该次输出留档——"我认为复位好了"不算数。
@@ -489,6 +491,12 @@ version: 4.4.0
 | `references/reflection-retry.md` | **反思重试机制**（v4.1.0）：触发条件 T1–T3、配置项取值域、每轮反思四要素、终止策略枚举、与返修复查/熔断/重规划的接缝、记录方式（trace.jsonl）、诚实边界 |
 | `references/self-judge.md` | **自我判断 · 意图快判**（v4.2.0）：主类枚举（chat/code/content，**手册侧唯一取值源**）、与入口分型的正交裁决、触发条件、四步 + D1–D5 schema、IO 契约、阈值路由（0.95 / 0.70 / fail-closed）、双 realization（脑内协议 / 独立模型）、不可委派护栏、边界判例锚、诚实边界。**阶段 0 第 1 步按需加载** |
 | `references/method-judge.md` | **方法选用 · 快判**（v4.4.0）：步骤级工具/方法选用快判，与 self-judge 同构但判「这一步该用什么手段」；能力类词汇源（capability-routing.md §一）、两层正交裁决、触发条件、四步 + M1–M5 schema、IO 契约、阈值路由、接进 `checks.py decide --from-method-select`（`needs_tool=true` 时自动推导决策记录）与 plan **检查项 15 抽样人审信号**（机器指路、判定靠人）、双 realization（**明确只上 A 不做落地层**）、不可委派护栏、边界判例锚、诚实边界。**阶段 3 第②步按需加载** |
+| `references/data-model.md` | **数据模型**（P0-1）：plan 中心数据模型的结构 schema（meta / steps 字段表）+ 枚举注册表（各枚举的代码常量 / 权威文档源 / 守卫项 / 受守卫镜像取值）。**查计划字段与枚举先读它** |
+| `references/state-model.md` | **状态模型**（P0-2）：步骤状态 + 熔断状态的**显式状态机**（状态集合 / 合法迁移表 / 复位两步 / 守卫「已机判·仍靠纪律」对应表 / mermaid 图）。**状态与迁移的唯一口径源** |
+| `references/decision-tables.md` | **决策模型**（P1-1）：能力路由 / 方法选用 / 自适应重规划 / 反思重试触发 / 终止策略**五张决策表集中映射**（输入→输出+阈值），与 self-judge 同构（Schema-First）。查"决策契约"先读它 |
+| `references/policy.md` | **策略模型**（P1-2）：`gate.py` 范围×意图决策表 + 信息安全 S1–S4 + 越界授权登记，注册为**显式策略集**（default-deny + fail-closed 方向） |
+| `references/process-model.md` | **流程模型**（P2-1）：六阶段主干 + 子循环**活动图**（mermaid）+ R/F/T **决策节点表** + 人工网关标注 |
+| `references/routing-table.md` | **路由模型**（P2-2）：阶段×档位**映射表** + `self-judge` category→档位**联动** + 路由决策链路图（复用 routing-guide.md 范式） |
 | `references/office-guide.md` | openpyxl / python-docx / pypdf 避坑 |
 | `assets/plan-template.yaml` ／ `report-template.md` ／ `templates/README.md` | 计划、报告、确认表规范 |
 | `assets/ledger-template.md` | **交付履历台账**（工作区根 `Ledger.md`）格式与字段说明 |
