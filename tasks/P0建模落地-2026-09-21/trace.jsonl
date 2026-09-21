@@ -1,0 +1,6 @@
+{"ts": "2026-09-21 16:03", "step": "1", "action": "产出 P0 执行计划（名称/目标/顺序+理由/预期产出/完成标准 + 决策点 D1–D3）", "cmd": "写 tasks/P0建模落地-2026-09-21/P0执行计划.md", "result": "10 章齐备；用户放行 D1=A/D2=A/D3=A", "note": "收尾补记：ts 为补记时刻，非该步执行时刻"}
+{"ts": "2026-09-21 16:03", "step": "2", "action": "[P0-1] 枚举收口为受守卫镜像 + 中心数据模型文档", "cmd": "新增 references/data-model.md；改 checks.py PARITY_ITEMS ×7 单源→多源", "result": "7 项口径守卫读 2 源并集一致；guard 0 漂移", "note": "收尾补记：ts 为补记时刻，非该步执行时刻"}
+{"ts": "2026-09-21 16:03", "step": "3", "action": "[P0-1] plan 结构 schema 描述 + 模板/索引导航到事实源", "cmd": "改 assets/plan-template.yaml（加指针行）；改 SKILL.md（索引 +2 行、L241/L458 改引用）", "result": "文档引用完整性 OK；status 锚点行原样保留", "note": "收尾补记：ts 为补记时刻，非该步执行时刻"}
+{"ts": "2026-09-21 16:03", "step": "4", "action": "[P0-2] 状态模型唯一口径源 + 熔断/步骤状态机图 + 守卫对应表", "cmd": "新增 references/state-model.md；改 SKILL.md 熔断节加唯一口径源指针", "result": "两状态域/迁移表/复位两步/已机判·仍靠纪律对照表齐备", "note": "收尾补记：ts 为补记时刻，非该步执行时刻"}
+{"ts": "2026-09-21 16:03", "step": "5", "action": "[P0-2] 与 checks.py 行为对拍 + 阴性对照", "cmd": "tmp/state_machine_probe.py 跑 6 用例（C0–C5）", "result": "6/6 与预期一致；C2 阴性对照「仅改 meta 仍 FAIL」命中", "note": "收尾补记：ts 为补记时刻，非该步执行时刻"}
+{"ts": "2026-09-21 16:03", "step": "6", "action": "门禁总验收 + 产出完成报告（阶段 6 归档）", "cmd": "跑 checks.py skill；guard_constants(--selftest)；plan 对拍 ×2；出站扫描", "result": "skill 43/43 FAIL=0；本报告与 Ledger 行落盘", "note": "收尾补记：ts 为补记时刻，非该步执行时刻"}
