@@ -27,8 +27,14 @@ skill 子命令检查项:
     4. assets/plan-template.yaml 必填键存在
     5. scripts/*.py 语法编译通过（py_compile；`.pyc` 输出到**系统临时目录**，不产生 __pycache__）
     6. 口径守卫（v3.5.0 / P0-3）：**解析手册与模板**里定义的取值，断言其与下方代码常量为同一集合 ——
-       消灭"同源只靠注释声明、不靠测试保证"。覆盖 5 个物理量：模型档位 / 步骤状态 / 能力类 /
-       重规划触发 / 熔断状态。**解析不到即 FAIL**（守着一条读不到的规则等于没有规则）。
+       消灭"同源只靠注释声明、不靠测试保证"。覆盖 7 个物理量：模型档位 / 步骤状态 / 能力类 /
+       重规划触发 / 熔断状态 / 反思触发 / 终止策略。**解析不到即 FAIL**（守着一条读不到的规则等于没有规则）。
+    7. 入口判定主类（v4.2.0）：**两半分开，各自的声明与各自的能力对齐** ——
+       ① 确定性（FAIL）：`references/self-judge.md` §1 的「机器可读声明块」（一对 ASCII 标记圈定）
+          须在**源规格面内恰一处**（源规格见 `CATEGORY_SOURCES`：`SKILL.md`＋`references/*.md`＋`assets/*.md`＋`assets/*.yaml`，**不递归**；技能根目录、`scripts/`、`references/` 子目录、`assets/*.txt`／`assets/templates/` **不在扫描面内**），块形合法（含「首格整格一个裸词」），块内取值集合须恰好等于 `VALID_CATEGORY`；
+       ② 启发式（**WARN，不作门禁**）：源规格面内「主类疑似列」扫描，可疑取值只提示并附文件名+行号。
+       ⚠️ v4.2.0 前四轮曾在①的位置用「全手册找表头 `| 主类 |`」的解析，被独立复核（未参与实现者）
+          实测出 14 种假绿 + 2 种误报（含 §10 那一行被误判成表头）→ **前提不成立，改口径而非再加固正则**。
 
 plan 子命令检查项:
     1. YAML 可解析（需 pyyaml：setup_env.ps1 已纳入依赖）
@@ -53,15 +59,26 @@ plan 子命令检查项:
        却未登记进 `meta.自研工具` → **WARN**（不是 FAIL：标注头只是充分线索，登记才是判据）。
     11. 阶段门禁（v3.5.0 / P2-2）：阶段 2「方案评审」与阶段 4「数值口径」各一条最低成本门禁，
        **只出 WARN**（首版刻意不设 FAIL，避免造出随机 FAIL 源）。
+    12. 反思重试配置（v4.1.0）：meta「反思重试配置」可选，缺省即 SKIP（向后兼容旧 plan）；
+        一旦填写必须结构合法（最大重试次数整数 ≥1 / 触发条件为 T1–T3 子集 /
+        终止策略在枚举内），步骤级覆盖同口径；语义（重试是否真改了）不机器判定，靠抽查。
+    13. 入口判定（v4.2.0）：meta「入口判定」可选 —— 阶段 0 第 1 步 self-judge 的产出，
+        完整契约见 references/self-judge.md。**整段缺省 → WARN**（向后兼容旧 plan，
+        **不追认历史计划**）；一旦填写须结构合法（category ∈ chat/code/content、
+        distribution 恰含三键且和=1、confidence ∈ [0,1]、dimensions 含 D1–D5、
+        route_hint 非空、ambiguity 为 bool、secondary 留空或在枚举内），非法即 FAIL。
+        ⚠️ **它不是门禁**：confidence 由模型自填、校准无法被机器证明（手册 §10 原样写明）。
 
 状态取值: OK / FAIL / SKIP / **WARN**（WARN 只提示、不计入 FAIL，也不改变退出码）
 
 退出码: 0 = 全部通过；1 = 有 FAIL（不可交付）；2 = 用法错误
 """
 import argparse
+import ast
 import json
 import py_compile
 import re
+import subprocess
 import sys
 import tempfile
 import time
@@ -95,6 +112,21 @@ VALID_TRIGGER = ("R1", "R2", "R3", "R4", "R5", "R6")
 # P9-c（v3.4.0）：`模型档位` 取值 —— 与 references/routing-guide.md 的 enum 同源。
 # 可选字段，留空合法；填了必须在此集内（含 `default` = 显式声明按阶段默认档位）。
 VALID_MODEL_TIERS = ("strong", "mid", "cheap", "default")
+# 反思重试机制（v4.1.0）：触发条件 + 终止策略枚举。
+# **唯一取值源**：本常量 + references/reflection-retry.md；二者经 PARITY_ITEMS 口径守卫同源
+# （手册写的枚举 == 代码常量，解析不到即 FAIL）。触发条件缺省全开，终止策略缺省「升级返修复查」。
+VALID_REFLECT_TRIGGER = ("T1", "T2", "T3")
+VALID_TERMINATION = ("升级返修复查", "触发熔断", "升级用户决策", "重规划R")
+# self-judge（v4.2.0）：主类枚举。**唯一取值源** = 本常量 + `references/self-judge.md` §1 的
+# **机器可读声明块**；二者由 `_check_category_decl` 断言同源（读不到块 = FAIL）。
+# ⚠️ 第五轮**换口径**（不是再加固正则）：前四轮用「全手册找表头 `| 主类 |`」的解析来做 FAIL，
+# 被独立复核（未参与实现者）实测出 14 种假绿（表头 `**主类**（认知轴）` 组合写法、取值大写／
+# 带连字符／全角／零宽字符、引用块 `>`、缺首尾竖线……）与 2 种误报，且 §10 描述守卫射程的那一行
+# 因格内引用了 `| 主类 |` 而被**误判成表头**（哑雷）。
+# **结论：从任意 markdown 表格里稳定提取枚举这个前提不成立。** 现口径两半：
+#   ① FAIL（确定性）＝ 声明块须在**源规格面内**恰一处（见 CATEGORY_SOURCES，不递归）、块形合法（含「首格整格一个裸词」）、取值集合恰好等于本常量；
+#   ② WARN（启发式，不作门禁）＝ 源规格面内「主类疑似列」的可疑取值，只提示 + 附文件名/行号。
+VALID_CATEGORY = ("chat", "code", "content")
 # 决策记录的必填项。⚠️ 此元组是**唯一事实源**：FAIL 文案由它生成，
 # 避免"文案写 5 个字段、代码只强制 3 个"这类描述↔实现脱节（v3.0.0 返修项 P4）。
 DECISION_KEYS = ("决策点", "能力类", "依据", "选择")
@@ -185,6 +217,21 @@ def _resolve(ref: str, skill_dir: Path) -> Path | None:
     return None
 
 
+def _frontmatter(text: str) -> str:
+    """取 YAML frontmatter 块（首对 `---` 之间的内容）；取不到返回空串。
+
+    ⚠️ **不要退回「固定字符窗口」写法**（v4.3.0 实测教训）：本函数替代的是
+    `read_text()[:800]`。`description` 是**刻意写长**的字段（能力概述 + 触发词清单），
+    它一长就把后面的 key 推出窗口 —— 实测扩充 description 后 `agent_created:` 的偏移
+    **恰为 800**，落在半开区间 `[0,800)` 之外，于是对**完全合法**的 frontmatter 报
+    FAIL=1。边界只差 1 个字符，而报错文案（「frontmatter 含 agent_created」）指向的是
+    **内容缺失**这一错误方向 —— 排查成本因此很高。
+    **判据应作用于结构（frontmatter 块），不应作用于长度。**
+    """
+    m = re.match(r"\A---[ \t]*\r?\n(.*?)\r?\n---[ \t]*(?:\r?\n|\Z)", text, re.S)
+    return m.group(1) if m else ""
+
+
 def check_skill(skill_dir: Path) -> int:
     skill_md = skill_dir / "SKILL.md"
     if not skill_md.exists():
@@ -192,9 +239,15 @@ def check_skill(skill_dir: Path) -> int:
         return 1
     ok("SKILL.md 存在")
 
-    head = skill_md.read_text(encoding="utf-8")[:800]
-    for key in ("name:", "description:", "agent_created:"):
-        (ok if key in head else fail)(f"frontmatter 含 {key.rstrip(':')}")
+    fm = _frontmatter(skill_md.read_text(encoding="utf-8"))
+    if not fm:
+        fail("frontmatter 可解析",
+             "未找到以 `---` 包裹的 frontmatter 块（首行须为 `---`，末行须为 `---`）")
+    else:
+        ok("frontmatter 可解析",
+           f"{len(fm)} 字符 / {fm.count(chr(10)) + 1} 行（结构化取块，非字符窗口）")
+        for key in ("name:", "description:", "agent_created:"):
+            (ok if key in fm else fail)(f"frontmatter 含 {key.rstrip(':')}")
 
     docs = [p for p in [skill_md, *sorted((skill_dir / "references").glob("*.md"))] if p.exists()]
     missing = []
@@ -272,6 +325,12 @@ def check_skill(skill_dir: Path) -> int:
     # v3.5.0 / P0-3：口径守卫 —— 手册/模板里写的取值必须与代码常量同源。放在最后，
     # 因为前面几项都是"代码自身"的完整性判据，这一项是"文档 ↔ 代码"的一致性判据。
     _check_parity(skill_dir)
+    # v4.2.0 第五轮：主类枚举单独判（声明块 FAIL + 启发式 WARN）—— 它的模型是「跨文件唯一性（源规格面内）」，塞不进 PARITY_ITEMS 的并集模型
+    _check_category_decl(skill_dir)
+    # v4.3.0 / 批次 B：平台门控 vs 真实 import（AST 口径，不认注释与字符串里的同名字面量）
+    _check_platform(skill_dir)
+    # v4.3.0 / 批次 C：运行时闸门可用性与同源（gate.py 缺失、或口径另存一份副本，均 FAIL）
+    _check_gate(skill_dir)
     return 0
 
 
@@ -1103,12 +1162,286 @@ def _p_fuse(text: str) -> set:
     return set(re.findall(r"^\|\s*`([^`]+)`\s*\|\s*存储态\s*\|", text, re.M))
 
 
+def _p_reflect_trigger(text: str) -> set:
+    """reflection-retry.md §2 触发表首列：`| **T1** | …`。"""
+    return set(re.findall(r"^\|\s*\*\*(T\d)\*\*\s*\|", text, re.M))
+
+
+def _p_reflect_term(text: str) -> set:
+    """reflection-retry.md §4 终止策略表首列：`| **升级返修复查**（默认，推荐） | …`
+    —— 加粗后可能接「（默认，推荐）」而非直接竖线，故只锚定行首 `| **枚举**`，不要求紧邻竖线。"""
+    return set(re.findall(r"^\|\s*\*\*(升级返修复查|触发熔断|升级用户决策|重规划R)\*\*", text, re.M))
+
+
+def _resolve_sources(skill_dir: Path, spec) -> list[Path]:
+    '''把 PARITY_ITEMS 的「源规格」解析为文件列表（v4.2.0 返修轮：支持多源）。
+
+    spec 三种形态（前 7 项沿用第一种，行为与本函数引入前一致）：
+      · str 单路径（无通配）→ 精确单文件；
+      · str 含通配（星号/问号/方括号）→ 在技能根下展开，**不递归**（防命中 _backup-*/ 里的历史副本）；
+      · tuple/list[str, ...] → 多源，逐项按上述规则解析后合并去重（v4.2.0 返修轮为
+        「入口判定主类」引入：源 = SKILL.md + references/*.md，源规格面内表行取并集）。
+
+    存在意义：单源时守卫看不到「手册侧别处新增/改名取值」—— 该缺口由独立复现审核实测发现
+    （往 SKILL.md 插一行主类表行，仍报「3 项一致」），属**单向覆盖**，本函数即为此修复。
+    '''
+    items = spec if isinstance(spec, (tuple, list)) else (spec,)
+    out: list[Path] = []
+    for it in items:
+        if any(ch in it for ch in "*?["):
+            out.extend(sorted(skill_dir.glob(it)))
+        else:
+            out.append(skill_dir / it)
+    seen: set = set()
+    uniq: list[Path] = []
+    for p in out:
+        if p not in seen:
+            seen.add(p)
+            uniq.append(p)
+    return uniq
+
+
+# ── 入口判定主类：确定性声明块 + 启发式扫描（v4.2.0 第五轮换口径）────────────
+# 为什么不再用「全手册找表头」的解析：其建模前提**不成立** ——"用正则从任意 markdown
+# 表格里稳定提取枚举"做不到，射程边界由写法的无限变化决定，加固只会换一批绕过。
+# 实测依据（独立复核，未参与实现者）：前四轮加固后仍有 14 种假绿与 2 种误报，且
+# `references/self-judge.md` §10 描述守卫射程的那一行因格内引用了 `| 主类 |`，按竖线
+# 切分后产生恰为 `主类` 的碎片格 → **该行被当成表头（列号=1）**，只因后随空行才未引爆。
+# 故：FAIL 只判**确定性**的那一半（标记块），启发式降为 **WARN 通道**（与 v3.5.0 P1-1 同处理）。
+# ⚠️ 源规格 = SKILL.md + references/*.md + assets/*.md + assets/*.yaml（**不递归**）。
+#    为什么必须含 assets/：实测 `assets/` 下有三个文件也重述了主类枚举（ledger-template.md 的「入口类型」列、plan-template.yaml 的 category 注释、熔断报告模板.md 的字段表）——只扫 references/ 的话，这三处的漂移既不会 FAIL 也不会 WARN。
+#    扩源前先侦察：对真文档**零新增命中**（无假警）才扩的。
+
+_DECL_BEGIN = "<!-- ai-workflow:category-decl:begin -->"
+_DECL_END = "<!-- ai-workflow:category-decl:end -->"
+_SEP_CELL = re.compile(r"^:?-{2,}:?$")
+_BARE_CELL = re.compile(r"^[A-Za-z][A-Za-z0-9_\-]{0,20}$")
+CATEGORY_SOURCES = ("SKILL.md", "references/*.md", "assets/*.md", "assets/*.yaml")
+
+
+class _DeclError(Exception):
+    """声明块形不合法。**抛异常而不是返回空集** —— 静默回落空集会让判据变成"永远全绿"。"""
+
+
+def _norm_cell(c: str) -> str:
+    """单元格归一：去空白／加粗／反引号；括号后缀只保留前缀（块内列义已定，放宽安全）。
+
+    ⚠️ 用 `replace` 而不是 `strip`：`**image**（图像产出）` 用 `strip("*")` 只去**首尾**星号，
+    中间那对留着 → 归一成 `image**`，于是"块内新增第四类"这个阳性对照会**假绿**
+    （干跑实测抓到，已改）。枚举取值里不会出现星号/反引号，故全删是安全的。
+    """
+    c = c.strip().replace("*", "").replace("`", "").strip()
+    m = re.match(r"^([^\s（(]+)", c)
+    return m.group(1) if m else ""
+
+
+def _norm_cell_full(c: str) -> str:
+    """单元格归一但**不截断**（与 `_norm_cell` 的唯一差别）。
+
+    ⚠️ 为什么需要它：`_norm_cell` 的正则 `^([^\\s（(]+)` **在空白处截断** —— 声明块里写成
+    `| **chat** / **image** |` 时它只读回 `chat`，第二个取值被静默丢掉。独立复核（未参与
+    实现者）实测 c13 抓到这一点：块内多值/连写**当时不被判**。声明块是本判据的**机器接口**、
+    格式由本技能自己定，故 `_p_category_decl` 改为要求「**整格一个裸词**」，这里提供判
+    「整格」所需的非截断归一。**别把两者合并** —— 截断版在启发式里是刻意的（见 `_scan_one_table`）。
+    """
+    return c.strip().replace("*", "").replace("`", "").strip()
+
+
+def _p_category_decl(text: str) -> set:
+    """从**标记块**取主类枚举（确定性）。块形不合法即抛 `_DeclError`（调用方转 FAIL）。
+
+    只认**整行等于标记**的行 —— 文档里用反引号引用标记（`` `<!-- … -->` ``）不算，
+    故可以在别处讨论本机制而不破坏「源规格面内恰一处」。
+
+    **块形契约（改块形就须同步改本判据）**：① 表头行；② 分隔行；③ ≥1 数据行；
+    ④ 每个数据行的**首格整格一个裸词**（去加粗/反引号后须匹配 `_BARE_CELL`；**空首格**与
+    中文说明文字都不算）。④ 分两半补：连写/多值那半由第二轮复核 c13 实测后补，**空首格**
+    那半由第三轮复核 N4 实测后补 —— 两半都是「此前静默放过」。
+    """
+    ls = [l.strip() for l in text.splitlines()]
+    b = [i for i, l in enumerate(ls) if l == _DECL_BEGIN]
+    e = [i for i, l in enumerate(ls) if l == _DECL_END]
+    if len(b) != 1 or len(e) != 1:
+        raise _DeclError(f"标记须各恰 1 处（begin={len(b)}，end={len(e)}）")
+    if e[0] < b[0]:
+        raise _DeclError("标记顺序颠倒（end 在 begin 之前）")
+    body = [l for l in ls[b[0] + 1:e[0]] if l.startswith("|")]
+    if len(body) < 3:
+        raise _DeclError(f"块内表格行 {len(body)} 行（需 表头 + 分隔 + ≥1 数据行）")
+    sep = body[1].strip().strip("|").split("|")
+    if not sep or not all(_SEP_CELL.match(c.strip()) for c in sep):
+        raise _DeclError("块内第 2 行不是表格分隔行")
+    vals = set()
+    for r in body[2:]:
+        cells = r.strip().strip("|").split("|")
+        whole = _norm_cell_full(cells[0]) if cells else ""
+        # ⚠️ 首格必须**整格一个裸词**。块内写成 `**chat** / **image**`、`**chat**（说明）`、
+        # `chat,code` 这类连写/多值/带后缀时，`_norm_cell` 只在空白处截断 → 只读回 `chat`，
+        # 多出来的取值**静默消失**（独立复核 c13 实测：块内声明 `image` 却不被罚）。
+        # 块是本判据的机器接口、格式自定，故这类写法按「块形不合法」FAIL，而不是漏判。
+        # ⚠️ **不跳过空首格**（第三轮独立复核 N4）：此前写成 `if whole and …`，于是空首格行
+        # （如 `|  | **image** |`）被静默放过；空首格不是裸词，同样按块形不合法 FAIL。
+        if not _BARE_CELL.fullmatch(whole):
+            raise _DeclError(
+                f"块内首格 {whole!r} 不是「整格一个裸词」—— 每个取值须单独占首格，"
+                "说明文字放第 2 格；连写/多值会让解析器只读到首个 token 而静默漏判")
+        t = _norm_cell(cells[0]) if cells else ""
+        if t:
+            vals.add(t)
+    if not vals:
+        raise _DeclError("块内未解析到任何取值")
+    return vals
+
+
+def _scan_one_table(rows: list, expected: set, tag: str) -> list[str]:
+    """单张表：找「主类列」，回报其中的可疑裸词。`rows` = [(行号, 行文本), …]。
+
+    两条并列判据 —— 都**只看真表头行**或**按列占比**，刻意不认「任意一行里出现主类」：
+    那正是前四轮的哑雷（§10 描述射程的那一行格内含 `| 主类 |`，切分后产生恰为 `主类`
+    的碎片格，于是**数据行被当成表头**，列号=1）。
+      ① 真表头（第 1 行）前 3 格里有格恰为「主类」→ 该格即主类列（覆盖"块外新写一张主类表"）；
+      ② 否则按**列**判：某列裸词 ≥3 个且其中属于本枚举者过半 → 认该列为疑似列。
+         ⚠️ 阈值取「≥3 且过半数」而非「≥2」是**实测调出来的**：§4 输出字段表的类型列恰有
+         `chat`（Choice 类型）与 `number` 两个裸词 → ≥2 时会假警；≥3 后该列只剩 2 个裸词，静默。
+    ⚠️ **前置闸门：只判「行列整齐」的表**（各行列数一致）。实测依据：`self-judge.md` §4 字段表
+    用 `\\|` 转义把类型写成 `\\`chat\\` \\| \\`code\\` \\| \\`content\\`` → 该行 6 格、别行 4 格、
+    末行 7 格；按列取格必然错位（实测假警 `第4列 'Noul'` —— 其实是把类型行的 `content`
+    当成了说明列的取值）。列数不齐 → 整表跳过：**宁漏不误**（启发式只提示，漏了也只是少一条线索）。
+     ⚠️ **已声明盲区（三条，均实测）**：
+       ① **斜杠连写式重述**（整格 `chat / code / content`）不是裸词 → 不判（`assets/` 里正是这么写的）；
+          token 化拆格试过，在真文档上**成片误报**（`Bug`／`secondary`／`ambiguity`／`true`／`LLM`／
+          `fail-closed`／日期串……，处数随扫描面变动、不可复现为定值）→ 按**宁漏不误**退回。
+       ② 行列不齐的表整表跳过（上一段）。
+       ③ **紧跟另一张表（中间不留空行）时会被并成一张表** → 真表头成了前一张表的表头、
+          列占比不过半 → **静默**。故块外新写主类表请**与前一张表空一行**。
+    """
+    if len(rows) < 2:
+        return []
+    numbered = [(no, s.strip().strip("|").split("|")) for no, s in rows]
+    if len({len(c) for _n, c in numbered}) != 1:
+        return []
+    width = min(len(c) for _n, c in numbered)
+    if width < 1:
+        return []
+    cat_cols = {j for j, c in enumerate(numbered[0][1][:3]) if _norm_cell(c) == "主类"}
+    body = numbered[1:]
+    if body and body[0][1] and all(_SEP_CELL.match(c.strip()) for c in body[0][1]):
+        body = body[1:]                      # 跳分隔行
+    if not body:
+        return []
+    hits: list[str] = []
+    for j in range(width):
+        pairs = [(no, _norm_cell(c[j])) for no, c in body if j < len(c)]
+        bare = [(n, b) for n, b in pairs if _BARE_CELL.match(b) and b != "主类"]
+        if j not in cat_cols:
+            if len(bare) < 3:
+                continue
+            if sum(1 for _n, b in bare if b in expected) / len(bare) < 0.5:
+                continue
+        for n, b in bare:
+            if b not in expected:
+                hits.append(f"{tag}:{n} 第{j + 1}列 '{b}'")
+    return hits
+
+
+def _scan_category_tables(text: str, expected: set, tag: str) -> list[str]:
+    """启发式：源规格面内"看着像主类清单"的表，其可疑裸词（**只用于 WARN**）。
+
+    用**按列占比**而不是"表头文字"：后者正是前四轮踩的坑（表头缩进／加粗／带序号列／
+    带括号后缀／写在第四格……每修一种就冒出下一种）。占比判据**不依赖表头怎么写**，
+    故对同一批夹具的实际检出**强于**被判为"已加固"的旧解析器。
+    """
+    out: list[str] = []
+    rows: list = []
+    for no, ln in enumerate(text.splitlines(), 1):
+        s = ln.strip()
+        if s.startswith("|") and s.endswith("|") and len(s) > 1:
+            rows.append((no, s))
+            continue
+        out += _scan_one_table(rows, expected, tag)
+        rows = []
+    out += _scan_one_table(rows, expected, tag)
+    return out
+
+
+def _check_category_decl(skill_dir: Path) -> None:
+    """入口判定主类：① 声明块（确定性 → FAIL）② 疑似列扫描（启发式 → WARN）。
+
+    阴性对照（验收用，**判据换了必须重做夹具** —— 旧的"表头/绕过"夹具对本案无效）：
+      (a) 块内 `code` → `codex`，或 `**chat**` → `**Chat**`（大小写）→ 必须 FAIL；
+      (b) 块内**新增一行** `| **image** | … |` → 必须 FAIL 且文案含 `image`；
+      (c) 删掉 `end` 标记（或让标记出现两次）→ 必须 FAIL（"读不到块"不得静默降级为绿）；
+      (d) **块外**（如 `SKILL.md`）新插一张含 `image` 的主类表 → 确定性项**必须仍绿**、
+          启发式项**必须出 WARN** —— 这是"两半各司其职"的证明，**别再宣称块外能 FAIL**；
+      (e) 块内无取值 / 第 2 行不是分隔行 → 必须 FAIL（块形是本判据的机器接口）；
+      (f) 块内**首格连写/多值**（`| **chat** / **image** |`）→ 必须 FAIL（"块形不合法"）；
+      (g) 块内**首格为空**（`|  | **image** |`）→ 必须 FAIL（空首格不是裸词）。
+          这是**本轮补的**：此前该写法只被 `_norm_cell` 读到 `chat`、第二个取值静默丢失
+          （独立复核 c13 实测）。**阴性对照**：撤掉 `_p_category_decl` 的裸词约束，(f) 必须
+          转绿 —— 否则说明该夹具空转。
+    """
+    label = "口径守卫：入口判定主类"
+    item_scan = "口径守卫：入口判定主类扫描（启发式·WARN）"
+    want = set(VALID_CATEGORY)
+    texts: list[tuple[str, str]] = []
+    for p in _resolve_sources(skill_dir, CATEGORY_SOURCES):
+        try:
+            if p.exists():
+                texts.append((p.name, p.read_text(encoding="utf-8")))
+        except OSError:
+            pass
+    if not texts:
+        fail(label, "源集合一个文件都读不到（守卫读不到规则 = 没有规则）")
+        return
+    per = []
+    for name, t in texts:
+        ls = [l.strip() for l in t.splitlines()]
+        per.append((name, ls.count(_DECL_BEGIN), ls.count(_DECL_END)))
+    nb = sum(x[1] for x in per)
+    ne = sum(x[2] for x in per)
+    if nb != 1 or ne != 1:
+        where = "、".join(f"{n}(begin {b}/end {e})" for n, b, e in per if b or e) or "无"
+        fail(label, f"声明块标记须在**源规格面内各恰 1 处**（源规格＝`CATEGORY_SOURCES`，不递归）：实测 begin={nb}、end={ne}｜出现处：{where}"
+                    "｜（第二处声明应改成「引用」：用反引号把标记包起来，不要让它单独成行）")
+    else:
+        holder = next(n for n, b, _e in per if b)
+        src = next(t for n, t in texts if n == holder)
+        try:
+            got = _p_category_decl(src)
+        except _DeclError as exc:
+            fail(label, f"声明块解析失败：{exc}｜块形是本判据的机器接口，改块形须同步改判据")
+        else:
+            if got != want:
+                fail(label, f"声明块（{holder}）取值得 {sorted(got)} ≠ 代码常量 {sorted(want)}"
+                            "（同一物理量两处不同源 —— 要么统一，要么显式声明二者关系）")
+            else:
+                ok(label, f"声明块（{holder}，源规格面内须恰 1 处）↔ 代码常量 "
+                          f"{'/'.join(sorted(want))}（{len(want)} 项一致）")
+    hits: list[str] = []
+    for name, t in texts:
+        hits += _scan_category_tables(t, want, name)
+    if hits:
+        warn(item_scan, f"疑似未登记的取值 {len(hits)} 处 —— **只提示不阻断**，请人审："
+                        + "；".join(hits[:8]) + ("…" if len(hits) > 8 else ""))
+    else:
+        ok(item_scan, f"源集合 {len(texts)} 个文件未见「主类疑似列」含未登记取值"
+                      "（启发式按列裸词占比判定，会漏会误，**不作门禁**）")
+
+
+
+
 PARITY_ITEMS = (
     ("模型档位", "references/routing-guide.md", _p_tiers, VALID_MODEL_TIERS),
     ("步骤状态", "assets/plan-template.yaml", _p_status, VALID_STATUS),
     ("能力类", "references/capability-routing.md", _p_caps, VALID_CAPABILITY),
     ("重规划触发", "references/adaptive-planning.md", _p_triggers, VALID_TRIGGER),
     ("熔断状态", "SKILL.md", _p_fuse, VALID_FUSE),
+    ("反思触发", "references/reflection-retry.md", _p_reflect_trigger, VALID_REFLECT_TRIGGER),
+    ("终止策略", "references/reflection-retry.md", _p_reflect_term, VALID_TERMINATION),
+    # ⚠️「入口判定主类」**不在本表内**（v4.2.0 第五轮换口径后由 `_check_category_decl` 单独判）：
+    # 本表的模型是「若干源 → 一个解析器 → 一个集合」，多源时取并集比对；而主类那项需要
+    # **跨文件的唯一性判定（源规格面内）**（声明块须恰一处），并集模型表达不了它 ——
+    # 两个文件各写一份相同集合时并集仍然相等，于是「重复声明」这一错法会漏判。
 )
 
 
@@ -1121,29 +1454,48 @@ def _check_parity(skill_dir: Path) -> None:
     + 配守卫测试"的落地；该条自 v3.3.0 起已扩展到全流程适用）。
 
     解析不到即 FAIL：**守着一条读不到的规则等于没有规则**，且"读不到"必须显式，不能静默降级成 OK。
-    阴性对照（验收用）：把 `routing-guide.md` 的 `cheap` 改成 `cheapx` → 本判据必须变红。
+    阴性对照（验收用）：`routing-guide.md` 的 `cheap` → `cheapx` → 第 1 项必须红（路径未被改坏）。
+    ⚠️ 主类那项的阴性对照已随第五轮换口径**搬到 `_check_category_decl` 的 docstring** ——
+    **判据换了，夹具必须重做**：夹具与被测判据同生共死，沿用旧夹具的阳性对照会静默退化成空转。
     """
     cache: dict[Path, str] = {}
-    for label, rel, parser, expected in PARITY_ITEMS:
-        p = skill_dir / rel
-        if p not in cache:
-            try:
-                cache[p] = p.read_text(encoding="utf-8") if p.exists() else ""
-            except OSError:
-                cache[p] = ""
-        text = cache[p]
-        if not text:
-            fail(f"口径守卫：{label}", f"源文件缺失或读不到：{rel}（守卫读不到规则 = 没有规则）")
-            continue
-        got = parser(text)
+    for label, spec, parser, expected in PARITY_ITEMS:
+        paths = _resolve_sources(skill_dir, spec)
+        label_src = spec if isinstance(spec, str) else " + ".join(spec)
+        is_single = isinstance(spec, str) and not any(ch in spec for ch in "*?[")
         want = set(expected)
+        got: set = set()
+        missing: list[str] = []
+        for p in paths:
+            if p not in cache:
+                try:
+                    cache[p] = p.read_text(encoding="utf-8") if p.exists() else ""
+                except OSError:
+                    cache[p] = ""
+            text = cache[p]
+            if not text:
+                try:
+                    missing.append(p.relative_to(skill_dir).as_posix())
+                except ValueError:
+                    missing.append(str(p))
+            else:
+                got |= parser(text)
+        if is_single and missing:
+            fail(f"口径守卫：{label}", f"源文件缺失或读不到：{label_src}（守卫读不到规则 = 没有规则）")
+            continue
+        if not paths or len(missing) == len(paths):
+            fail(f"口径守卫：{label}", f"源全部缺失或读不到：{label_src}（守卫读不到规则 = 没有规则）")
+            continue
+        got_s = "/".join(sorted(got))
+        want_s = "/".join(sorted(want))
         if not got:
-            fail(f"口径守卫：{label}", f"在 {rel} 中解析不到取值定义（格式可能已变；守卫读不到规则 = 没有规则）")
+            fail(f"口径守卫：{label}", f"在 {label_src} 中解析不到取值定义（格式可能已变；守卫读不到规则 = 没有规则）")
         elif got != want:
-            fail(f"口径守卫：{label}", f"{rel} 解析得 {'/'.join(sorted(got))} ≠ 代码常量 {'/'.join(sorted(want))}"
+            fail(f"口径守卫：{label}", f"{label_src} 解析得 {got_s} ≠ 代码常量 {want_s}"
                                       f"（同一物理量两处不同源 —— 要么统一，要么显式声明二者关系）")
         else:
-            ok(f"口径守卫：{label}", f"{rel} ↔ {'/'.join(sorted(want))}（{len(want)} 项一致）")
+            scope = f"{label_src}（读得 {len(paths) - len(missing)} 个文件，取并集）" if len(paths) > 1 else label_src
+            ok(f"口径守卫：{label}", f"{scope} ↔ {want_s}（{len(want)} 项一致）")
 
 
 # ── 阶段 2 / 4 最低成本门禁（v3.5.0 / P2-2）───────────────────────────────────
@@ -1290,6 +1642,142 @@ def _check_user_release(meta: dict) -> None:
 
 
 # --------------------------------------------------------------------------- #
+# --------------------------------------------------------------------------- #
+# v4.2.0：self-judge 入口判定校验（可选字段，缺省即 WARN —— 向后兼容旧 plan）
+# --------------------------------------------------------------------------- #
+ENTRY_KEY = "入口判定"
+ENTRY_REQUIRED = ("category", "distribution", "confidence", "dimensions", "ambiguity", "route_hint")
+ENTRY_DIMS = ("D1", "D2", "D3", "D4", "D5")
+
+
+def _check_entry_verdict(meta: dict) -> None:
+    """v4.2.0：meta.入口判定 —— **可选字段，填了就必须合法**。
+
+    口径与 `_check_user_release` / `_check_reflection_retry` 同源：
+      * 整段缺省 → **WARN**（向后兼容旧 plan，**不追认历史计划** ——
+        不拿新判据改写旧证据）
+      * 非映射 / 缺必填项 / 取值越界 → **FAIL**
+
+    ⚠️ **它不是门禁**：`confidence` 由模型自填，**校准无法被机器证明**。
+    本函数只做"结构合法"这一层；"类别选对了没"不在此判据射程内
+    （类型合法 ≠ 判断正确）。依据与原文见 references/self-judge.md §10。
+    """
+    v = meta.get(ENTRY_KEY, None)
+    if not v:
+        warn("meta.入口判定",
+             "未记录 —— 阶段 0 第 1 步（self-judge）本应产出。**只提示不阻断**："
+             "向后兼容旧 plan，不追认历史计划；本项**不是门禁**（校准无法机器强制）")
+        return
+    if not isinstance(v, dict):
+        fail("meta.入口判定 合法", f"应为映射，实际 {type(v).__name__}")
+        return
+    bad = []
+    for k in ENTRY_REQUIRED:
+        if k not in v or (not isinstance(v[k], (int, float, bool)) and not v[k]):
+            bad.append(f"缺『{k}』或为空")
+    cat = str(v.get("category", "") or "").strip()
+    if cat and cat not in VALID_CATEGORY:
+        bad.append(f"category=『{cat}』（只允许 {'/'.join(VALID_CATEGORY)}）")
+    conf = v.get("confidence", None)
+    if conf is not None:
+        if isinstance(conf, bool) or not isinstance(conf, (int, float)):
+            bad.append(f"confidence={conf!r}（须为 0–1 的数）")
+        elif not 0.0 <= float(conf) <= 1.0:
+            bad.append(f"confidence={conf!r}（越界，须在 0–1）")
+    amb = v.get("ambiguity", None)
+    if amb is not None and not isinstance(amb, bool):
+        bad.append(f"ambiguity={amb!r}（须为 bool）")
+    dist = v.get("distribution", None)
+    if isinstance(dist, dict):
+        if set(dist) != set(VALID_CATEGORY):
+            bad.append(f"distribution 键={sorted(dist)}（须恰为 {sorted(VALID_CATEGORY)}）")
+        else:
+            nums = [float(x) for x in dist.values()
+                    if isinstance(x, (int, float)) and not isinstance(x, bool)]
+            if len(nums) != len(VALID_CATEGORY):
+                bad.append("distribution 含非数值项")
+            elif abs(sum(nums) - 1.0) > 1e-6:
+                bad.append(f"distribution 之和={sum(nums):.4f}（须为 1）")
+    elif dist is not None:
+        bad.append(f"distribution 应为映射，实际 {type(dist).__name__}")
+    dims = v.get("dimensions", None)
+    if isinstance(dims, dict):
+        miss_d = [d for d in ENTRY_DIMS if d not in dims]
+        if miss_d:
+            bad.append(f"dimensions 缺 {'/'.join(miss_d)}")
+    elif dims is not None:
+        bad.append(f"dimensions 应为映射，实际 {type(dims).__name__}")
+    sec = v.get("secondary", None)
+    if sec not in (None, "") and str(sec).strip() not in VALID_CATEGORY:
+        bad.append(f"secondary=『{sec}』（留空或在 {'/'.join(VALID_CATEGORY)} 内）")
+    if bad:
+        fail("meta.入口判定 合法", "；".join(bad[:3]))
+    else:
+        ok("meta.入口判定 合法", f"category={cat}（**留痕，非门禁**；结构合法不代表判对）")
+
+
+# --------------------------------------------------------------------------- #
+# v4.1.0：反思重试配置校验（可选块，缺省即 SKIP —— 向后兼容旧 plan）
+# --------------------------------------------------------------------------- #
+def _validate_reflect_block(block: dict, where: str) -> list:
+    """校验一个反思重试配置块（meta 级或步骤级覆盖），返回问题字符串列表（空 = 合法）。"""
+    if not isinstance(block, dict):
+        return [f"{where}：应为映射，实际 {type(block).__name__}"]
+    bad = []
+    # 最大重试次数：可选；填了必须整数 ≥1（bool 是 int 子类，显式排除）
+    mv = block.get("最大重试次数", None)
+    if mv is not None:
+        if isinstance(mv, bool) or not isinstance(mv, int) or mv < 1:
+            bad.append(f"{where}：「最大重试次数」={mv!r}（必须为整数 ≥1）")
+    # 触发条件：可选；填了必须是 T1-T3 的非空子集
+    tc = block.get("触发条件", None)
+    if tc is not None:
+        if not isinstance(tc, list) or not tc:
+            bad.append(f"{where}：「触发条件」必须为非空列表（取值 {'/'.join(VALID_REFLECT_TRIGGER)}）")
+        else:
+            bad_t = [str(x) for x in tc if x not in VALID_REFLECT_TRIGGER]
+            if bad_t:
+                bad.append(f"{where}：「触发条件」含非法值 {bad_t}（只允许 {'/'.join(VALID_REFLECT_TRIGGER)}）")
+    # 终止策略：可选；填了必须在枚举内
+    term = block.get("终止策略", None)
+    if term is not None and term not in VALID_TERMINATION:
+        bad.append(f"{where}：「终止策略」=『{term}』（只允许 {'/'.join(VALID_TERMINATION)}）")
+    return bad
+
+
+def _check_reflection_retry(meta: dict, steps: list) -> None:
+    """v4.1.0：反思重试配置 —— **可选块，整段缺省即 SKIP（向后兼容）**。
+
+    口径沿用「可选字段、填了就不能糊弄」：整段（meta + 步骤级覆盖均）缺省＝关闭自动重试，
+    旧 plan 不受影响；一旦 meta 或某步骤填了，就校验结构合法（最大重试次数整数 ≥1 /
+    触发条件为 T1-T3 子集 / 终止策略在枚举内）。**语义**（"重试是否真的改了什么"）无法
+    机器判定，靠抽查。
+    """
+    cfg = meta.get("反思重试配置", None)
+    bad = []
+    if cfg:
+        bad += _validate_reflect_block(cfg, "meta.反思重试配置")
+    # 步骤级覆盖：模板口径「不写则用 meta，写了只对本步生效」—— 即便 meta 无配置，
+    # 单步也可独立声明自己的重试策略，故同样校验（不依赖 meta 是否存在）。
+    step_overrides = []
+    for s in steps:
+        if not isinstance(s, dict):
+            continue
+        ov = s.get("反思重试", None)
+        if ov:
+            step_overrides.append((s.get("id", "?"), ov))
+    if not cfg and not step_overrides:
+        skip("meta.反思重试配置", "未配置（含步骤级覆盖）—— 旧 plan 或显式关闭自动重试（不影响判定）")
+        return
+    for sid, ov in step_overrides:
+        bad += _validate_reflect_block(ov, f"步骤 {sid}.反思重试")
+    if bad:
+        fail("meta.反思重试配置 合法", "；".join(bad[:3]))
+    else:
+        ok("meta.反思重试配置 合法", "配置结构合法（语义靠抽查，非门禁）")
+
+
+# --------------------------------------------------------------------------- #
 # v4.0.0 / U3 + U8：执行 trace 与任务级指标（共用 jsonl 追加设施）
 # --------------------------------------------------------------------------- #
 def _jsonl_append(path: Path, rec: dict) -> None:
@@ -1304,12 +1792,16 @@ def _task_dir(plan_path: Path) -> Path:
 
 
 def cmd_trace(plan_path: Path, step: str | None, action: str, command: str,
-              result: str, elapsed: float | None, replay: bool) -> int:
+              result: str, elapsed: float | None, replay: bool,
+              note: str = "", attempt: int | None = None) -> int:
     """U3：执行 trace —— `plan.yaml` 记的是**离散状态点**（做到哪/为什么引入/为什么变了），
     不含时序；trace 补上时序，让阶段 6 的复盘四问从"回忆"变"查账"。
 
     ⚠️ **约定：`trace.jsonl` 不进 `交付物` 字段** —— 它是留痕不是交付物。
     若写进交付物，`_is_file_like()` 会命中 `.jsonl` 并按存在性判定，把留痕误当产物。
+
+    v4.1.0：新增 `--note` / `--attempt` —— 用于结构化记录「反思重试」（action=retry 时
+    填根因·调整摘要与第几轮重试），与其它 trace 行同构、可 `--replay` 回放。
     """
     tf = _task_dir(plan_path) / "trace.jsonl"
     if replay:
@@ -1330,13 +1822,24 @@ def cmd_trace(plan_path: Path, step: str | None, action: str, command: str,
            "action": action or "", "cmd": command or "", "result": result or ""}
     if elapsed is not None:
         rec["elapsed_s"] = elapsed
+    if note:
+        rec["note"] = note
+    if attempt is not None:
+        rec["attempt"] = attempt
     _jsonl_append(tf, rec)
     print("[OK] trace 已追加 —— %s（step=%s）" % (tf, step))
     return 0
 
 
 def cmd_metrics(plan_path: Path, finalize: bool) -> int:
-    """U8：任务级指标沉淀 —— 收尾时把本任务的指标追加进工作区级 `tasks/_metrics.jsonl`。
+    """U8：任务级指标沉淀 —— 收尾时把本任务指标追加进**本任务目录**的 `_metrics.jsonl`
+    （即 `tasks/<任务>/_metrics.jsonl`）。
+
+    ⚠️ **路径口径修正（v4.3.0）**：此前 docstring 与 `SKILL.md` 都写作"工作区级
+    `tasks/_metrics.jsonl`"，但代码一直是 `_task_dir(pp) / "_metrics.jsonl"` —— 落点是**任务
+    目录内**。实测工作区：`tasks/*/_metrics.jsonl` 有 1 个、`tasks/_metrics.jsonl` 为 0 个，
+    证明实际行为与文档不符。按「同一物理量两处即为不符合」（技能库卫生第 4 条）**改文档对齐
+    代码**，而不是改代码去迁就文档 —— 因为按任务分文件才能让归档随任务一起移动。
 
     目的：此前**没有任何任务级统计**（返修轮次、熔断频次、门禁 FAIL 率、步骤耗时全无），
     技能自身演进缺数据依据。
@@ -1371,6 +1874,289 @@ def cmd_metrics(plan_path: Path, finalize: bool) -> int:
     print("[OK] 指标已追加 —— %s" % tf)
     print("    " + json.dumps(rec, ensure_ascii=False)[:220])
     return 0
+
+
+# ── v4.3.0 / E′：步骤闭环不变量（E「步骤闭环」+ M-1′「零沉淀须显式登记」合并）────────
+# 为什么必须合并：两条都落在 check_plan、都管「完成态该留下什么」。分开做会出现两个判据互相
+# 打架（一个说"有 trace 就算闭环"，另一个说"得有沉淀登记"），故合成一条链式判定。
+#
+# ⚠️ **WARN/FAIL 的分级是实测出来的，不是拍脑袋定的**（2026-09-21 上线前影响面实测）：
+#   工作区 21 个已完成任务 **全部** 无 trace.jsonl、132 个完成步骤零时序留痕。若直接按 FAIL
+#   上线，等于把**全部历史库存判红** —— 那不是发现缺陷，是制造噪音，而噪音的必然结局是判据
+#   被整体绕过（v3.5.0 已有此教训）。故分三级：
+#     · 无 trace.jsonl（或空文件）      → WARN：提示里给可执行的补救命令
+#     · 有 trace 但完成步骤漏记         → FAIL：该任务**已启用** trace 却漏记，是确定的不一致
+#     · 零沉淀且未显式写明「无沉淀」理由 → WARN：对齐方案 §4.4（首版不稳的检查先落 WARN）
+#   升级时机：当新任务普遍启用 trace（metrics 里有据可查）后，第一档可整体升 FAIL。
+#   Sediment（沉淀）的判定口径见下。另注：`PLAN_STEP_REQUIRED` **已包含「验证方式」**，所以 E
+#   原本提的"完成态须有验证方式"这一块钱，已由既有「步骤 N 必填字段」判据覆盖，**此处不重复
+#   判** —— 重复判不会更严，只会让同一缺陷在输出里出现两次，稀释每条 WARN 的可读性。
+SEDIMENT_TOKENS = ("沉淀", "复盘", "sediment", "metrics")
+_TRACE_HINT = ("补救：每步执行后 `checks.py trace <plan> --step <id> --action <摘要>`；"
+               "收尾 `checks.py metrics <plan> --finalize`")
+
+
+def _read_trace(path: Path) -> tuple[set[str], list[str]]:
+    """读 trace.jsonl → (已记录的 step id 集合, action 列表)。坏行跳过，不算致命错误。"""
+    ids: set[str] = set()
+    actions: list[str] = []
+    try:
+        text = path.read_text(encoding="utf-8-sig")
+    except OSError:
+        return ids, actions
+    for ln in text.splitlines():
+        ln = ln.strip()
+        if not ln:
+            continue
+        try:
+            rec = json.loads(ln)
+        except ValueError:
+            continue
+        if isinstance(rec, dict):
+            if rec.get("step") is not None:
+                ids.add(str(rec.get("step")))
+            actions.append(str(rec.get("action", "") or ""))
+    return ids, actions
+
+
+def _check_closure(steps: list[dict], plan_path: Path, meta: dict) -> None:
+    """E′：完成态 = 状态 + trace + 沉淀登记（验证方式由 PLAN_STEP_REQUIRED 覆盖）。"""
+    done = [s for s in steps if str(s.get("状态", "")).strip() == "完成"]
+    if not done:
+        skip("步骤闭环不变量", "无已完成步骤")
+        return
+
+    trace_path = _task_dir(plan_path) / "trace.jsonl"
+    if not trace_path.exists():
+        warn("步骤闭环不变量（trace 自证）",
+             f"{len(done)}/{len(steps)} 步已完成但无 trace.jsonl —— 复盘只能靠回忆，"
+             f"且本次是否沉淀无法自证。{_TRACE_HINT}")
+        return
+
+    ids, actions = _read_trace(trace_path)
+    if not actions:
+        warn("步骤闭环不变量（trace 自证）", f"trace.jsonl 存在但 0 条记录。{_TRACE_HINT}")
+        return
+
+    miss = [str(s.get("id", "?")) for s in done if str(s.get("id", "?")) not in ids]
+    if miss:
+        fail("步骤闭环不变量（trace 自证）",
+             f"本任务已启用 trace，但 {len(miss)} 个完成步骤无记录：{','.join(miss[:10])}"
+             f"{'…' if len(miss) > 10 else ''}。{_TRACE_HINT}")
+    else:
+        ok("步骤闭环不变量（trace 自证）", f"{len(done)} 个完成步骤均有 trace 记录")
+
+    # M-1′：零沉淀须**显式登记**。hermes 原文：a pass that does nothing is a missed
+    # learning opportunity, **not a neutral outcome** —— 空转通过等于漏掉一次学习。
+    noted = str(meta.get("复盘沉淀", "") or "").strip()
+    learned = any(any(tok in a for tok in SEDIMENT_TOKENS) for a in actions)
+    if noted or learned:
+        pieces = []
+        if noted:
+            pieces.append("meta.复盘沉淀 已登记")
+        if learned:
+            pieces.append("trace 含沉淀/复盘动作")
+        ok("复盘沉淀登记", "；".join(pieces))
+    else:
+        warn("复盘沉淀登记",
+             "本次未登记任何沉淀（既无 meta.复盘沉淀，trace 中亦无沉淀/复盘动作）。"
+             "若确无可沉淀内容，须**显式写明**『无沉淀：理由』后重跑；"
+             "什么都不做的一次 pass 是漏掉的学习机会，不是中性结果。")
+
+
+# ── v4.3.0 / B：平台门控 vs 真实 import ────────────────────────────────────────
+# 判的是「**用了单平台能力，却在 frontmatter 宣称跨平台**」这一自相矛盾，**不判**"这个类库
+# 装没装"（后者与平台无关，装不上会在运行时炸，轮不到这里管）。
+#
+# 用 **AST 而非正则**：正则会把注释里、字符串里的同名文本也算命中。本机最典型的一课是
+# `checks.py:755/787` 与 `verify_push.py:254` 三处 `"/tmp/" in rel` —— 那是**跳过临时目录的
+# 路径过滤器**，与平台无关；按字面量判定会 100% 假红自身。故两条纪律：
+#   ① 只认 AST 里的真实 import 与属性调用；② **不把 `/tmp` 字面量视作平台信号**。
+#   这是**收窄判据**而不是放水：真正的单平台能力（`fcntl`/`termios`/`os.fork`/`winreg`…）一条未放过。
+PLAT_MODULES = {
+    "fcntl": "POSIX", "termios": "POSIX", "pty": "POSIX", "pwd": "POSIX", "grp": "POSIX",
+    "syslog": "POSIX", "resource": "POSIX", "readline": "POSIX", "crypt": "POSIX",
+    "msvcrt": "Windows", "winreg": "Windows", "_winreg": "Windows", "winsound": "Windows",
+    "win32api": "Windows", "win32con": "Windows", "pywin32": "Windows", "pythoncom": "Windows",
+}
+# 模块本身跨平台，但某些成员不是（写成 "模块.成员"）
+PLAT_ATTRS = {
+    "os.setsid": "POSIX", "os.fork": "POSIX", "os.forkpty": "POSIX", "os.openpty": "POSIX",
+    "os.killpg": "POSIX", "os.waitpid": "POSIX", "os.wait": "POSIX", "os.getpgid": "POSIX",
+    "os.setpgid": "POSIX", "os.getuid": "POSIX", "os.getgid": "POSIX", "os.setuid": "POSIX",
+    "os.mkfifo": "POSIX", "os.mknod": "POSIX", "os.execv": "POSIX", "os.execve": "POSIX",
+    "os.nice": "POSIX", "signal.SIGKILL": "POSIX", "signal.SIGCHLD": "POSIX", "signal.SIGQUIT": "POSIX",
+    "ctypes.windll": "Windows", "ctypes.WinDLL": "Windows", "ctypes.OleDLL": "Windows",
+    "ctypes.wintypes": "Windows",
+}
+PLAT_ABS_PATHS = ("/usr/bin/", "/usr/local/", "/var/run/", "/etc/", "/bin/", "/proc/")  # platform-check:allow（本判据自身的规则表，不是真实路径依赖）
+# 行内豁免：命中的行里若出现本标记，则不计入 FAIL、改计入「豁免」并单独列出。
+# 唯一合法用途与 outbound_scan.py 的 `outbound-scan:allow` 完全同源 —— ① 判据自身的规则表；
+# ② 文档中示范该格式的行。**收窄判据，而不是把文档改得躲开门禁**。
+# ⚠️ 本判据首次上线时**第一个命中的就是它自己的规则表**（checks.py 的 PLAT_ABS_PATHS），
+#    与 v3.5.0「新门禁第一次拦住的通常是引入它的那次改动」是同一现象。
+PLAT_ALLOW_TOKEN = "platform-check:allow"
+
+
+def _attr_chain(node: ast.AST) -> str:
+    """把 `a.b.c` 的属性链还原成字符串；非纯 Name/Attribute 链返回空串。"""
+    parts = []
+    cur = node
+    while isinstance(cur, ast.Attribute):
+        parts.append(cur.attr)
+        cur = cur.value
+    if isinstance(cur, ast.Name):
+        parts.append(cur.id)
+        return ".".join(reversed(parts))
+    return ""
+
+
+class _PlatVisitor(ast.NodeVisitor):
+    """收集单平台依赖。只记录确定命中的形态，宁可不报也不误报。"""
+
+    def __init__(self) -> None:
+        self.hits: list[tuple[str, str, str, int]] = []  # (类别, 名称, 平台, 行号)
+        self.aliases: dict[str, str] = {}
+
+    def visit_Import(self, node: ast.Import) -> None:
+        for al in node.names:
+            top = al.name.split(".")[0]
+            if top in PLAT_MODULES:
+                self.hits.append(("模块", al.name, PLAT_MODULES[top], node.lineno))
+            self.aliases[al.asname or top] = top
+        self.generic_visit(node)
+
+    def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
+        top = (node.module or "").split(".")[0]
+        if top in PLAT_MODULES:
+            self.hits.append(("模块", node.module or "", PLAT_MODULES[top], node.lineno))
+        for al in node.names:
+            self.aliases[al.asname or al.name] = f"{top}.{al.name}"
+        self.generic_visit(node)
+
+    def visit_Attribute(self, node: ast.Attribute) -> None:
+        chain = _attr_chain(node)
+        if chain:
+            top = chain.split(".")[0]
+            full = self.aliases.get(top, top) + chain[len(top):]
+            plat = PLAT_ATTRS.get(full)
+            if plat:
+                self.hits.append(("成员", full, plat, node.lineno))
+        self.generic_visit(node)
+
+    def visit_Constant(self, node: ast.Constant) -> None:
+        if isinstance(node.value, str):
+            for pref in PLAT_ABS_PATHS:
+                if node.value.startswith(pref):
+                    self.hits.append(("绝对路径", node.value[:40], "POSIX", node.lineno))
+                    break
+        self.generic_visit(node)
+
+
+def _check_platform(skill_dir: Path) -> None:
+    """B：脚本用了单平台能力 vs frontmatter 是否声明 `platforms:`。"""
+    skill_md = skill_dir / "SKILL.md"
+    head = _frontmatter(skill_md.read_text(encoding="utf-8")) if skill_md.exists() else ""
+    declared = bool(re.search(r"^\s*platforms\s*[:\-]", head, re.M))
+
+    hits: list[tuple[str, str, str, str, int]] = []  # (文件, 类别, 名称, 平台, 行号)
+    allowed: list[str] = []
+    for py in sorted((skill_dir / "scripts").glob("*.py")):
+        try:
+            src = py.read_text(encoding="utf-8", errors="ignore")
+            tree = ast.parse(src, filename=str(py))
+        except (SyntaxError, ValueError, OSError):
+            continue  # 语法不合法由「py_compile」判据负责，这里不重复报错
+        lines = src.splitlines()
+        v = _PlatVisitor()
+        v.visit(tree)
+        for cat, name, plat, ln in v.hits:
+            if 0 < ln <= len(lines) and PLAT_ALLOW_TOKEN in lines[ln - 1]:
+                allowed.append(f"{py.name}:{name}@{ln}")
+                continue
+            hits.append((py.name, cat, name, plat, ln))
+
+    if allowed:
+        # 豁免不是逃生门 —— 它必须被**看见**（列出文件名与行号），否则就成了"悄悄地放行"。
+        ok("平台门控：行内豁免", f"{len(allowed)} 处（{'; '.join(allowed[:5])}"
+                                f"{'…' if len(allowed) > 5 else ''}）—— 合法用途仅限判据自身规则表与文档示范")
+
+    if not hits:
+        ok("平台门控 vs 真实 import", "scripts/*.py 无单平台 API 依赖（AST 口径）")
+        return
+
+    detail = "；".join(f"{f}:{nm}@{ln}[{pl}]" for f, _c, nm, pl, ln in hits[:6])
+    if len(hits) > 6:
+        detail += f"…（共 {len(hits)} 处）"
+    pol = "/".join(sorted({pl for _, _, _, pl, _ in hits}))
+    if declared:
+        ok("平台门控 vs 真实 import",
+           f"frontmatter 已声明 platforms；命中 {len(hits)} 处 {pol} 依赖 —— {detail}。"
+           f"⚠️ **声明与实际是否一致本判据不代您核对**（它能发现『未声明』，无法发现『声明得不对』）。")
+    else:
+        fail("平台门控 vs 真实 import",
+             f"用了 {pol} 专属能力却未在 frontmatter 声明 `platforms:` —— {detail}。"
+             f"补声明，或改用跨平台实现（如 `tempfile`/`pathlib` 替代硬编码路径）。")
+
+
+def _check_gate(skill_dir: Path) -> None:
+    """C-1 常驻判据：运行时闸门 `gate.py` 的可用性 + 同源性 + fail-closed 行为。
+
+    三级判据，缺一不可 ——
+      ① **存在性/语法**：文件在且能 AST 解析（不靠 py_compile 代劳，独立判定）；
+      ② **同源性**：`INFRA_EXCEPTIONS` 必须**从 checks.py 加载**（技能库卫生第 4 条：
+         同一物理量单一事实源）。**自建副本 → FAIL** —— 那正是「复制粘贴」的复发形态；
+      ③ **行为**：跑 `--selftest`，要求退出码 0（含决策层 × 意图对照）。
+    ⚠️ 本判据**不复制** `INFRA_EXCEPTIONS` 的取值，只断言「它是被加载来的」——
+    否则判据自己就成了第三个副本。
+    """
+    NAME = "运行时闸门（gate.py 可用性与同源）"
+    gate = skill_dir / "scripts" / "gate.py"
+    if not gate.exists():
+        fail(NAME, "scripts/gate.py 缺失 —— 红线③在**运行时**无收口："
+                   "阶段 3 的删改既有文件动作失去前置拦截（事后对账拦不住已发生的事）")
+        return
+    try:
+        src = gate.read_text(encoding="utf-8", errors="ignore")
+        ast.parse(src, filename=str(gate))
+    except SyntaxError as e:
+        fail(NAME, f"gate.py 语法错误（L{e.lineno}）：{e.msg}")
+        return
+    except (ValueError, OSError) as e:
+        fail(NAME, f"gate.py 不可读：{type(e).__name__}: {e}")
+        return
+
+    # ② 同源性：不得自建 INFRA_EXCEPTIONS 副本；必须由 checks.py 加载
+    self_def = bool(re.search(r"^INFRA_EXCEPTIONS\s*[:=]", src, re.M))
+    loads_it = bool(re.search(r"spec_from_file_location|importlib", src)) and "INFRA_EXCEPTIONS" in src
+    if self_def:
+        fail(NAME, "gate.py **自行定义**了 INFRA_EXCEPTIONS —— 违反技能库卫生第 4 条"
+                   "（同一物理量必须单一事实源）。改为从 checks.py 加载，不要复制取值。")
+        return
+    if not loads_it:
+        fail(NAME, "gate.py 未见从 checks.py 加载 INFRA_EXCEPTIONS 的代码 —— 同源性无法证明"
+                   "（口径来源不可验证即随时可能漂移）")
+        return
+
+    # ③ 行为：阴性对照。第一版假绿正出在「只测范围不测决策」，故这里要求整组退出码 0。
+    try:
+        r = subprocess.run([sys.executable, str(gate), "--selftest"],
+                           capture_output=True, text=True, errors="replace", timeout=120)
+    except subprocess.TimeoutExpired:
+        fail(NAME, "--selftest 超时（120s）—— 闸门自身可能死锁")
+        return
+    except OSError as e:
+        fail(NAME, f"--selftest 无法启动：{type(e).__name__}: {e}")
+        return
+    out = (r.stdout or "") + (r.stderr or "")
+    if r.returncode != 0:
+        bad = [l.strip() for l in out.splitlines() if "[XX " in l]
+        extra = f"：{'；'.join(bad[:3])}" if bad else ""
+        fail(NAME, f"--selftest 退出码 {r.returncode}（{len(bad)} 项不符预期）{extra}")
+        return
+    n_ok = out.count("[OK ]")
+    ok(NAME, f"gate.py 就位；INFRA_EXCEPTIONS 由 checks.py 同源加载（未自建副本）；"
+             f"--selftest 退出码 0（{n_ok} 项对照全绿）")
 
 
 def check_plan(plan_path: Path, base: Path) -> int:
@@ -1427,11 +2213,16 @@ def check_plan(plan_path: Path, base: Path) -> int:
     _check_scope(meta, steps, base)
     _check_irreversible(meta, steps)
     _check_user_release(meta)
+    _check_entry_verdict(meta)
     _check_autonomy(meta)
     _check_selftools(meta, steps, base)
     _check_stage_gates(steps)
     _check_model_tiers(steps)
+    _check_reflection_retry(meta, steps)
     _check_fuse(meta, steps, plan_path)
+    # v4.3.0 / 批次 B：E′ 步骤闭环不变量（trace 自证 + 零沉淀须显式登记）。放最后，
+    # 因为它依赖前面各项的判定结果（plan 可解析、meta 完整），且它的输出会引用 step id。
+    _check_closure(steps, plan_path, meta)
     return 0
 
 
@@ -1487,6 +2278,8 @@ def main() -> None:
     p.add_argument("--command", default="", help="实际执行的命令（避免与子命令名 cmd 冲突，故拼全）")
     p.add_argument("--result", default="", help="结果摘要")
     p.add_argument("--elapsed", type=float, help="耗时（秒）")
+    p.add_argument("--note", default="", help="执行备注（v4.1.0：反思重试时填根因·调整摘要）")
+    p.add_argument("--attempt", type=int, help="重试轮次（v4.1.0：action=retry 时填第几轮）")
     p.add_argument("--replay", action="store_true", help="回放该任务的完整时序")
 
     p = sub.add_parser("metrics", help="任务级指标沉淀（v4.0.0 / U8：写入 tasks/_metrics.jsonl）")
@@ -1517,7 +2310,7 @@ def main() -> None:
         name = "自研工具登记"
     elif args.cmd == "trace":
         code = cmd_trace(Path(args.plan), args.step, args.action, args.command,
-                         args.result, args.elapsed, args.replay)
+                         args.result, args.elapsed, args.replay, args.note, args.attempt)
         name = "执行 trace"
     else:  # metrics
         code = cmd_metrics(Path(args.plan), args.finalize)

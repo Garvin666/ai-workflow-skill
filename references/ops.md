@@ -11,8 +11,8 @@
 调用一律用 PowerShell `&` 运算符或 Git Bash 绝对路径：
 
 ```bash
-SK="C:/Users/26717/.workbuddy/skills/ai-workflow"
-PY="C:/Users/26717/.workbuddy/binaries/python/envs/ai-workflow/Scripts/python.exe"
+SK="$HOME/.workbuddy/skills/ai-workflow"
+PY="$HOME/.workbuddy/binaries/python/envs/ai-workflow/Scripts/python.exe"
 "$PY" "$SK/scripts/checks.py" skill
 ```
 
@@ -39,6 +39,9 @@ PY="C:/Users/26717/.workbuddy/binaries/python/envs/ai-workflow/Scripts/python.ex
 | **push_ontology.py**（v3.2.0 自研） | **本体（Ontology）专用推送通道** → `ai-workflow-skill`：`--base <rev> --head <rev>` 增量推送本地 commit 范围。走 `api.github.com` Git Data API（blob → tree(**base_tree**) → commit → PATCH ref），远端混合仓故用 `base_tree` 精确列改动；内容从 `git cat-file blob` 取（**git 对象库天然 LF**，不用工作区 CRLF 字节）；新 blob 的 sha 与远端返回不符**立即抛错**（换行符口径的机器判据）。**默认 dry-run**，`--apply` 才写；`--allow-delete` 才删远端（默认只列出）；`--expect-remote <sha>` 锁基线防并发。`--repo` / `ONTOLOGY_REPO` 覆盖（默认 `Garvin666/ai-workflow-skill`）。由 v3.0 任务临时脚本 `tasks/技能增强-ai-workflow-v3.0-2026-09-15/tmp/push_incremental.py` 提升而来（v3.2.0 修正其三个隐患：藏在 tmp 不入仓、仓名硬编码、**默认就真推**） | `push_ontology.py --base 8f14ac61 --head HEAD`<br>`push_ontology.py --base X --head Y --apply --allow-delete` |
 | **push_router.py**（v3.2.0 自研） | **两类资源的分流推送路由**：`classify` 离线分类 + **交叉校验**（标注头×`meta.自研工具` 登记表；漏登记／登记与实现不符／标注头缺项 → FAIL）；`push` 分流推两仓（本体 → 技能仓，自研工具 → 工具仓，默认 dry-run）。⚠️ **分流不是互斥二选一**：本体＝改动面全量，自研工具＝其子集，`scripts/` 下自研脚本属**双属**。判定三条件缺一不可：① 事实＝有 `[自研工具]`/`[自研技能]` 标注或 `SKILL.md` frontmatter `selfbuilt: true` ② 意图＝已登记 ③ **指向＝登记链接指向工具仓**（否则技能本体本身的登记会被误判成自研工具）。⚠️ **标注头判据的收窄（两处，都是实测换来的）**：只认**注释行**（否则 `ops.md` 的标注格式说明表会误命中）、且**文档类 `.md` 整体不走脚本分支**（markdown 的 `#` 是标题不是注释，而 `references/push-routing.md` 的标注模板**必须**写出 `# [自研工具] xxx.py` 这样的示例——不排除就会把文档判成"有标注头却没登记"，**修法是收窄判据而不是把文档改得躲开门禁**）。交叉校验 FAIL **阻塞两条通道**；本体通道失败则中止、不继续工具通道 | `push_router.py classify --files scripts/foo.py`<br>`push_router.py push --base X --head Y --apply` |
 | **verify_push.py**（v3.2.1 自研） | **推送结果的独立验收器**（与三条推送通道**零代码共享**）：`--rev <本地 rev> [--prev-remote <推送前远端 HEAD>] [--expect-remote <sha>] [--repo] [--tools-repo] [--skill-dir] [--allow-dirty]`。**1 条前提 + 7 条实质判据** —— 判据 0（前提）：工作区干净 + rev 可解析；判据 1：远端 HEAD 等值/非空跑；判据 2：本地 rev ⊆ 远端且 blob sha 逐一相等；判据 3：远端独有项早于本次推送 + blob 数不减少；判据 **4 / 6**（同一段两项）：每个自研工具在工具仓的 sha == 本地**独立重算**值（CRLF→LF 归一化）／**跨仓一致性**（同文件两仓 sha 必须相同）；判据 5：发布物自证（远端 `SKILL.md` 自身 + 它指向的下沉手册）；判据 7：两仓 public。**期望版本从本地 rev 的 SKILL.md 自动推导；自研工具清单从 `tasks/**/plan.yaml` 的 `meta.自研工具` 自动发现**（`tasks/*/tmp/` 不读——那里是探针伪造的假登记）。口径坑内建：`git -c core.quotePath=false ls-tree`、混合仓用「本地⊆远端」而非「集合相等」。几种"像失败其实不是"的情形显式判 **SKIP**（未传 prev-remote／登记链接为「待推送」／登记文件只存在于工作区未入版本控制）。退出码 0=全通过、1=有 FAIL、2=基建错误。⚠️ **`--skill-dir` 同时是本地 git 根**（v3.4.0 补的功能缺口：此前它只喂 `read_registrations()`，而 `git()` 的 `cwd` 硬编码为脚本位置 → 「指定技能根来验收」文档上成立、实现上不成立，混合仓的另一条本地来源**根本无法被本脚本验收**）。⚠️ **多通道同轮推送须按通道分跑**（口径与两条结构性限制详见 `push-routing.md` →「推送后的独立验收：多通道口径与两条结构性限制」） | `verify_push.py --rev HEAD --prev-remote db2a3e58`<br>`verify_push.py --rev HEAD --prev-remote X --expect-remote Y`<br>`verify_push.py --skill-dir "E:/ChatGPT/工作流" --rev <工作区 rev> --expect-version <v> --prev-remote X` |
+| **outbound_scan.py**（v3.5.0 自研） | **出站前扫描的可机器化部分**：检测「将外发的文件」是否含本机绝对路径。两级严重度 —— **FAIL** 含用户名的主目录路径（`C:\Users\<具体用户名>\…`，出站清单第 4 项的字面要求）；**WARN** 其它具名盘符路径（第 3 项「内部目录结构」，**只提示不阻断** —— 一并升级为 FAIL 会让存量档案大面积变红，处置需人拍板）。**已掩码形态两侧都不命中**（`<用户名>` / `%USERNAME%` / `$HOME` / `~/.workbuddy/`）—— 报它们等于惩罚已按规则脱敏的文件。行内豁免 `outbound-scan:allow`。`--list <文件>` 按清单扫（**扫的是指定推送清单，不是全仓**）；**已被 `push_router.py` 导入为推送前门禁，导入失败即阻塞（fail-closed）** | `outbound_scan.py --list push_list.txt`<br>`outbound_scan.py "a.md" "b.py" --json` |
+| **guard_constants.py**（v4.2.0 自研） | **跨模块同名常量的同源守卫**（技能库卫生第 4 条）：把 `scripts/` 下同名顶层常量的关系登记成 `GROUPS` 清单，机器校验漂移即 FAIL。两类关系 —— ① **必须同源**（取值应相同：`RETRY_DELAYS` / `CODE_EXT` / `REF_PATTERN` / `SELFTOOL_KEYS`）② **刻意不同**（语义不同、合并会改变行为：`TEXT_EXT` 的真子集关系、`DEFAULT_REPO`/`DEFAULT_BRANCH` 指向不同仓）—— 后者**不允许被「顺手统一」**，但关系被悄悄打破同样要能发现。自带**阴性对照** `--selftest`（注入 4 类漂移：改一侧取值／少登记一项／打破子集／把两个不同默认值改成一样） | `guard_constants.py`<br>`guard_constants.py --selftest` |
+| **gate.py**（v4.3.0 自研） | **统一运行时闸门**：跑在**删改既有文件之前**，把红线③的**范围判定**与**风险判定**分离后统一收口。`check <路径…> --base <工作区根> --intent <read\|write\|delete\|move>`；判定三态 **INSIDE / INFRA（基础设施例外）/ OUTSIDE**；**基础设施例外 ≠ 高风险豁免** —— `read` 豁免，`write`/`delete`/`move` 仍须当次授权（`needs_authorization()`）。**fail-closed**：`checks.py` 的 `INFRA_EXCEPTIONS` 加载失败即拒绝，不静默放行。退出码 **0 放行／1 拒绝／2 用法错／3 fail-closed**；`--allow-outside <理由>` 显式授权放行；越界与授权事件记 `~/.workbuddy/cache/ai-workflow/gate_audit.jsonl`（常态 INSIDE 不记，零噪音）；`--selftest` 13 项含**决策层×意图对照**（"范围判对 ≠ 决策判对"的回归） | `gate.py check "<技能根>/scripts/x.py" --base "<工作区根>" --intent delete`<br>`gate.py check … --allow-outside "用户已确认"`<br>`gate.py --selftest` |
 
 各脚本详细参数：加 `--help`。
 
@@ -67,8 +70,8 @@ PY="C:/Users/26717/.workbuddy/binaries/python/envs/ai-workflow/Scripts/python.ex
 **最小探测命令（推荐先跑这条；不依赖 ps1，任何环境都能照抄）**：
 
 ```bash
-PY="C:/Users/26717/.workbuddy/binaries/python/envs/ai-workflow/Scripts/python.exe"
-AST="C:/Users/26717/.workbuddy/binaries/python/envs/ai-workflow/Scripts/ast-grep.exe"
+PY="$HOME/.workbuddy/binaries/python/envs/ai-workflow/Scripts/python.exe"
+AST="$HOME/.workbuddy/binaries/python/envs/ai-workflow/Scripts/ast-grep.exe"
 "$PY" -c "import requests, openpyxl, docx, pypdf, yaml, duckdb; print('deps OK')"
 "$AST" --version
 ```
@@ -98,7 +101,7 @@ powershell -ExecutionPolicy Bypass -File scripts\setup_env.ps1
 | AI 调用 401/超时 | 检查 AI_API_KEY / AI_API_BASE / AI_MODEL；脚本自带 3 次指数退避 |
 | GitHub API 403 | 多为**匿名限流**（非权限），脚本自动识别并退避；持续限流会提示设 GITHUB_TOKEN，或改用已有数据并标注"未实时校验" |
 | 抓取结果疑似旧数据 | 缓存导致——加 `--no-cache`，或调小 `AIWF_HTTP_TTL` |
-| `checks.py` 报缺 pyyaml | 用错解释器了——必须用 venv：`C:\Users\26717\.workbuddy\binaries\python\envs\ai-workflow\Scripts\python.exe`。脚本会**以退出码 2 中止**并给出该提示（早期版本会继续输出 `FAIL=0` 造成假绿，v2.3 已修） |
+| `checks.py` 报缺 pyyaml | 用错解释器了——必须用 venv：`$HOME/.workbuddy/binaries/python/envs/ai-workflow/Scripts/python.exe`。脚本会**以退出码 2 中止**并给出该提示（早期版本会继续输出 `FAIL=0` 造成假绿，v2.3 已修） |
 | `checks.py plan` 报 `mapping values are not allowed here` | **plan.yaml 某个未加引号的值里出现了 ASCII 冒号 `: `**（如 `（A: GitHub API…）`），YAML 会把它当成嵌套映射。改用全角 `：`/`－`，或整段加双引号。此错由对账当场拦下，**不要手工编辑后再忘跑对账** |
 | `checks.py plan` 报交付物缺失 | 逐项查：① 路径是否写全（缩写如「选品分析.yaml」无法定位）；② 括号注释是否多余；③ `--base` 是否用了 Windows 字面路径（**相对路径只以 `--base` 为基准**，Git Bash 的 `$(pwd)` 会给出 `/c/...` 这种 pathlib 解析不了的形态）；④ **交付物是否在工作区根之外** —— v2.5.2 起候选**只有 `base/<p>`**，跨根引用（如改技能本体的 `skills/ai-workflow/...`）**必须写绝对路径**。旧的 `~/.workbuddy/<p>` 与 `base.parent/<p>` 两条兜底通道已移除：前者让工作区内不存在的交付物被同名文件"救活"（假 PASS），后者让落在工作区根之外的交付物也判通过（撞红线③） |
 | 抓取失败但 `--out` 文件还在 | 脚本会打印告警（避免把旧内容当成新结果用）；确认后重跑或改用其它来源 |

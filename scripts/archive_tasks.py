@@ -26,6 +26,13 @@
     # 执行
     python scripts/archive_tasks.py --root . --older-than 2026-09-11 --apply
 
+3. **（v4.3.0）日期不等于使用度**：一个创建较早、却仍被反复引用的任务目录，只按日期会被卷走。
+   故叠加两个**使用度**维度与一个 **pinned** 声明，三者**默认全关**（不传参数＝与旧版行为一致）：
+       --keep-recent-days N   最近 N 天内有改动的目录跳过
+       --keep-used            目录内含 _metrics.jsonl / trace.jsonl（已有收尾记录）则跳过
+       --pin "A,B"            显式 pinned；或写进 `tasks/_pinned.txt`（每行一个目录名）
+   pinned 是**意图声明**，不因 `--dirs` 点名而被推翻。
+
 退出码：0 成功（含 dry-run）／1 移动后校验失败／2 前置检查拒绝
 """
 import argparse
@@ -33,6 +40,7 @@ import hashlib
 import re
 import shutil
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -78,12 +86,61 @@ def month_of(name: str) -> str:
     return m.group("date")[:7] if m else "undated"
 
 
+# ── 使用度与 pinned（v4.3.0 / 批次 B-3）──────────────────────────────────────
+# 背景：原脚本只有"按日期"一个维度 —— 但**日期不等于使用度**。一个 30 天前创建、却仍在被
+# 反复引用的任务目录，按日期会被卷走；而"只移动不删除"虽保证可恢复，恢复成本仍不为零。
+#
+# ⚠️ 三条既有不变量（只移动不删 / 引用门禁 / sha256 自证）**一条未动**，本组只做**叠加跳过**。
+# ⚠️ 新增维度**全部默认关闭**：`--keep-recent-days 0`、`--keep-used` 关、无 `--pin` 参数时
+#    仅在 `tasks/_pinned.txt` **存在**才生效 —— 因此**不传新参数时的行为与旧版逐字节一致**。
+USAGE_MARKERS = ("_metrics.jsonl", "trace.jsonl")
+
+
+def latest_mtime(d: Path) -> float:
+    """目录内所有文件的**最新** mtime。0.0 表示读不到（保守：调用方按"很旧"处理）。"""
+    newest = 0.0
+    for p in d.rglob("*"):
+        if p.is_file():
+            try:
+                newest = max(newest, p.stat().st_mtime)
+            except OSError:
+                pass
+    return newest
+
+
+def load_pins(root: Path, cli_pins: str, pin_file: str) -> tuple[set[str], list[str]]:
+    """pinned 目录集合 + 来源说明。来源必须**被打印出来**（否则"为什么没归档"无法解释）。"""
+    pins: set[str] = set()
+    sources: list[str] = []
+    if cli_pins:
+        pins.update(s.strip() for s in cli_pins.split(",") if s.strip())
+        sources.append("--pin")
+    pf = Path(pin_file) if pin_file else root / "tasks" / "_pinned.txt"
+    if pf.exists():
+        for ln in pf.read_text(encoding="utf-8-sig").splitlines():
+            ln = ln.strip()
+            if ln and not ln.startswith("#"):
+                pins.add(ln)
+        if pins or pin_file:
+            sources.append(str(pf))
+    return pins, sources
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="任务目录归档（只移动不删除，默认 dry-run）")
     ap.add_argument("--root", default=".", help="技能目录（含 tasks/），默认当前目录")
     ap.add_argument("--dirs", default="", help="要归档的目录名，逗号分隔")
     ap.add_argument("--older-than", default="", help="归档早于该日期（YYYY-MM-DD）的任务")
     ap.add_argument("--apply", action="store_true", help="真正执行移动（默认只打印计划）")
+    ap.add_argument("--pin", default="",
+                    help="pinned 目录名，逗号分隔；这些目录**不被归档**（v4.3.0）")
+    ap.add_argument("--pin-file", default="",
+                    help="pinned 清单文件（每行一个目录名，# 注释）。默认自动读 "
+                         "<root>/tasks/_pinned.txt —— **仅在文件存在时生效**（v4.3.0）")
+    ap.add_argument("--keep-recent-days", type=int, default=0,
+                    help="最近 N 天内有改动的目录跳过（默认 0 = 不启用，与旧行为一致，v4.3.0）")
+    ap.add_argument("--keep-used", action="store_true",
+                    help="目录内含 _metrics.jsonl/trace.jsonl（已有收尾/使用记录）则跳过（默认关，v4.3.0）")
     args = ap.parse_args()
 
     root = Path(args.root).resolve()
@@ -124,12 +181,50 @@ def main() -> int:
 
     # ---- 前置门禁：被文档引用的目录剔除 ----
     refs = referenced_dirs(root, want)
-    movable = [n for n in want if n not in refs]
+
+    # ---- v4.3.0：使用度 / pinned 叠加跳过（三项新维度全默认关闭 → 不传参数时零影响）----
+    pins, pin_src = load_pins(root, args.pin, args.pin_file)
+    skipped: dict[str, str] = {}
+    now = time.time()
+    for n in want:
+        if n in refs:
+            continue
+        if n in pins:
+            skipped[n] = "pinned（来源：%s）" % ("、".join(pin_src) or "--pin")
+            continue
+        if args.keep_recent_days > 0:
+            newest = latest_mtime(tasks / n)
+            age = (now - newest) / 86400.0 if newest else 1e6
+            if age < args.keep_recent_days:
+                skipped[n] = "%.1f 天前仍有改动（< --keep-recent-days=%d）" % (age, args.keep_recent_days)
+                continue
+        if args.keep_used:
+            marks = [m for m in USAGE_MARKERS if (tasks / n / m).exists()]
+            if marks:
+                skipped[n] = "含使用记录 %s（--keep-used）" % "、".join(marks)
+                continue
+
+    movable = [n for n in want if n not in refs and n not in skipped]
 
     print("---- 选定归档集 ----")
     for n in want:
-        print(f"  {'✗ 剔除' if n in refs else '· 待归档'}  {n}")
+        # ⚠️ 引用剔除沿用**原标签**（`✗ 剔除`），不加后缀 —— 未启用新维度时输出必须与旧版
+        #    逐字节一致；只有**新维度**造成的跳过才用新标签 `✗ 跳过`，便于二者区分。
+        if n in refs:
+            tag = "✗ 剔除"
+        elif n in skipped:
+            tag = "✗ 跳过（使用度/pinned）"
+        else:
+            tag = "· 待归档"
+        print(f"  {tag}  {n}")
     print()
+
+    if skipped:
+        print("---- 跳过明细（v4.3.0：使用度 / pinned）----")
+        for n, why in sorted(skipped.items()):
+            print(f"  - {n}：{why}")
+        print("  说明：pinned 是**意图声明**，不因 --dirs 点名而被推翻 —— 想归档须先从清单移除。")
+        print()
 
     if refs:
         print("[门禁] 以下目录被文档引用，归档会使「文档引用完整性」FAIL，已剔除：")
