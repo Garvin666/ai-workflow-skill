@@ -68,6 +68,17 @@ plan 子命令检查项:
         distribution 恰含三键且和=1、confidence ∈ [0,1]、dimensions 含 D1–D5、
         route_hint 非空、ambiguity 为 bool、secondary 留空或在枚举内），非法即 FAIL。
         ⚠️ **它不是门禁**：confidence 由模型自填、校准无法被机器证明（手册 §10 原样写明）。
+    14. 方法选用（v4.4.0）：meta「方法选用」可选 —— 阶段 3 第②步 method-judge 的产出，
+        完整契约见 references/method-judge.md。**整段缺省 → WARN**（向后兼容旧 plan，
+        **不追认历史计划**）；一旦填写须结构合法（gap_class ∈ 知识/算力/事实/手脚 及其 '+' 组合、
+        candidates 为含 tool/fit_score 的列表、needs_tool 为 bool、confidence ∈ [0,1]、
+        route_hint 非空），非法即 FAIL。
+        ⚠️ **它不是门禁**：confidence 由模型自填、校准无法被机器证明（手册 §10 原样写明）。
+    15. 方法选用抽样人审（v4.4.0）：**非门禁，只指路** —— 当 `meta.方法选用` 存在
+        `needs_tool=true` 或 `confidence < 0.95` 的条目时，WARN 列出建议抽样的条目；
+        均不满足则 OK。契约 §10 把「工具选用↔人工复核**一致率**」列为**人审**信号，本项
+        只把**抽样池**指出来，**判定靠人**（机器无法判"选得对不对"）；未证实前只报
+        **一致率**、**不声称准确率**。
 
 状态取值: OK / FAIL / SKIP / **WARN**（WARN 只提示、不计入 FAIL，也不改变退出码）
 
@@ -108,6 +119,13 @@ VALID_FUSE = ("正常", "已熔断")
 # 自主决策层（v3.0.0）：能力路由 + 自适应计划的留痕口径。字段全为**可选**——
 # 纯本地任务本就无外部辅助，强制填空会退化成走过场（见 references/adaptive-planning.md 第三节）。
 VALID_CAPABILITY = ("知识", "算力", "事实", "手脚")
+# v4.4.0：能力类校验（支持「+」组合，与 method-judge 的 gap_class 同词汇）。
+# 单一值须 ∈ VALID_CAPABILITY；组合形如「事实+手脚」须每部分都合法。
+def _capability_ok(cap: str | None) -> bool:
+    if not cap or not str(cap).strip():
+        return False
+    parts = [p.strip() for p in str(cap).split("+")]
+    return bool(parts) and all(p in VALID_CAPABILITY for p in parts)
 VALID_TRIGGER = ("R1", "R2", "R3", "R4", "R5", "R6")
 # P9-c（v3.4.0）：`模型档位` 取值 —— 与 references/routing-guide.md 的 enum 同源。
 # 可选字段，留空合法；填了必须在此集内（含 `default` = 显式声明按阶段默认档位）。
@@ -678,9 +696,20 @@ def _check_autonomy(meta: dict) -> None:
             if miss:
                 bad.append(f"第{i}项缺 {'、'.join(miss)}")
             cap = str(d.get("能力类", "") or "").strip()
-            if cap and cap not in VALID_CAPABILITY:
+            if cap and not _capability_ok(cap):
                 bad.append(f"第{i}项能力类『{cap}』不在 {VALID_CAPABILITY}")
         (ok if not bad else fail)("决策记录", f"{len(dec)} 条" if not bad else "；".join(bad))
+
+    # v4.4.0：方法选用 ↔ 决策记录 一致性（留痕对齐，WARN 非门禁）。
+    # 方法选用 marked needs_tool=true 的步骤应经 checks.py decide 留痕；漏记只是提示。
+    _ms_list = meta.get(METHOD_KEY)
+    if isinstance(_ms_list, list) and _ms_list:
+        _need = sum(1 for _e in _ms_list if isinstance(_e, dict) and _e.get("needs_tool") is True)
+        _dec_n = len(dec) if isinstance(dec, list) else 0
+        if _need > _dec_n:
+            warn("方法选用↔决策记录",
+                 f"{_need} 条 needs_tool=true 但仅 {_dec_n} 条决策记录 —— 可能漏记"
+                 "（needs_tool=true 应经 checks.py decide --from-method-select 留痕）")
 
     rev = meta.get("计划修订")
     if rev is None or (isinstance(rev, list) and not rev):
@@ -958,18 +987,58 @@ def _append_meta_list(plan_path: Path, key: str, item_lines: list[str]) -> bool:
 
 
 def cmd_decide(plan_path: Path, point: str, basis: str,
-               capability: str | None, choice: str | None) -> int:
-    """追加一条能力决策记录（自主决策层留痕，v3.0.0）。"""
-    if capability not in VALID_CAPABILITY:  # argparse choices 已兜一层，此处再防一次
-        fail("能力类合法", f"『{capability}』不在 {VALID_CAPABILITY}")
-        return 1
-    if not (point or "").strip() or not (basis or "").strip() or not (choice or "").strip():
-        fail("参数", "必须给出 --point（决策点）、--basis（依据）与 --choice（选择）")
+               capability: str | None, choice: str | None,
+               ms_index: int | None = None) -> int:
+    """追加一条能力决策记录（自主决策层留痕，v3.0.0）。
+
+    v4.4.0 增强：--from-method-select [INDEX] 从 plan 的 meta.方法选用 列表读取一条
+    method-judge 产出，自动推导 能力类/选择/依据（可被同名参数覆盖）；决策点(--point)
+    仍须手填（方法选用不记录步骤名）。INDEX 缺省取最新一条；传正整数为 1-based 序号。
+    """
+    if not (point or "").strip():
+        fail("参数", "必须给出 --point（决策点：这一步缺什么/要决定什么）")
         return 1
     if plan_path.is_dir():
         plan_path = plan_path / "plan.yaml"
     if not plan_path.exists():
         fail("plan.yaml 存在", str(plan_path))
+        return 1
+
+    # —— v4.4.0：从 meta.方法选用 推导缺失字段 ——
+    if ms_index is not None:
+        yaml = _require_yaml()
+        try:
+            _data = yaml.safe_load(plan_path.read_text(encoding="utf-8")) or {}
+            _ms_list = (_data.get("meta") or {}).get(METHOD_KEY)
+        except Exception as e:  # noqa: BLE001 - 解析失败的明确报错，不静默
+            fail("meta.方法选用 读取", f"YAML 解析失败：{e}")
+            return 1
+        if not isinstance(_ms_list, list) or not _ms_list:
+            fail("meta.方法选用", "不存在或为空，无法从中推导决策记录"
+                 "（先经 method-judge 产出并写入 meta.方法选用 列表）")
+            return 1
+        _idx = (len(_ms_list) - 1) if ms_index < 0 else (ms_index - 1)
+        if not (0 <= _idx < len(_ms_list)):
+            fail("meta.方法选用 索引", f"INDEX={ms_index} 越界（共 {len(_ms_list)} 条）")
+            return 1
+        _ms = _ms_list[_idx] or {}
+        if not _capability_ok(capability):
+            capability = str(_ms.get("gap_class", "") or "").strip() or None
+        if not (choice or "").strip():
+            _cands = _ms.get("candidates") or []
+            _top = max(_cands, key=lambda c: float(c.get("fit_score", 0) or 0)) if _cands else None
+            choice = (_top.get("tool") if isinstance(_top, dict) else None) or None
+        if not (basis or "").strip():
+            _rh = str(_ms.get("route_hint", "") or "").strip()
+            _conf = _ms.get("confidence")
+            basis = (f"{_rh}（confidence={_conf}）" if _rh
+                     else f"（confidence={_conf}）")
+
+    if not _capability_ok(capability):  # argparse choices 已兜一层；此处含「+」组合
+        fail("能力类合法", f"『{capability}』不在 {VALID_CAPABILITY}（或「+」组合越界；可经 --capability 显式给出）")
+        return 1
+    if not (basis or "").strip() or not (choice or "").strip():
+        fail("参数", "必须给出 --basis（依据）与 --choice（选择）；或从 --from-method-select 推导")
         return 1
     ts = datetime.now().strftime("%Y-%m-%d %H:%M")
     item = [
@@ -982,7 +1051,8 @@ def cmd_decide(plan_path: Path, point: str, basis: str,
     if not _append_meta_list(plan_path, "决策记录", item):
         fail("meta.决策记录 写入", "未找到 `meta:` 块，请手工添加该键")
         return 1
-    ok("决策记录已追加", f"能力类={capability or '-'}；决策点={point[:40]}")
+    ok("决策记录已追加", f"能力类={capability}；决策点={point[:40]}"
+       + ("（自 meta.方法选用 推导）" if ms_index is not None else ""))
     return 0
 
 
@@ -1649,6 +1719,15 @@ ENTRY_KEY = "入口判定"
 ENTRY_REQUIRED = ("category", "distribution", "confidence", "dimensions", "ambiguity", "route_hint")
 ENTRY_DIMS = ("D1", "D2", "D3", "D4", "D5")
 
+# v4.4.0：method-judge 方法选用校验（可选字段，缺省即 WARN —— 向后兼容旧 plan）
+# --------------------------------------------------------------------------- #
+METHOD_KEY = "方法选用"
+METHOD_REQUIRED = ("gap_class", "candidates", "needs_tool", "confidence", "route_hint")
+METHOD_GAP_CLASSES = ("知识", "算力", "事实", "手脚")
+# v4.4.0：抽样人审信号的**自采信带** —— 与 method-judge.md §5 阈值同源（≥0.95 自动采信）。
+# 低于该值的条目并入抽样池（连同 needs_tool=true 的条目），只作**人审指路**，绝非门禁。
+METHOD_SAMPLE_BAND = 0.95
+
 
 def _check_entry_verdict(meta: dict) -> None:
     """v4.2.0：meta.入口判定 —— **可选字段，填了就必须合法**。
@@ -1714,6 +1793,115 @@ def _check_entry_verdict(meta: dict) -> None:
         fail("meta.入口判定 合法", "；".join(bad[:3]))
     else:
         ok("meta.入口判定 合法", f"category={cat}（**留痕，非门禁**；结构合法不代表判对）")
+
+
+# v4.4.0：method-judge 方法选用校验（可选字段，缺省即 WARN —— 向后兼容旧 plan）
+# --------------------------------------------------------------------------- #
+def _check_method_select(meta: dict) -> None:
+    """v4.4.0：meta.方法选用 —— **可选字段，填了就必须合法**。
+
+    与 `_check_entry_verdict` 同源口径：整段缺省/空列表 → WARN（向后兼容旧 plan，
+    不追认历史计划）；应为**列表（每步一条判定）**，非列表/缺必填项/取值越界 → FAIL。
+    ⚠️ **它不是门禁**：`confidence` 由模型自填，校准无法机器强制；
+    "选了工具"≠"工具对"（类型合法 ≠ 判断正确）。契约见 references/method-judge.md §10。
+    """
+    v = meta.get(METHOD_KEY, None)
+    if v is None or (isinstance(v, list) and not v):
+        warn("meta.方法选用",
+             "未记录 —— 阶段 3 第②步（method-judge）本应每步产出一条，追加到列表。"
+             "**只提示不阻断**：向后兼容旧 plan，不追认历史计划；本项**不是门禁**（校准无法机器强制）")
+        return
+    # 单映射（过渡期偶发）归一化为 1 元素列表，便于统一校验
+    entries = v if isinstance(v, list) else [v]
+    if not isinstance(v, list):
+        warn("meta.方法选用 形态", "应为列表（每步一条），检测到单映射已按 1 条处理；"
+             "建议改为「方法选用: []」后逐条追加")
+
+    bad = []
+    for i, e in enumerate(entries, 1):
+        if not isinstance(e, dict):
+            bad.append(f"第{i}项非映射")
+            continue
+        for k in METHOD_REQUIRED:
+            if k not in e or (not isinstance(e[k], (int, float, bool)) and not e[k]):
+                bad.append(f"第{i}项缺『{k}』或为空")
+        gc = str(e.get("gap_class", "") or "").strip()
+        if gc:
+            parts = [p.strip() for p in gc.split("+")]
+            if any(p not in METHOD_GAP_CLASSES for p in parts):
+                bad.append(f"第{i}项 gap_class=『{gc}』（只允许 {'/'.join(METHOD_GAP_CLASSES)} 及其 '+' 组合）")
+        nt = e.get("needs_tool", None)
+        if nt is not None and not isinstance(nt, bool):
+            bad.append(f"第{i}项 needs_tool={nt!r}（须为 bool）")
+        conf = e.get("confidence", None)
+        if conf is not None:
+            if isinstance(conf, bool) or not isinstance(conf, (int, float)):
+                bad.append(f"第{i}项 confidence={conf!r}（须为 0–1 的数）")
+            elif not 0.0 <= float(conf) <= 1.0:
+                bad.append(f"第{i}项 confidence={conf!r}（越界，须在 0–1）")
+        cand = e.get("candidates", None)
+        if isinstance(cand, list):
+            for j, c in enumerate(cand):
+                if not isinstance(c, dict) or "tool" not in c:
+                    bad.append(f"第{i}项 candidates[{j}] 缺『tool』")
+                    continue
+                fs = c.get("fit_score", None)
+                if fs is None or isinstance(fs, bool) or not isinstance(fs, (int, float)):
+                    bad.append(f"第{i}项 candidates[{j}].fit_score 须为 0–1 的数")
+                elif not 0.0 <= float(fs) <= 1.0:
+                    bad.append(f"第{i}项 candidates[{j}].fit_score 越界")
+        elif cand is not None:
+            bad.append(f"第{i}项 candidates 应为列表，实际 {type(cand).__name__}")
+        rh = e.get("route_hint", None)
+        if rh is not None and not str(rh).strip():
+            bad.append(f"第{i}项 route_hint 为空")
+    if bad:
+        fail("meta.方法选用 合法", "；".join(bad[:3]))
+    else:
+        _need = sum(1 for e in entries if isinstance(e, dict) and e.get("needs_tool") is True)
+        ok("meta.方法选用 合法",
+           f"{len(entries)} 条（needs_tool=true {_need} 条；**留痕，非门禁**；结构合法不代表选对工具）")
+
+
+def _check_method_select_sample(meta: dict) -> None:
+    """v4.4.0：方法选用的**抽样人审信号** —— 非门禁，只指路。
+
+    契约 §10 把「工具选用 ↔ 人工复核**一致率**」列为**人审**信号：机器能指出"该抽样看哪里"
+    （哪些条目值得复核），但**不能代替复核**，也无法机器判定"选得对不对"。故本项只出
+    **WARN**（无需抽样时出 OK），**永不计入 FAIL、不改退出码**。
+
+    抽样池 = `needs_tool=true` 的条目（真正引入了外部手段，复核杠杆最高）∪ `confidence`
+    低于自采信带 `METHOD_SAMPLE_BAND` 的条目（§5 的"复核带"）。
+    与 `_check_autonomy` 的「方法选用↔决策记录」一致性 WARN 互补：那条查**有没有留痕**，
+    这条提示**留痕里选得对不对需人抽验**。
+    ⚠️ 未证实前只说「**一致率**」，**不声称「准确率」** —— 与 §10 原样一致。
+    """
+    v = meta.get(METHOD_KEY)
+    if not isinstance(v, list) or not v:
+        return  # 无留痕 → 无可抽样项（"缺省"由检查项 14 的 WARN 覆盖，此处不重复提示）
+    pool: list[str] = []
+    for i, e in enumerate(v, 1):
+        if not isinstance(e, dict):
+            continue
+        nt = e.get("needs_tool") is True
+        conf = e.get("confidence")
+        mid = (isinstance(conf, (int, float)) and not isinstance(conf, bool)
+               and float(conf) < METHOD_SAMPLE_BAND)
+        if nt or mid:
+            why = "引入外部手段" if nt else ""
+            if mid:
+                why = (why + "；" if why else "") + f"confidence={conf}<{METHOD_SAMPLE_BAND}"
+            pool.append(f"第{i}条（{why}）")
+    if not pool:
+        ok("方法选用抽样人审",
+           "无待抽样条目（均 needs_tool=false 且 confidence 达自采信带）—— 机器未指路，非门禁")
+        return
+    k = min(2, len(pool))
+    warn("方法选用抽样人审",
+         f"{len(pool)} 条待复核，建议抽 {k} 条人工核验：" + "、".join(pool[:k])
+         + ("…" if len(pool) > k else "")
+         + " —— 核对所选手段是否真解决了 gap_class 所述缺口。"
+           "**这是「一致率」抽样，不是「准确率」验证**；机器只指路，判定靠人（契约 §10）。**非门禁**。")
 
 
 # --------------------------------------------------------------------------- #
@@ -2214,6 +2402,8 @@ def check_plan(plan_path: Path, base: Path) -> int:
     _check_irreversible(meta, steps)
     _check_user_release(meta)
     _check_entry_verdict(meta)
+    _check_method_select(meta)
+    _check_method_select_sample(meta)
     _check_autonomy(meta)
     _check_selftools(meta, steps, base)
     _check_stage_gates(steps)
@@ -2251,12 +2441,14 @@ def main() -> None:
                    help="设置 meta.熔断状态；复位填『正常』（须与步骤状态一并复位，见 _check_fuse）")
     p.add_argument("--batch", help="批量文件：每行 `<step_id> <status>`（空行/# 忽略）；一次性落盘，避免 N 步 N 次重写（N7）")
 
-    p = sub.add_parser("decide", help="追加一条能力决策记录到 meta.决策记录（自主决策层留痕）")
+    p = sub.add_parser("decide", help="追加一条能力决策记录到 meta.决策记录（自主决策层留痕，v3.0.0）")
     p.add_argument("plan", help="plan.yaml 路径或任务目录")
-    p.add_argument("--point", required=True, help="决策点：这一步缺什么/要决定什么")
-    p.add_argument("--basis", required=True, help="依据：一句话判据（说不出可验证收益就别引入）")
-    p.add_argument("--capability", required=True, choices=VALID_CAPABILITY, help="能力类：知识/算力/事实/手脚")
-    p.add_argument("--choice", required=True, help="选择：实际引入的具体手段")
+    p.add_argument("--point", required=True, help="决策点：这一步缺什么/要决定什么（方法选用不记录步骤名，故必填）")
+    p.add_argument("--basis", help="依据：一句话判据（说不出可验证收益就别引入）；--from-method-select 时可省略")
+    p.add_argument("--capability", help="能力类：知识/算力/事实/手脚（支持「+」组合）；--from-method-select 时可省略（校验走 _capability_ok，故不设 argparse choices）")
+    p.add_argument("--choice", help="选择：实际引入的具体手段；--from-method-select 时可省略")
+    p.add_argument("--from-method-select", nargs="?", const=-1, type=int, default=None,
+                   help="v4.4.0：从 meta.方法选用 列表推导 能力类/选择/依据；缺省取最新一条，传正整数为 1-based 序号")
 
     p = sub.add_parser("revise", help="追加一条计划修订到 meta.计划修订（重规划留痕）")
     p.add_argument("plan", help="plan.yaml 路径或任务目录")
@@ -2300,7 +2492,7 @@ def main() -> None:
         code = cmd_mark(Path(args.plan), args.step_id, args.status, args.fuse, args.batch)
         name = "状态更新"
     elif args.cmd == "decide":
-        code = cmd_decide(Path(args.plan), args.point, args.basis, args.capability, args.choice)
+        code = cmd_decide(Path(args.plan), args.point, args.basis, args.capability, args.choice, args.from_method_select)
         name = "决策留痕"
     elif args.cmd == "revise":
         code = cmd_revise(Path(args.plan), args.trigger, args.change, args.unchanged)

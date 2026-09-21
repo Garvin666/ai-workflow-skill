@@ -30,6 +30,18 @@ meta:
                         #     （沿用「可选字段、填了就不能糊弄」）。校准不可机器强制，**不得宣称它是门禁**。
                         #   category → 任务分层 L0/L1/L2 的映射与阈值路由（0.95 / 0.70 / fail-closed）
                         #     口径**只以 references/self-judge.md 为准**（主类枚举的手册侧唯一取值源在 §1）
+  方法选用: []           # 【可选，v4.4.0 新增，v4.4.0 修订为列表】阶段 3 第②步 method-judge（方法选用·快判）的产出，每步一条，追加不覆盖；契约见 references/method-judge.md
+                        #   每项五字段：gap_class(必填，知识/算力/事实/手脚，可+组合) / candidates(必填，[{tool, fit_score}])
+                        #   / needs_tool(必填，bool) / confidence(必填，0–1) / route_hint(必填，非空)
+                        #   ⚠️ **它不是门禁**：列表为空 → `checks.py plan` 检查项 14 只出 WARN
+                        #     （向后兼容旧 plan，**不追认历史计划**）；一旦填写则必须结构合法，非法即 FAIL
+                        #     （沿用「可选字段、填了就不能糊弄」）。校准不可机器强制，**不得宣称它是门禁**。
+                        #   gap_class 取值域**只以 references/capability-routing.md §一 为准**（四类能力词汇源）；
+                        #   needs_tool=false 的步骤不写决策记录（"不引入"是合法且常见结论，见能力路由硬规则4）；
+                        #   needs_tool=true 的步骤应经 `checks.py decide --from-method-select` 留痕到 meta.决策记录
+                        #   ⚠️ 检查项 15 是**抽样人审信号**（同样**非门禁**）：needs_tool=true 或
+                        #     confidence<0.95 的条目会被列出来提示"抽 2 条人工复核"——**机器只指路，
+                        #     判定靠人**；这是「一致率」抽样，**不声称「准确率」**（契约 §10）
   熔断状态: ""          # 【可选，留空即「正常」】正常 / 已熔断；熔断与复位都用 checks.py mark：
                         #   置熔断：mark <plan> --fuse 已熔断   复位：mark <plan> --fuse 正常（+ 步骤状态一并复位）
                         #   复位须用户明示，且两步缺一不可（见 SKILL.md「熔断机制」）
