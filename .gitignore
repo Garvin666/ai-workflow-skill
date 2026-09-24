@@ -7,3 +7,19 @@ tasks/*/plan.yaml
 tasks/*/tmp/
 .venv/
 venv/
+# 历史快照（v4.4.2 目录瘦身）：本地保留归档，不进版本控制
+_archive/backups/
+
+# 密钥与凭据（项目 Git 开发规范 §4.1 第⑤类；信息安全底线 S1 —— 凭据永不落盘）
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets.*
+credentials.json
+
+# 任务档案归档区（v4.7.0 仓库整理）：本地保留历史，不进版本控制
+tasks/_archive/

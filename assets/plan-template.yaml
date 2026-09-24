@@ -43,6 +43,37 @@ meta:
                         #   ⚠️ 检查项 15 是**抽样人审信号**（同样**非门禁**）：needs_tool=true 或
                         #     confidence<0.95 的条目会被列出来提示"抽 2 条人工复核"——**机器只指路，
                         #     判定靠人**；这是「一致率」抽样，**不声称「准确率」**（契约 §10）
+  检索判定: []           # 【可选，v4.5.0 新增】阶段 3 第 5 条之前 retrieval-judge（检索·快判）的产出，每次检索一条，追加不覆盖；契约见 references/retrieval-judge.md
+                        #   每项五字段：source_class(必填，本地资产/历史留痕/知识库/技能手册/联网，可+组合)
+                        #   / candidates(必填，[{source, fit_score}]) / needs_retrieval(必填，bool)
+                        #   / confidence(必填，0–1) / route_hint(必填，非空)
+                        #   ⚠️ **它不是门禁**：列表为空 → `checks.py plan` 检查项 16 只出 WARN
+                        #     （向后兼容旧 plan，**不追认历史计划**）；一旦填写则必须结构合法，非法即 FAIL
+                        #     （沿用「可选字段、填了就不能糊弄」）。
+                        #   source_class 取值域**只以 references/retrieval-judge.md §1 为准**（五类源词汇源）；
+                        #   needs_retrieval=false 的步骤不写决策记录（"不必检索"是合法且常见结论）
+                        #   ⚠️ **「未检索」与「不存在」的区分无法机器强制** —— 机器只校验字段结构，
+                        #     不能校验那句"没有"背后是否真查过；契约 §5.1 是纪律 + 留痕，**不是门禁**（§10）。
+                        #   否定断言须在 route_hint 里写明**实际检索了哪几类源**，未覆盖的源类须显式列出
+                        #   ⚠️ 检查项 17 是**抽样人审信号**（同样**非门禁**）：needs_retrieval=true 或
+                        #     confidence<0.95 的条目会被列出来提示"抽 2 条人工复核"——**机器只指路，
+                        #     判定靠人**；这是「一致率」抽样，**不声称「准确率」**（契约 §10）
+  作业判定:             # 【可选，v4.7.0 新增】阶段 0 作业识别（homework-judge，模式选用·快判）的产出
+                        #   完整契约见 references/homework-judge.md；本字段是**单映射**（一次任务一条）
+                        #   七字段：mode(必填，作业题/讲解题/非作业，允许「A+B」组合) / distribution(必填，三键齐全且和=1)
+                        #   / confidence(必填，0–1) / dimensions(必填，W1–W5) / ambiguity(必填，bool)
+                        #   / route_hint(必填，非空) / needs_homework(必填，bool —— **派生值**，= mode 主模式是否『作业题』)
+                        #   ⚠️ **它不是门禁**：整段缺省 → `checks.py plan` 检查项 18 只出 WARN
+                        #     （向后兼容旧 plan，**不追认历史计划**）；一旦填写则必须结构合法，非法即 FAIL
+                        #   ⭐ 比另三份 judge 多一条**确定性判据**：`needs_homework` 与 `mode` 矛盾 → FAIL
+                        #     （它是派生值，"矛盾"不是判断分歧而是算错；method-judge 的 needs_tool × gap_class 只能事后识别）
+                        #   ⚠️ v4.7.0 补 2：**值域也判**（原先只判结构，负概率可配平通过） ——
+                        #     distribution 各项 ∈ 0–1（`{0.9, 0.15, -0.05}` 和虽为 1，仍 FAIL）；
+                        #     dimensions 各项 ∈ 0–1（W1–W5 是 0–1 分，越界即 FAIL，不是只查键齐）；
+                        #     ⭐ `confidence == max(distribution)`（派生自洽，容差 1e-3 仅防落盘量化）；
+                        #     mode 组合串不得重复项（「作业题+作业题」非法 —— 组合应是**不同**模式的并列）
+                        #   ⚠️ mode 三态是「模式选用」枚举，与**主类**三态是两个不同物理量，不得合并、不得互推
+                        #   ⚠️ 检查项 19 是**抽样人审信号**（非门禁）：组合态 / confidence<0.95 / ambiguity 会被列出提示复核
   熔断状态: ""          # 【可选，留空即「正常」】正常 / 已熔断；熔断与复位都用 checks.py mark：
                         #   置熔断：mark <plan> --fuse 已熔断   复位：mark <plan> --fuse 正常（+ 步骤状态一并复位）
                         #   复位须用户明示，且两步缺一不可（见 SKILL.md「熔断机制」）

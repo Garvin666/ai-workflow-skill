@@ -1,4 +1,0 @@
-https://example.com
-https://www.python.org
-https://huggingface.co
-https://www.python.org/2026/04/17/fake-article-for-404-test

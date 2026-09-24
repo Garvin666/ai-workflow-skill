@@ -1,0 +1,9 @@
+{"ts": "2026-09-22 15:31", "step": "1", "action": "落盘 plan.yaml 与确认表", "cmd": "", "result": "checks.py plan 可解析 FAIL=0"}
+{"ts": "2026-09-22 15:31", "step": "2", "action": "写 references/git-conventions.md 规范唯一事实源", "cmd": "", "result": "201 行，五节逐条覆盖用户 5 条规则"}
+{"ts": "2026-09-22 15:31", "step": "3", "action": "写 assets/gitignore-template.txt", "cmd": "", "result": "按五类分节，可直接复制"}
+{"ts": "2026-09-22 15:31", "step": "4", "action": "写 scripts/git_check.py 只读校验器", "cmd": "", "result": "阳性 2 例 RC=0 / 阴性 2 例 RC=1 / 边界 1 例 RC=0+WARN"}
+{"ts": "2026-09-22 15:31", "step": "5", "action": "口径守卫同源落地（checks_core + checks_parity + data-model）", "cmd": "", "result": "第 8 项守卫「提交类型」三源；阴性 2 例均 FAIL 后复绿"}
+{"ts": "2026-09-22 15:31", "step": "6", "action": "接入 SKILL.md（新章节 + 索引 + description + 版本 4.6.0）", "cmd": "", "result": "版本三处一致；引用完整性通过"}
+{"ts": "2026-09-22 15:31", "step": "7", "action": "playbook.md 追加第六类「代码 / Git 项目类」", "cmd": "", "result": "体例与既有五节一致，只引用不重复正文"}
+{"ts": "2026-09-22 15:31", "step": "8", "action": "门禁回归与对照实验", "cmd": "", "result": "checks.py skill 49/49 FAIL=0（从工作区根调用）"}
+{"ts": "2026-09-22 15:31", "step": "9", "action": "追加 changelog v4.6.0 条目与 Ledger 履历行", "cmd": "", "result": "两条均已追加"}

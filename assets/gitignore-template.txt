@@ -1,0 +1,96 @@
+# ============================================================
+# .gitignore 模板 —— ai-workflow「项目 Git 开发规范」§4
+# 唯一事实源：references/git-conventions.md
+# 用法：复制到项目根目录，按项目实际路径增删；分节对应规范 §4.1 的五类禁止提交
+# 自检：python scripts/git_check.py ignore <项目目录>
+# ============================================================
+
+# --- ① 模型权重（规则④：禁止提交）---
+# 体积常在 GB 级，进 Git 历史后无法回收
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.onnx
+*.h5
+*.bin
+*.gguf
+models/
+weights/
+checkpoints/
+*.model
+
+# --- ② 数据集（规则④：禁止提交）---
+# 判定标准是「体积 + 是否含隐私/商业数据」，不是扩展名；小体积脱敏样例可用 ! 开白名单
+data/
+datasets/
+raw/
+*.parquet
+*.tfrecord
+*.arrow
+*.feather
+# 如需保留脱敏样例，取消下一行注释并调整路径
+# !data/sample/
+
+# --- ③ 虚拟环境与构建产物（规则④：禁止提交）---
+.venv/
+venv/
+env/
+ENV/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+node_modules/
+.next/
+.nuxt/
+out/
+
+# --- ④ 日志与运行期产物（规则④：禁止提交）---
+*.log
+logs/
+log/
+*.out
+*.err
+pip_debug.log
+nohup.out
+*.pid
+*.sqlite-journal
+
+# --- ⑤ 密钥与凭据（规则④ + 信息安全底线 S1：凭据永不落盘）---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+secrets.*
+credentials.json
+*_rsa
+*_ed25519
+.netrc
+# ⚠️ 若已提交过密钥：删文件 ≠ 密钥失效，必须轮换（见规范 §4.3）
+
+# --- ⑥ 编辑器 / 系统噪音（非规则④要求，本模板的常规补充）---
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- ⑦ 本地临时与缓存（ai-workflow 任务产物）---
+# 任务计划与中间产物不入库；交付物按需显式加白
+tasks/*/plan.yaml
+tasks/*/tmp/
+.cache/
+tmp/
+scratch/

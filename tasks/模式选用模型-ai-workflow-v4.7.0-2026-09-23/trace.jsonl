@@ -1,0 +1,7 @@
+{"ts": "2026-09-23 22:13", "step": "1", "action": "落盘任务目录与 plan.yaml/确认表", "cmd": "", "result": "checks.py plan 可解析；作业判定块结构合法", "elapsed_s": 0.2, "note": "YAML 路径一律正斜杠，避开上轮 \\U 非法转义坑"}
+{"ts": "2026-09-23 22:13", "step": "2", "action": "写 scripts/homework_model.py（聚合 + 装配 + 一致率 + selftest + CLI）", "cmd": "", "result": "selftest FAILS=0（18 项含 3 组阴性对照）", "elapsed_s": 0.6, "note": "锚点漂移对照把命中数从 8/8 打到 1/8，证明锚例断言非空跑"}
+{"ts": "2026-09-23 22:13", "step": "3", "action": "补契约 §5.1 聚合规则 / §5.2 一致率出口条件 / §7.3 时点注记 / 变更记录", "cmd": "", "result": "写入并回读确认", "elapsed_s": 0.3, "note": "锚点与温度只写在代码一处，手册只给公式与真实示例，避免双写"}
+{"ts": "2026-09-23 22:13", "step": "4", "action": "三处登记：ops.md 速查表 / SKILL.md 核心命令与作业模式节 / laya-backend.md 出口条件", "cmd": "", "result": "三处 grep 实测命中", "elapsed_s": 0.2, "note": "技能库卫生第 3 条：核心命令与 ops.md 两处都要登记"}
+{"ts": "2026-09-23 22:13", "step": "5", "action": "自证落盘：_selfproof.py → tmp/自证输出.txt；独立进程前后哈希 → tmp/哈希前后.txt", "cmd": "", "result": "selftest RC=0；哈希 before/after 比对", "elapsed_s": 0.5, "note": "前后哈希由两次独立进程取得，不用同进程自比"}
+{"ts": "2026-09-23 22:13", "step": "6", "action": "门禁回归：checks.py plan（本 plan）+ checks.py skill（--skill-dir 技能根）", "cmd": "", "result": "plan FAIL=0；skill 53/53 FAIL=0", "elapsed_s": 0.7, "note": "skill 项数 52→53 系新增脚本的 py_compile 项，非判据变化"}
+{"ts": "2026-09-23 22:13", "step": "7", "action": "台账与履历：changelog 补记 + Ledger 行 + 交付前自检报告", "cmd": "", "result": "写入并回读确认", "elapsed_s": 0.2, "note": "未 commit、未 push —— 推送属不可逆动作，须用户单独确认"}

@@ -1,6 +1,0 @@
-{"ts": "2026-09-21 15:25", "step": "1", "action": "落地决策表模型", "cmd": "写 references/decision-tables.md（五张决策表集中映射）", "result": "完成；verify_p1p2.py 取值与源手册逐项相等", "note": "收尾补记(会话续作)：本步在上一轮会话已完成，本次续作按 checks.py 步骤闭环不变量要求补录 trace"}
-{"ts": "2026-09-21 15:25", "step": "2", "action": "落地策略模型", "cmd": "写 references/policy.md（gate.py 范围×意图 + S1-S4 default-deny）", "result": "完成；无本机绝对路径", "note": "收尾补记(会话续作)：本步在上一轮会话已完成，本次续作按 checks.py 步骤闭环不变量要求补录 trace"}
-{"ts": "2026-09-21 15:25", "step": "3", "action": "落地流程模型", "cmd": "写 references/process-model.md（六阶段活动图 + R/F/T 节点表）", "result": "完成；与 state-model/decision-tables 衔接声明一致", "note": "收尾补记(会话续作)：本步在上一轮会话已完成，本次续作按 checks.py 步骤闭环不变量要求补录 trace"}
-{"ts": "2026-09-21 15:25", "step": "4", "action": "落地路由模型", "cmd": "写 references/routing-table.md（阶段×档位 + category 联动）", "result": "完成；引用 routing-guide.md 取值不重述", "note": "收尾补记(会话续作)：本步在上一轮会话已完成，本次续作按 checks.py 步骤闭环不变量要求补录 trace"}
-{"ts": "2026-09-21 15:25", "step": "5", "action": "接入 SKILL.md 索引", "cmd": "索引+4 行 + 三处散文转引用指针", "result": "完成；Grep 确认四行存在", "note": "收尾补记(会话续作)：本步在上一轮会话已完成，本次续作按 checks.py 步骤闭环不变量要求补录 trace"}
-{"ts": "2026-09-21 15:25", "step": "6", "action": "门禁复跑与阶段6归档", "cmd": "verify+checks+guard+outbound 复跑 + Ledger/trace/metrics 补记", "result": "收尾：plan FAIL=0，checks skill 43/43，outbound 推送面内 FAIL=0", "note": "收尾补记(会话续作)：本步在上一轮会话已完成，本次续作按 checks.py 步骤闭环不变量要求补录 trace"}

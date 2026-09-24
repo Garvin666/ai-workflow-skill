@@ -1,0 +1,12 @@
+{"ts": "2026-09-23 21:59", "step": "1", "action": "落盘任务目录、plan.yaml 与确认表", "cmd": "", "result": "checks.py plan 可解析；meta 三必填非空"}
+{"ts": "2026-09-23 21:59", "step": "2", "action": "写 references/homework-mode.md（作业模式判据语义源）", "cmd": "", "result": "C1–C3 + H1–H5 + 三类题型骨架 + I1–I4；含「不做第四类」论证"}
+{"ts": "2026-09-23 21:59", "step": "3", "action": "写 assets/templates/作业解题.yaml（L1 模板）", "cmd": "", "result": "schema 九字段齐全，task_type=作业解题"}
+{"ts": "2026-09-23 21:59", "step": "4", "action": "写 references/homework-judge.md（第四份 judge 契约）", "cmd": "", "result": "§1–§10 + 附录A + 变更记录；与另三份同构"}
+{"ts": "2026-09-23 21:59", "step": "5", "action": "接入 Laya：judges.json + laya_client.py 的 homework_judge 分支；修回环被代理劫持缺陷", "cmd": "", "result": "py_compile 通过；回环异常为连接类而非 HTTPError 502"}
+{"ts": "2026-09-23 21:59", "step": "6", "action": "机器侧判据接入：checks_core +5 常量 / checks_parity 第10项守卫 / checks_judges 检查项18·19 / checks.py 两处调用", "cmd": "", "result": "口径守卫阴性对照 FAIL 后复绿；plan 5/5 用例符合预期"}
+{"ts": "2026-09-23 21:59", "step": "7", "action": "plan-template.yaml + data-model.md + decision-tables.md（新增第七张表，章节顺延）", "cmd": "", "result": "三源 mode 取值一致；章节编号连续；2 处 §七 引用同步为 §九"}
+{"ts": "2026-09-23 21:59", "step": "8", "action": "接入 SKILL.md（新章节 + 阶段0引块 + 索引 + description + 版本 4.7.0 + 计数订正）", "cmd": "", "result": "版本三处一致；文档引用完整性通过"}
+{"ts": "2026-09-23 21:59", "step": "9", "action": "下游文档接入：playbook / quality-gates / ops / laya-backend / 三份既有 judge 手册变更记录", "cmd": "", "result": "quality-gates 那行实测存在（此前误称已补，已修）；行数 +1 且 v4.7.0 计数 0→1"}
+{"ts": "2026-09-23 21:59", "step": "10", "action": "离线自证 + 阴性对照（两脚本 + 三份原始输出）", "cmd": "", "result": "两脚本 FAILS=0；注入漂移即红、恢复即绿"}
+{"ts": "2026-09-23 21:59", "step": "11", "action": "门禁回归：checks.py skill / checks.py plan + 原始输出落盘", "cmd": "", "result": "skill FAIL=0（52/52）；plan FAIL=0"}
+{"ts": "2026-09-23 21:59", "step": "12", "action": "changelog v4.7.0 条目 + Ledger 履历行 + 交付前自检报告", "cmd": "", "result": "含版本/日期/改动清单/实测证据；含 8 项不得读成绿"}

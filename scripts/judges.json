@@ -1,0 +1,114 @@
+{
+  "_comment": "四个 judge 的 questions 模板。字段名与 laya.Agent.system_one 契约一致：type/instructions/criteria。候选类（gap_class / source_class）与维度分是固定题；候选工具（candidates）由调用侧运行时注入。v4.7.0 新增 homework_judge（模式选用）。",
+  "self_judge": {
+    "state_fields": ["request_text"],
+    "fixed": {
+      "category": {
+        "type": "choice",
+        "instructions": "这段请求的产出形态属于哪一类？chat=会话内回答即可、无交付物；code=产出可运行或可构建的东西；content=产出给人阅读的文件。",
+        "criteria": {
+          "chat": "问答、解释、查询、翻译、单文件读取、临时状态检查",
+          "code": "脚本、程序、配置、跨文件改造、Bug 修复",
+          "content": "报告、文档、PPT、知识总结、方案"
+        }
+      },
+      "D1": {"type": "score", "instructions": "该请求指向一个可交付产物的明确程度。", "criteria": ["完全没有", "有一点", "比较明确", "非常明确"]},
+      "D2": {"type": "score", "instructions": "产物能否被运行、构建或编译。", "criteria": ["不能", "基本不能", "基本能", "完全能"]},
+      "D3": {"type": "score", "instructions": "产物是否面向会话之外的人、系统或运行环境。", "criteria": ["仅在会话内", "偏低", "偏高", "明确对外"]},
+      "D4": {"type": "score", "instructions": "是否要求落盘为文件，而不是只在会话里回答。", "criteria": ["不需要", "偏低", "偏高", "明确要求"]},
+      "D5": {"type": "score", "instructions": "措辞中「写/生成/实现」这类指令强度有多高。", "criteria": ["很弱", "偏弱", "偏强", "很强"]},
+      "ambiguity": {"type": "noul", "instructions": "这段请求的表述是模糊的或混合的，需要先向用户澄清一句再动手。"}
+    },
+    "thresholds": {
+      "auto_accept": 0.95,
+      "mid": 0.70,
+      "ambiguity_band": [0.35, 0.65],
+      "_note": "阈值来自 references/self-judge.md §5；温度未拟合前只作影子对照，不接管路由。"
+    },
+    "route_hint": {
+      "chat": "直接答；不建任务目录、不走阶段 0-6、不落 plan",
+      "code": "进 L2 全流程；先落 plan.yaml 再动手",
+      "content": "进 L1/L2：起草可用 cheap/mid 档，交付前必须出示验证证据"
+    }
+  },
+  "method_judge": {
+    "state_fields": ["step_what", "step_input", "step_expect"],
+    "gap_class": {
+      "type": "choice",
+      "instructions": "这一步最缺的是哪一类能力？知识=专门方法论或领域流程；算力=子任务独立可并行、需独立视角；事实=本机推不出的当世事实；手脚=确定性计算、结构解析、批量产出。",
+      "criteria": {
+        "知识": "需要加载其它 skill 或领域手册",
+        "算力": "需要派子代理并行、独立视角",
+        "事实": "需要联网检索或外部数据源",
+        "手脚": "需要脚本、本地工具或确定性计算"
+      }
+    },
+    "needs_tool": {"type": "noul", "instructions": "这一步确实需要引入外部工具或脚本，而不是在会话内直接推理完成。"},
+    "dimensions": {
+      "M1": {"type": "score", "instructions": "本步判断能否由脚本或工具确定性完成。", "criteria": ["完全不能", "偏低", "偏高", "完全可以"]},
+      "M2": {"type": "score", "instructions": "是否需要语义理解或领域判断。", "criteria": ["不需要", "偏低", "偏高", "强需要"]},
+      "M3": {"type": "score", "instructions": "是否需要当世事实或外部数据。", "criteria": ["不需要", "偏低", "偏高", "强需要"]},
+      "M4": {"type": "score", "instructions": "子任务是否独立、可并行。", "criteria": ["完全耦合", "偏低", "偏高", "完全独立"]},
+      "M5": {"type": "score", "instructions": "所需事实或工具在工作区内是否已经存在（高分=不必联网）。", "criteria": ["完全没有", "偏低", "偏高", "工作区内已有"]}
+    },
+    "combine_gap_delta": 0.15,
+    "_note": "gap_class 取值域与 references/capability-routing.md §一 同源，不得新增第五类。"
+  },
+  "retrieval_judge": {
+    "state_fields": ["step_need", "step_clues", "workspace"],
+    "source_class": {
+      "type": "choice",
+      "instructions": "这一步的信息缺口该从哪一类源补？本地资产=工作区内的源码/配置/产物/数据；历史留痕=既往任务计划、结论、台账；知识库=个人知识库；技能手册=已装技能的指令与手册；联网=本机推不出的当世事实。",
+      "criteria": {
+        "本地资产": "工作区内的源码、配置、产物、数据文件",
+        "历史留痕": "既往任务的 plan.yaml、Ledger.md、trace.jsonl、memory/",
+        "知识库": "个人知识库 kb.py retrieve",
+        "技能手册": "已装技能的 SKILL.md 与 references/",
+        "联网": "http_fetch、GitHub API、网页检索"
+      }
+    },
+    "needs_retrieval": {"type": "noul", "instructions": "这一步确实需要发起检索，而不是靠模型既有知识直接作答。"},
+    "dimensions": {
+      "R1": {"type": "score", "instructions": "本步所需信息，模型既有知识加当前上下文是否已足够（高分=缺口大、必须检索）。", "criteria": ["已足够", "基本够", "有缺口", "缺口很大"]},
+      "R2": {"type": "score", "instructions": "所需信息是否在工作区内已有（高分=本机可得、不必联网）。", "criteria": ["完全没有", "偏低", "偏高", "工作区内已有"]},
+      "R3": {"type": "score", "instructions": "是否已有同类任务的计划、结论或踩坑可直接复用。", "criteria": ["没有", "偏低", "偏高", "确定有"]},
+      "R4": {"type": "score", "instructions": "是否依赖当世事实，训练数据可能过期。", "criteria": ["不依赖", "偏低", "偏高", "强依赖"]},
+      "R5": {"type": "score", "instructions": "目标源内噪声占比有多低（低分=必须先清洗候选池）。", "criteria": ["噪声很高", "偏高", "偏低", "很干净"]}
+    },
+    "combine_src_delta": 0.15,
+    "_note": "source_class 是封闭五类，未命中任何一类应判 needs_retrieval=false，不得新增第六类。"
+  },
+  "homework_judge": {
+    "state_fields": ["request_text", "context_clues"],
+    "mode": {
+      "type": "choice",
+      "instructions": "这次请求的模式归属是什么？作业题=含题干结构（已知/求/证明/计算/设计/论述或题号小问）、要答案与过程；讲解题=要讲解知识点或答疑，不针对具体题干求解；非作业=生成练习题/题库或普通工程文档任务或闲聊。",
+      "criteria": {
+        "作业题": "含题干结构或题号小问，期望给出答案与求解过程",
+        "讲解题": "要求讲解概念、原理或答疑，不针对具体题目求解",
+        "非作业": "生成练习题/题库、普通任务、闲聊等，都不属于解题"
+      }
+    },
+    "ambiguity": {"type": "noul", "instructions": "这次请求的模式归属是模糊的或混合的，需要先向用户澄清一句再动手。"},
+    "dimensions": {
+      "W1": {"type": "score", "instructions": "请求里包含明确题意结构（已知条件、所求、条件限制、小问编号）的程度。", "criteria": ["完全没有", "偏低", "偏高", "结构完整"]},
+      "W2": {"type": "score", "instructions": "期望的是「答案与过程」，还是「交付物/系统」（高分=要答案与过程）。", "criteria": ["要交付物", "偏交付物", "偏答案与过程", "明确要解题过程"]},
+      "W3": {"type": "score", "instructions": "教材、章节、作业、复习、考试这类学习语境的强度。", "criteria": ["无", "弱", "中", "强"]},
+      "W4": {"type": "score", "instructions": "是否处于考试、测验或限时评价场景（高分=受评，须提示学业诚信）。", "criteria": ["无关", "偏低", "偏高", "明确是考试或测评"]},
+      "W5": {"type": "score", "instructions": "按 H1–H5 完整结构作答相比直接回答的增益有多大（低分=直接答即可）。", "criteria": ["无增益（直接答）", "微弱", "明显", "必须有完整过程"]}
+    },
+    "combine_mode_delta": 0.15,
+    "thresholds": {
+      "auto_accept": 0.95,
+      "mid": 0.70,
+      "ambiguity_band": [0.35, 0.65],
+      "_note": "阈值来自 references/homework-judge.md §5；温度未拟合前只作影子对照，不接管路由。"
+    },
+    "route_hint": {
+      "作业题": "叠加作业模式：按 H1→H5 组织（审题与已知条件 → 思路与知识点 → 分步推导/求解 → 关键步骤解释 → 答案与验证），题型骨架见 references/homework-mode.md §4",
+      "讲解题": "不叠加作业模式；按讲解组织，可借用 H2（知识点关联）与 H4（关键步骤解释），不必走全五阶段",
+      "非作业": "不叠加；按宿主模式（self-judge 的 category 与来源分型）正常处理"
+    },
+    "_note": "⚠️ mode 三态是「模式选用」枚举，与 self-judge 的主类三态（chat/code/content）是**两个不同物理量**，不得混称、不得互相推导；取值域见 references/homework-judge.md §1，并与 references/data-model.md 的受守卫镜像同源（checks 口径守卫机检）。"
+  }
+}

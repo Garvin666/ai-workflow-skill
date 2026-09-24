@@ -64,6 +64,8 @@
 | 模型档位 | `VALID_MODEL_TIERS` | `references/routing-guide.md`、本文件 §2.2 | 口径守卫：模型档位 |
 | 反思触发 | `VALID_REFLECT_TRIGGER` | `references/reflection-retry.md`、本文件 §2.2 | 口径守卫：反思触发 |
 | 终止策略 | `VALID_TERMINATION` | `references/reflection-retry.md`、本文件 §2.2 | 口径守卫：终止策略 |
+| 提交类型 | `VALID_COMMIT_TYPES` | `references/git-conventions.md` §3.2、`scripts/git_check.py`、本文件 §2.2 | 口径守卫：提交类型 |
+| 作业模式 | `HOMEWORK_MODES` | `references/homework-judge.md` §1、`scripts/judges.json`、本文件 §2.2 | 口径守卫：作业模式 |
 | 入口主类 | `VALID_CATEGORY` | `references/self-judge.md` §1（机器可读声明块） | 口径守卫：入口判定主类 |
 | 任务分层 | （映射，非独立常量） | 本文件 §2.2 | 人审 |
 | 不可逆可回滚 | （字段字面量） | `assets/plan-template.yaml` | `_check_irreversible`（机器） |
@@ -131,6 +133,29 @@
 | **升级用户决策** | 暂停自动化、升级由用户裁决 |
 | **重规划R** | 转入 R1–R6 重规划 |
 
+**提交类型**（Git commit 注释；规范与用法见 `references/git-conventions.md` §3）：
+
+| 类型 | 含义 |
+| --- | --- |
+| `feat` | 新增功能 |
+| `fix` | 修复 bug |
+| `refactor` | 代码重构，功能不变 |
+| `docs` | 更新文档注释 |
+
+> ⚠️ 本表**刻意用反引号**而非加粗：`_p_tiers` 只认 `| **小写词** |`，此处若用加粗会把
+> feat/fix/refactor/docs 并进**模型档位**集合 → 假 FAIL（两表在同一个文件里，判据必须正交）。
+> ⚠️ 扩展类型（chore/perf/test 等）须**先经用户确认**，再同步三处：本表 →
+> `scripts/checks_core.py` 的 `VALID_COMMIT_TYPES` → `scripts/git_check.py` 的 `COMMIT_TYPES`。
+
+**作业模式**（homework-judge 的模式选用；契约与判据见 `references/homework-judge.md`。
+⚠️ 它是**「模式选用」枚举**，与**主类**三态是**两个物理量** —— 字形相近但语义无关，不得合并、不得互推）：
+
+| 模式 | 含义 |
+| --- | --- |
+| **作业题** | 含题干结构（已知/求/证明/计算/设计/论述或题号小问）且要答案与过程 → **叠加作业模式**，按 H1–H5 组织 |
+| **讲解题** | 要求讲解概念、原理或答疑，不针对具体题目求解 → 不叠加；可借用 H2／H4 结构 |
+| **非作业** | 生成练习题/题库、普通工程文档任务、闲聊 → 不叠加，按宿主模式处理 |
+
 **任务分层**（映射，非独立常量，源自 `category` + 复杂度）：
 
 | 层级 | 判据 | 执行方式 |
@@ -156,4 +181,8 @@
 
 - **v1（2026-09-21，P0-1）**：新增本文件。把 plan 中心数据模型的**结构 schema**（§一）与**枚举注册表**（§二）集中登记；各枚举表以「受守卫镜像」形式并入 `PARITY_ITEMS` 的源规格，由 `checks.py skill` 口径守卫与代码常量同源校验。背景：P0-1 分析（`tasks/工作流建模分析-2026-09-21/`）发现「枚举散落三处、无中心结构文档」。
   - ⚠️ **实测订正（诚实登记）**：动手前的实测表明枚举的**代码侧单一源**（`checks.py`）与**部分文档↔代码守卫**（`PARITY_ITEMS` 7 项 + 主类声明块）**已存在**，并非从零缺失；本文件的增量是「**中心结构 schema** + **把镜像集中到一处并纳入守卫**」，不是「新造单一源」。
+
+- **v2（2026-09-23，v4.7.0）**：登记第 9 个受守卫枚举「**作业模式**」—— 随 `homework-judge`（模式选用快判）新增，源规格为 **3 处**（`references/homework-judge.md` §1 的模式表 + `scripts/judges.json` 的 `homework_judge.mode.criteria` + 本文件 §2.2 镜像），由口径守卫「作业模式」项并集比对。
+  - ⚠️ **必须写死的分界**：作业模式三态（作业题／讲解题／非作业）是**「模式选用」枚举**，与**主类**三态是两个**不同物理量** —— 前者答"要不要叠加作业模式"，后者答"这次产出什么"。二者**不得合并、不得互相推导**（合并会造成两套口径同形异义，正是本文件要防的那类漂移）。
+  - ⚠️ **解析器为什么锚定表头**：`| **中文加粗** |` 在本文件里**不唯一**（档位表、能力表、熔断表、关系表皆用加粗首格），沿用"全文件扫格式"会把这些表并进作业模式集合 → 假 FAIL（v4.6.0「提交类型」首版即此坑）。故取结构性锚定（表头 `| 模式 | 含义 |` 唯一）。
   - ⚠️ **格式即锚点**：§2.2 各表的**列格式**被 `_p_tiers / _p_status / _p_caps / _p_triggers / _p_fuse / _p_reflect_trigger / _p_reflect_term` 解析，改表形须同步改这些解析器（或退出本文件的源规格）。
