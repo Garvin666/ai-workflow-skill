@@ -26,7 +26,10 @@ meta:
                         #   七字段：category(必填，chat|code|content) / distribution(必填，三键齐全且和=1)
                         #   / confidence(必填，0–1) / dimensions(必填，D1–D5) / ambiguity(必填，bool)
                         #   / route_hint(必填，非空) / secondary(可选，混合请求的次标签)
-                        #   ⚠️ **它不是门禁**：整段缺省 → `checks.py plan` 检查项 13 只出 WARN
+                        #   ⚠️ **它不是门禁**：整段缺省 → `checks.py plan` 检查项 13 出提示
+                        #     ⭐ v4.13.0 **分档**：**已声明 L1 ⇒ 汇总为一条 SKIP「不算缺口」；L2／层级不明 ⇒ 逐条 WARN**
+                        #       （理由：实测 24 份活跃 L2 里 11 份缺本字段 —— 一律 FAIL 等于追认历史计划；
+                        #        而一律 WARN 会让 L1 轻任务被 6–7 条同义提示淹没，反把真信号挤掉）
                         #     （向后兼容旧 plan，**不追认历史计划**）；一旦填写则必须结构合法，非法即 FAIL
                         #     （沿用「可选字段、填了就不能糊弄」）。校准不可机器强制，**不得宣称它是门禁**。
                         #   category → 任务分层 L0/L1/L2 的映射与阈值路由（0.95 / 0.70 / fail-closed）
@@ -34,7 +37,10 @@ meta:
   方法选用: []           # 【可选，v4.4.0 新增，v4.4.0 修订为列表】阶段 3 第②步 method-judge（方法选用·快判）的产出，每步一条，追加不覆盖；契约见 references/method-judge.md
                         #   每项五字段：gap_class(必填，知识/算力/事实/手脚，可+组合) / candidates(必填，[{tool, fit_score}])
                         #   / needs_tool(必填，bool) / confidence(必填，0–1) / route_hint(必填，非空)
-                        #   ⚠️ **它不是门禁**：列表为空 → `checks.py plan` 检查项 14 只出 WARN
+                        #   ⚠️ **它不是门禁**：列表为空 → `checks.py plan` 检查项 14 只报 **SKIP（未检测）**
+                        #     ⭐ v4.13.0 校正：**本项落盘是条件性的** —— 只有唯一自然解法时「不写决策记录」
+                        #       是合法结论（capability-routing 硬规则 4）。故"未记录"有两义（该记没记／本就无需记），
+                        #       机器不可区分 ⇒ **只报未检测，不判缺口**（原先报 WARN 是把合法结论当失误）；
                         #     （向后兼容旧 plan，**不追认历史计划**）；一旦填写则必须结构合法，非法即 FAIL
                         #     （沿用「可选字段、填了就不能糊弄」）。校准不可机器强制，**不得宣称它是门禁**。
                         #   gap_class 取值域**只以 references/capability-routing.md §一 为准**（四类能力词汇源）；
@@ -47,7 +53,9 @@ meta:
                         #   每项五字段：source_class(必填，本地资产/历史留痕/知识库/技能手册/联网，可+组合)
                         #   / candidates(必填，[{source, fit_score}]) / needs_retrieval(必填，bool)
                         #   / confidence(必填，0–1) / route_hint(必填，非空)
-                        #   ⚠️ **它不是门禁**：列表为空 → `checks.py plan` 检查项 16 只出 WARN
+                        #   ⚠️ **它不是门禁**：列表为空 → `checks.py plan` 检查项 16 只报 **SKIP（未检测）**
+                        #     ⭐ v4.13.0 校正：**本项落盘是条件性的** —— 确定不必检索（`needs_retrieval=false`）
+                        #       时不写决策记录是合法结论 ⇒ 与 method-judge 同款："未记录"两义不可区分，只报未检测；
                         #     （向后兼容旧 plan，**不追认历史计划**）；一旦填写则必须结构合法，非法即 FAIL
                         #     （沿用「可选字段、填了就不能糊弄」）。
                         #   source_class 取值域**只以 references/retrieval-judge.md §1 为准**（五类源词汇源）；

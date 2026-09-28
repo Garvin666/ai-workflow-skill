@@ -4,10 +4,10 @@ description: AI 标准化多阶段工作方法论，适用于量化分析、跨�
 agent_created: true
 selfbuilt: true
 repo: https://github.com/Garvin666/ai-workflow-skill
-version: 4.11.1
+version: 4.13.0
 ---
 
-# AI 工作流 v4.11.1
+# AI 工作流 v4.13.0
 
 > **[自研技能]** 名称：`ai-workflow` ｜ 用途：为多阶段任务提供标准化流程编排（入口分型 / 任务分层 / 计划先行 / 三项核心原则 / 自主决策层 / 独立审核抽查制 / 熔断）＋面向作业题的**作业模式**（S0–S2 精简解题结构、三类题型骨架）＋**学习模型**（K1–K5 持续优化回路：归纳使用者偏好与领域知识、蒸馏去重后并入个人知识库），并配一套**机器可校验**的工具与门禁 ｜ 适用场景：产出文件或代码或报告、多步且步骤间有依赖、数据分析、跨文件改造、调研查重、方案评审；纯问答 / 查询 / 翻译 / 单文件读取不适用 ｜ 仓库：https://github.com/Garvin666/ai-workflow-skill
 
@@ -110,6 +110,7 @@ version: 4.11.1
    - **它不授权、不替代红线、不改分层**：只判「该不该按原样做」，**不输出"我可以做"**（C1）；越界判定、出站扫描、口径守卫仍由确定性规则负责（C2）；`verdict` **不改变** L0/L1/L2 判据。
    - **`拒绝` 须落审计账本**：向 `<工作区根>/.workbuddy/thinking-audit.log` **追加**一条（`≤40 字片段 + 轴编号`，**不存原文**）—— 阶段 6 读账本做**过拒审计**（拒绝率 > 50% 或连续 3 次拒绝 → 人审；C22②）。
    - **影子对照（C1 形态）**：Laya 侧 `scripts/laya_client.py --judge thinking-judge` 并行产出，**只作对照、不参与放行、不进一致率以外的派生**；不可达 → exit 3 降级（`laya.status ∈ {ok, degraded, absent}`），**不阻断流程**。
+   - **要用它，先确认它在跑（v4.12.0，运维事实 + 单一入口）**：`laya_client.py` 客户端代码再对，服务**不常驻**时仍一律 `exit 3` 降级 —— **「装了」≠「在跑」**。故跑影子对照前先用 **`scripts/laya_ensure.py`**（**可用性网关**）：`check` 探活（exit 0/3，**码与客户端降级对齐**）；`with -- <判定命令>` 把服务生命周期与判定**绑进同一进程**（**推荐形态** —— 实测「宿主会回收分离进程」，持句柄才可靠）。服务就绪后再用 `scripts/laya_client.py --judge …` 跑 B 侧（冷启动 ≈ 40 s）。⚠️ `ensure` 只保证**本次调用**期间可用，**不解决跨会话常驻**（那归登录自启项 `LayaJudge.cmd` / 计划任务；`ensure` 输出会显式标 `persistent:false`，不许当成「已常驻」）。判定完成后用 **`scripts/laya_record.py run`**（v4.13.0 新增：**一条命令**完成探活→跑 B 侧→配对→落盘；`append` 退为"B 侧已拿到手"的低层路径）把 A/B 配对**落盘采样** —— 否则影子期出口条件「N ≥ 50 条一致率」**结构上永远为 0**（`agree` 有算法、没人生产样本）。⭐ 该出口条件的**分母只含人工标**，故 `append` 之后还须用 **`review`** 逐条回填抽查结论：**不人工抽查，则无论攒多少样本都测不出来** —— 缺的不是样本量，是人。⚠️ 样本文件含用户请求指纹/原文，**不得放进任何 git 仓**。
 
 1. **自我判断 · 意图快判（self-judge，v4.2.0 新增，必跑）**：动手前先跑一次 **System 1 结构化快判** —— 单次前向、四步、无思维链，产出 `{category, distribution, confidence, dimensions, ambiguity, route_hint[, secondary]}`。
    - **产出即判据**：`category` 映射任务分层 L0/L1/L2、给出阶段感知模型路由的初始档位、决定是否需澄清。**取值与映射口径只以 `references/self-judge.md` 为准** —— 本处**不复述取值表**（该文件 §1 是主类枚举的唯一**定义**源，其中紧贴表格的一对 ASCII 标记圈出**机器可读声明块**：口径守卫断言该块在**源规格面内恰一处**（源规格＝`checks.py` 的 `CATEGORY_SOURCES`：技能根目录**只计入其 `SKILL.md`**，`scripts/` 与各级子目录不计）且取值恰好等于代码常量 `VALID_CATEGORY`，**读不到块即 FAIL**；块**外**的可疑取值只走 **WARN**、不作门禁 —— 两半各自的射程见该文件 §1 的「诚实标注」）。
@@ -183,9 +184,9 @@ version: 4.11.1
 
 1. **任务目录制**：`<工作区根>/tasks/<任务类型>-<YYYY-MM-DD>/` 内存放 plan.yaml、交付物、中间数据（**目录必须建在工作区根下**；`工作区根/tasks/` 才是 `checks.py status/plan` 的基准。技能目录的 `tasks/` 只存技能自身演进类任务，不得存其他项目）。命名规则：任务类型为**不含空格与斜杠**的中文短语，日期取**任务创建日**（非完成日）；同日同类型多次迭代加版本后缀区分，如 `技能增强-ai-workflow-v2.1-2026-09-10/`；归档时整体移入 `tasks/_archive/<YYYY-MM>/`。plan.yaml 严格用 `assets/plan-template.yaml` 的**中文键格式**，**`交付物` 必填且写完整路径**（阶段 5 自动对账依赖它）。状态用 `checks.py mark <plan.yaml> <id> <状态>` 更新，不手工 sed。**多步状态更新一律用 `checks.py mark <plan.yaml> --batch <文件>`（文件每行 `<id> <状态>`）**——它只需一次进程启动，8 步实测 1544 ms → 196 ms（−87%，v3.4.0 起引导）；逐条调是最容易被忽略的浪费。省的是**调用次数**，不是"少留痕"：**禁止**为提速手改 YAML。**本步若新建自研工具/技能文件，须同时写标注块并在 `meta.自研工具` 登记一项**（见「自研工具与技能：标注与公开留痕」）。
 2. **验证闭环前置检查**：动手前回答"完成时用什么可判定信号证明它成了？"——有信号就写进「验证方式」；无信号**先补最小验证物**，补不了就显式登记「人审点」。交付前**出示证据而非声称成功**。各类任务的可判定信号参考：代码类＝测试/构建码/lint/断言；Office 类＝写回后用 `office_io` 读回校验；**数据分析类＝交叉校验脚本（总额对账／行数一致／空值率）+ 抽样复算**；**调研类＝资源条目数达标且每条含链接 + 关键链接实测探活（`http_fetch --check-links`）+ 时效性说法经官方页复核 + 反例/过期信息已剔除**；改造类＝`checks.py skill` 全绿 + py_compile 通过；**性能类＝耗时下降「且」输出与旧版逐字节一致**（预热后多次取最小值，≥2 轮独立复现，禁用"冷基线 vs 热优化"的假加速）。**完整信号表见 `references/quality-gates.md`（含未列出的任务类型）**。
-3. **逐步执行**：每步前重述目标与判定标准，完成后更新状态；未达成先修正再推进。**执行期六动作：每步动手前的「能力路由判定」即步骤级工具/方法选用快判（method-judge，见 `references/method-judge.md`）**；R1–R6 重规划触发见 `references/adaptive-planning.md` 与 `references/capability-routing.md`（按需加载）。
+3. **逐步执行**：每步前重述目标与判定标准，完成后更新状态；未达成先修正再推进。**执行期六动作：每步动手前都做「能力路由判定」——即步骤级工具/方法选用快判（method-judge，见 `references/method-judge.md`）**；⚠️ **落盘口径（v4.13.0 校正）：「判」是每步都判，「落盘」是条件性的** —— 仅当该步存在**多条可行路径、或选错代价高**时才追加 `meta.方法选用`；只有唯一自然解法（`needs_tool=false`）时**不写决策记录是合法结论**（capability-routing 硬规则 4）。旧措辞「本应每步产出一条」与实际严重不符（实测 26 份活跃 plan 仅 1 份落盘），属**悬空承诺**，已改。机器侧对应：缺省只报 **SKIP（未检测）**，不判缺口 —— 因为"未记录"有两义（该记没记／本就无需记），不可区分就不许择一断言；R1–R6 重规划触发见 `references/adaptive-planning.md` 与 `references/capability-routing.md`（按需加载）。
 4. **进度汇报节奏（效率项：等待可预期）**：每完成 2-3 步或切换阶段回报**一行**（`步骤 x/y 完成 → 下一步：…`）；只在受阻、需决策、完成时展开。**预计耗时 >1 分钟的单步，在开始前先声明预期时长与中间产出节点**（阈值由 v3.2.1 的 5 分钟收紧为 1 分钟，并把"预计 >5 分钟先报一句"扩大到按步声明），使用户不必空等、也便于及早发现卡顿。
-> **检索快判（retrieval-judge，v4.5.0，本步动手查之前必跑）**：跑一次 System 1 快判 —— `{source_class, candidates, needs_retrieval, confidence, route_hint}`，落 `meta.检索判定`。它判的是「**该不该查、查哪一类源、查到什么程度算够、能不能下「不存在」的断言**」，与 self-judge（入口级）/ method-judge（步骤级）同构，是三者的第三块。⚠️ **未检索不得说"不存在"** —— 只能报"未检索"，或分报"已查 A/B、未查 C/D"（契约 §5.1 否定断言证据门槛）。判定阶段**不发起真检索**，否则失去"先判后查"的次序。契约见 `references/retrieval-judge.md`。
+> **检索快判（retrieval-judge，v4.5.0，本步动手查之前必跑）**：跑一次 System 1 快判 —— `{source_class, candidates, needs_retrieval, confidence, route_hint}`，落 `meta.检索判定`。⚠️ **落盘口径同 method-judge（v4.13.0 校正）：「判」是每次动手查之前都做，「落盘」是条件性的** —— 确定不必检索（`needs_retrieval=false`）时不写决策记录是合法结论；缺省机器侧只报 **SKIP（未检测）**，不判缺口。它判的是「**该不该查、查哪一类源、查到什么程度算够、能不能下「不存在」的断言**」，与 self-judge（入口级）/ method-judge（步骤级）同构，是三者的第三块。⚠️ **未检索不得说"不存在"** —— 只能报"未检索"，或分报"已查 A/B、未查 C/D"（契约 §5.1 否定断言证据门槛）。判定阶段**不发起真检索**，否则失去"先判后查"的次序。契约见 `references/retrieval-judge.md`。
 >
 5. **精确检索（先选对工具再搜）**：网页 → `http_fetch <URL> --grep --max-chars`（缓存自动兜底）；**GitHub 找项目 → `http_fetch --github-search "<query>"`**（限定符 `language:` `stars:` `topic:` `pushed:` `archived:`），**GitHub 找代码实现 → `--github-code-search "<代码片段> repo:owner/name"`**（⭐**强制 `GITHUB_TOKEN`**，返回"哪个仓库的哪个文件"+命中片段），取指标 → `--github-repo a/b,c/d`（凭据按 `--token` → `GITHUB_TOKEN` → `GH_TOKEN` → `gh auth token` 自动解析，已登录 gh CLI 即免配置）；两个搜索都支持 **`--dry-run`**（只打印将请求的 URL，不发请求，无 token 也能验证参数构造）；本地小目录 → 内置 `Grep`/`Glob`；**跨行/结构模式 → `ast-grep`**（"先 A 后 B 且中间无 try"这类；⚠️ 其 pattern **不支持正则**，且**复合语句必须写全**，文本匹配回 `Grep`；符号级用 `ast-grep outline`）；**大数据集/大目录 → `data_query.py files|sql|find`**（DuckDB 零导入直查 Parquet/JSON/CSV；`big` 默认跳过 `.venv` 等依赖目录，旧口径加 `--no-skip`）。**交付物里的外部链接一律先用 `http_fetch.py --check-links <urls.txt>` 并发探活**（只取状态码，不下载正文）。引用标明来源。
    - **检索结果复用（效率项，v3.3.0）**：**同一 URL / 同一查询式在任务内只做一次实时取数**，后续一律走缓存，并在使用处标注「（复用 YYYY-MM-DD 的取数结果）」。需重新实时取的只有三种情形：① 数据具时效性且已过期 ② 前次取数失败或结果不完整 ③ 用户明确要求刷新。**禁止对同一目标反复实时请求**——既浪费等待，也会撞外部限流。
@@ -614,6 +615,8 @@ verify_push.py --rev <rev> --prev-remote <sha>                                 �
 publish_tools.py push --file <本地路径> [--apply] / verify                      自研工具入 public 仓
 guard_constants.py [--selftest]                                                跨模块同名常量同源守卫
 laya_client.py --judge <self-judge|method-judge|retrieval-judge|homework-judge|thinking-judge> / --selfcheck  Laya 离线服务客户端（影子后端）；不可达 → exit 3 降级回 Realization A
+laya_ensure.py check / status / ensure [--timeout <s>] / with [--timeout <s>] -- <命令…> / selftest   Laya **服务可用性网关**（v4.12.0）：就绪判据与 laya_client **同源**（`healthz.status==ok ∧ readyz.ready`，绝不另造一套）；只保证「本次调用进程存活期间」可用 —— `ensure` 输出**显式**带 `persistent:false`，**不解决跨会话常驻**（那是登录自启项/计划任务的事）；前置条件缺失 fail-closed exit 4 并指名缺哪个；`with` 把服务与判定命令绑进同一进程、透传其退出码
+laya_record.py run --file <样本.json> --judge <k> --a <A侧取值> [--state <原文>] [--ensure] / append --b-file <B侧.json> / stats / review --id <n> --verdict <v> [--note <依据>] / export --out <pairs.json> / selftest    Laya 影子期**采样落盘**（样本生产者；v4.13.0 起 **`run` 为推荐路径** —— 一条命令完成 探活→B 侧判定→配对→落盘；`append` 留给"B 侧已拿到手"）；`degraded/absent` 绝不编造 B 值、`provenance` 缺省 `agent_seed` 不进一致率分母；`review` 是分母的**唯一**合法升格路径（只改 provenance、不碰 a/b、**无「一键全标」**）；样本文件不设默认路径且**不得入 git 仓**
 homework_model.py aggregate --dims "W1=..,…,W5=.." / agree --pairs <json> / selftest   模式选用聚合模型（A 侧可复现半边）；参数未拟合，只作对照与回归
 thinking_model.py aggregate --dims "T1=..,…,T4=.." [--veto-noul <f>] [--ambiguity] [--amendments <json>] [--plan-block] / gold [--file <gold.yaml>] / agree --pairs <json> / selftest   思考板块聚合模型（A 侧可复现半边，v4.11.0）；verdict 由 derive 规则产出**不等于 argmax**、`拒绝` 不入 distribution；参数未拟合，只作对照与回归
 kb_learn.py  judge --dims "V1=..,…,V5=.." / note [--evidence|--contradicts|--supersedes] / commit [--apply] / retire [--approve <id>] [--apply] / stats / selftest   学习引擎（K3 蒸馏／K4 校验／K5 入库）＋冲突冻结／废止提案／证据固化；语义归模型、算术归代码；默认 dry-run

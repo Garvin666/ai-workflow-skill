@@ -23,7 +23,7 @@
 | 监听 | `127.0.0.1:8731`（默认只回环） |
 | 鉴权 | `Authorization: Bearer $LAYA_JUDGE_TOKEN`；token 持久化在 `HKCU\Environment`（用户级环境变量），**不落项目文件、不入 plan.yaml、不打日志**（S1） |
 | 运维脚本 | `.workbuddy/laya/bin/`：`serve.cmd` / `.workbuddy/laya/bin/start_laya.ps1` / `.workbuddy/laya/bin/stop_laya.ps1` / `.workbuddy/laya/bin/status_laya.ps1` / `.workbuddy/laya/bin/register_autostart.ps1` / `.workbuddy/laya/bin/setup_token.py` |
-| 开机自启 | 计划任务 `LayaJudge`（登录时触发，失败重启 3 次、间隔 1 分钟）。**注册需管理员权限一次**：非提权下 `Register-ScheduledTask` 必然返回「拒绝访问」（实测），注册脚本已加提权前置门禁（明确报错 + `exit 2`）。**未注册时服务不常驻，客户端走 `exit 3` 降级，工作流不中断** |
+| 开机自启 | 计划任务 `LayaJudge`（登录时触发，失败重启 3 次、间隔 1 分钟）。**注册需管理员权限一次**：非提权下 `Register-ScheduledTask` 必然返回「拒绝访问」（实测），注册脚本已加提权前置门禁（明确报错 + `exit 2`）。**未注册时服务不常驻，客户端走 `exit 3` 降级，工作流不中断**。⚠️ **2026-09-28 实测补**：本机 `schtasks.exe` 已被**安全策略列入程序黑名单**（提示明确"不可批准、不得从别的 shell 绕行"）⇒ 该官方路径**在现宿主不可执行**（**环境约束，非技能缺陷**，如实登记不粉饰）。可行通道：① 启动文件夹项 `…\Startup\LayaJudge.cmd`（**免提权**，登录即起，删除即取消）；② **`laya_ensure with/ensure`** —— **不依赖常驻**：判定时把服务与命令绑进同一进程（推荐形态） |
 
 **实测版本**：`torch 2.14.0+cpu` / `laya 0.3.6` / `transformers 5.17.0` / `huggingface_hub 1.32.0` / `numpy 2.5.3` / `safetensors 0.8.0`。
 > ⚠️ `transformers` 实装为 **5.17.0**（laya 0.3.6 声明 `>=4.48`，5.x 为跨大版本）。本机真跑已验证可用；**这是"声明兼容"，不等于"官方测试过"** —— 升级 transformers 前必须重跑 `laya_client.py --selfcheck`。
@@ -59,6 +59,62 @@ python scripts/laya_client.py --selfcheck          # 探测服务可用性（0 �
 ```
 
 > **一次前向出全部结论**：`laya.Agent.system_one` 在**单次前向**里并行评估 `questions` 里的**每一个**问题。所以**必须把该 judge 的全部维度塞进一次请求** —— 逐维调用＝逐次前向，会把 Laya 唯一的结构性优势浪费掉。
+
+### 2.1 ★ 采样落盘（v4.11.2 新增 —— 补上"样本生产"这一环）
+
+**问题**：`thinking_model.py agree --pairs` 与 `homework_model.py agree --pairs` 都能算一致率，**但没有任何东西在生产 pairs 文件** ⇒ §5 的出口条件「N ≥ 50 条一致率」**结构上恒为 0**：工具解决了「能不能测」，没解决「有没有得测」。**同时**：`laya_client.py` 只把结果打到 stdout，判定完就丢了。
+
+**解法**：`scripts/laya_record.py`（样本生产者）。判定完成后把 A/B 配对落盘：
+
+```bash
+python scripts/laya_record.py run --file <样本.json> --judge self-judge \
+       --a "code" --state "<请求原文>" [--ensure]        # ⭐ 推荐（v4.13.0）：一条命令走完 探活→判定→配对→落盘
+python scripts/laya_record.py append --file <样本.json> --judge self-judge \
+       --a "code" --b-file <laya_client 的 stdout 存成的 JSON> [--state "<请求原文>"]   # B 侧已拿到手时用
+python scripts/laya_record.py stats  --file <样本.json>          # 进度（不判阈值：出口阈值未定值）
+python scripts/laya_record.py review --file <样本.json> --id 1 --verdict user_spot_checked \
+       --note "<抽查依据>"                                        # 人工抽查回填（分母的唯一合法升格路径）
+python scripts/laya_record.py export --file <样本.json> --out <pairs.json>   # → 喂 agree --pairs
+python scripts/laya_record.py selftest
+```
+
+**三条硬纪律**（每条都有 selftest 阴性对照）：
+
+| 纪律 | 内容 | 为什么 |
+| --- | --- | --- |
+| **不编造 B 值** | B 侧 `degraded`／缺席 ⇒ `b=null`、`laya_status ∈ {degraded, absent}`、`comparable=false` | 用 A 值顶替 = 一致率变成**自己跟自己比**（假绿） |
+| **不冒充人工标** | `provenance` 缺省 `agent_seed`，**不得**落在 `{user_spot_checked, human_verified}`；非法值 fail-closed | D12/D13 分母纪律：自标进了分母，一致率就是自证 |
+| **不落原文** | `--state` 默认只存 **sha1 指纹**；要原文须显式 `--keep-state` | 样本文件含用户请求 = 隐私面 |
+
+**两条既有口径的落地**：① `thinking-judge` 的 B 侧**刻意不产 `verdict`**（§2、§6.4）⇒ 该类样本记 `b_field="verdict_probe"` 且 **`comparable=false`（只留痕、不进一致率）**；② `status=ok` 而 `model_key≠multilingual` ⇒ 打 **`d16_violation`**（影子跑错模型 ⇒ 对照无效）。
+
+⚠️ **样本文件位置**：`--file` **不设默认路径**（默认路径会掩盖"写错位置"这类静默故障）；建议放 `~/.workbuddy/laya/samples/pairs.json`（**部署物目录，不入任何 git 仓** —— 样本含请求指纹/原文）。
+⚠️ **首条真机样本（2026-09-28）**：`n_qualified` 仍为 **0** —— 缺省标注是 `agent_seed`，需**人工抽查**改 `provenance` 才进分母。即便攒够 50 条，**没有人工标也一样测不出一致率**。
+> ⭐ **v4.12.0 补上「升格路径」**：此前 `stats` 会告警"需人工抽查后改 provenance"，但**没有任何命令能改** —— 告警指向的动作**无工具承载** ⇒ 出口条件在结构上仍不可达（与「无人触发的分支」同族）。现由 `review` 承载：只改 `provenance`（**绝不碰 a/b**）、不可比对样本**拒绝升格**、**刻意不提供「全部标合格」**（一键全标＝伪造人工抽查）；`stats` 在分母为 0 时**直接打印该命令**，把"缺的是人"接到动作上。
+> ⭐ **v4.13.0 再补「一条命令」（`run`）**：`append` 只收**已经拿到手**的 B 侧文件 ⇒ 调用方要先手工探活、手工跑判定、手工转存 —— **摩擦即漏采**（实测真机样本长期停在 0 条，正是这个形状）。`run` 把整条链路合并：探活（**复用 `laya_ensure` 的同源判据，绝不另造**）→ 跑 B 侧 → 与 `--a` 配对 → 落盘。三条纪律**做进代码**：`provenance` 硬编码 `agent_seed` 且**不提供 `--provenance` 开关**（⇒ `run` **没有任何冒充人工标的入口**）、B 侧不可达/非 JSON ⇒ `b=None`、`--state` 默认只落 sha1。真机实测（2026-09-28）：self-judge 779.2 ms ／ thinking-judge 2824.2 ms，`model_key=multilingual`、`d16_violations=0`；样本 2→4 条，`n_qualified` 仍 **0**。
+> ⚠️ **`n_qualified` 恒为 0 是个真结论，不是工具没做好**：分母**只含人工标**（D12/D13），而**没有任何机制会自动产生人工标** —— 缺的不是样本量，是**人**。`run` 只解决了"样本生产"，**不解决"人工标"**，也不该解决（自动产生的人工标 = 自证）。
+
+### 2.2 ★ 可用性网关：确认它在跑（v4.12.0 新增）
+
+**问题**：服务的**可用性**此前无人负责 —— `laya_client.py` 探到不可达只能 `exit 3` 降级，于是「装了却没在用」；而每个调用方若要自己探活，又会各造一套判据（⇒ 出现"网关说就绪、客户端说降级"的分裂）。
+
+**解法**：`scripts/laya_ensure.py` —— 探活/拉起的**单一入口**：
+
+| 子命令 | 作用 |
+| --- | --- |
+| `check` | 只读探活，退出码 **0 = 就绪 / 3 = 不可用**（**与客户端降级码对齐**） |
+| `status` | JSON 详情：`ready` / `port` / `tcp_connected` / `listener_pids` / `preconditions_missing` |
+| `ensure [--timeout s]` | 探活 → 不在则拉起并轮询到就绪（**分离进程，尽力而为**） |
+| `with [--timeout s] -- <命令…>` | **拉到就绪后执行命令**，透传其退出码 —— 服务与判定处在**同一进程生命周期**内（**推荐形态**） |
+
+**三条硬纪律**：
+
+1. **就绪判据同源**：直接复用 `laya_client.healthz/readyz`（判据 = `healthz.status=="ok" ∧ readyz.ready`，与其 `run_judge` 的 precheck **完全一致**）。**绝不自造判据** —— 自造就会长出"两套真值"。
+2. **不解决跨会话常驻（诚实边界）**：只保证「**本次调用进程存活期间**」可用。实测：**分离进程会被宿主回收**（两次），**持句柄的子进程不会** ⇒ `with` 是受限环境里唯一可靠的形态。`ensure` 的输出**显式**带 `persistent: false` 与说明 —— **不许静默冒充「已常驻」**。跨会话常驻仍归登录自启项（`Startup\LayaJudge.cmd`）或计划任务（`.workbuddy/laya/bin/register_autostart.ps1`，**需提权**）。
+3. **失败可诊断**：前置条件（`serve.cmd` / venv 解释器 / 服务端脚本 / 日志目录）缺一即 **exit 4** 并**指名缺哪个**；等待超时只报**本次启动之后新增**的日志（按偏移切分）—— **不让历史成功记录冒充当前证据**。
+
+⚠️ **selftest 自身零副作用**：fail-closed 分支用**注入的前置条件失败**去撞，**不真正拉起服务**（首版曾真把服务拉起一次 —— 已修，并列为自检项）。
+⚠️ **退出码**：`0` 就绪 / `3` 不可用 / `4` 配置错误；`with` 透传被包装命令的退出码。
 
 ---
 
@@ -122,6 +178,11 @@ python scripts/laya_client.py --selfcheck          # 探测服务可用性（0 �
 **影子期出口条件（需人拍板，未闭环前不得切换）**：
 1. 温度拟合完成（见 §6.1）；
 2. N ≥ 50 条历史请求上 A/B **一致率**达标（阈值本身**未定值**；口径同 `self-judge.md` §10：只报"一致率"，**不声称"准确率"**）。
+
+> ⭐ **样本生产已补齐（v4.11.2）**：条件 2 此前**两头都缺** —— 不只是"N 不够"，而是**没有样本生产者**
+> （`agree` 有算法、`laya_client` 只打 stdout）。现由 **`scripts/laya_record.py`**（§2.1）承担落盘，
+> 样本导出后可直接喂 `agree --pairs`。**但"能攒"不等于"已达标"**：分母**只含人工标**（D12/D13），
+> 首条真机样本的 `n_qualified` 仍为 **0** ⇒ **条件 2 的结论不变：还差得远，且缺的是人。**
 
 > ✅ **时点注记（2026-09-23 补）**：条件 2 此前**结构上无法满足** —— 不是样本不够，而是 **A 侧没有可复现实现**
 > （脑内协议每次现场给分布 ⇒ 测出来的"一致率"是噪声）。现 A 侧的**聚合半边已落成代码**：
@@ -273,6 +334,8 @@ confidence; clamping choice:11+=0.1006. Treat confidence from the affected bucke
 
 ## 变更记录
 
+- **2026-09-28（v4.13.0 随附）**：① §2.1 把 **`run`** 列为推荐路径（一条命令走完 探活→B 侧判定→配对→落盘；三条纪律**做进代码**，`run` 无任何冒充人工标的入口），`append` 降为低层路径；增注 **`n_qualified` 恒为 0 是真结论**（缺的是人，`run` 不解决也不该解决"人工标"）。② §1「开机自启」行补**黑名单实测**：`schtasks.exe` 被安全策略禁用 ⇒ 官方计划任务路径在现宿主**不可执行**（环境约束，非技能缺陷），可行通道 = 启动文件夹项 + `laya_ensure with/ensure`（**不依赖常驻**）。**未改动任何判定口径、阈值与路由规则。**
+- **2026-09-28（v4.11.2 随附）**：① 新增 **§2.1「采样落盘」** —— `scripts/laya_record.py` 作为**样本生产者**，补上「`agree --pairs` 有算法、却没人生产样本」这一环；三条硬纪律（**不编造 B 值**／**不冒充人工标**／**不落原文**）各配 selftest 阴性对照；`thinking-judge` 记 `b_field=verdict_probe` 且 `comparable=false`（只留痕不进一致率，C16/D15）；`status=ok ∧ model_key≠multilingual` 打 `d16_violation`；`--file` **不设默认路径**且样本文件**不得入 git 仓**。② §5 出口条件补**更正注记**：条件 2 此前只写「N 不够」，实测为**两头都缺**（连样本生产者都没有）；并如实登记首条真机样本 `n_qualified` 仍为 **0**。③ 运维事实登记：**服务不常驻时客户端一律 `exit 3`**（"装了"≠"在跑"），故用例前置 `--selfcheck`／按需拉起／登录自启项。**未改动任何既有判据、阈值与路由口径。**
 - **2026-09-28（v4.11.0 随附）**：① 接入**第六份 judge `thinking_judge`**（§2 用法、"不注入候选"与"**B 侧刻意不产 `verdict`**"说明、§3 带宽同源注记、§5 节点图增「阶段 0 **第 0 步**」、§6.4 钉死表增两行 + 真机实测坐实「**Router 只看 `state`**」`script_profile.latin=0.6136`、4.1× 延迟）；② 新增**跨格式同源判据**（`checks_parity._check_thinking_band_source`）锁死 `judges.json.ambiguity_band` ↔ `checks_core.THINKING_NUOL_BAND`；③ **D16** 落为结构判据（`laya.status=="ok"` 而 `model_key≠"multilingual"` → 检查项 24 FAIL）。**未改动任何既有判据、阈值与路由口径。**
 - **2026-09-23（v4.7.0 随附）**：① 接入第四份 judge `homework_judge`（§2 用法与"不注入候选"说明、§3 两处刻意差异、§5 节点、§6.4 钉死表增项并标注**未实测**）；② 新增 **§4.1「环境代理会劫持本地回环」**（真实缺陷：`HTTP_PROXY` 让回环请求拿到 502 → 服务活着却被判不可用 → 静默降级；修法为回环走 `ProxyHandler({})` opener + 连接类异常阴性对照）；③ §7 排障补一行。**未改动任何既有判据、阈值与路由口径。**
 - **2026-09-23（新增）**：本文件随"Laya 本地最小部署 + 接入"任务新增。用户决定：接入形态 A（扩写本体）、权重走 hf-mirror、双 checkpoint、装于用户目录、`setx` 持久化 token、注册开机自启；**§7.3 约束保留（C1 影子形态）**。同步新增 `scripts/laya_client.py`、`scripts/judges.json`，并在三份 judge 手册 §7.3 加指向注记。

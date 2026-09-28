@@ -129,6 +129,70 @@ from checks_core import (  # noqa: F401
     warn,
 )
 
+# ---------------------------------------------------------------------------
+# v4.13.0：整段缺省的分档出口（降噪 + 报覆盖率）
+# ---------------------------------------------------------------------------
+ABSENT = {}   # {检查项: 说明} —— 各 _check_* 在「整段缺省」分支登记，由 flush_absent 统一产出
+
+
+def _tier_is_l1(meta):
+    """本计划是否**已显式声明**为 L1。
+
+    ⚠️ 缺层级信息 ⇒ False（**按 L2 处理**）：层级不明时宁可多提示；
+       这里没有"猜它是轻任务于是静音"这条路（fail-open 的反面）。
+    """
+    return str((meta or {}).get("任务层级", "") or "").strip().upper() == "L1"
+
+
+def _absent(item, note, meta, conditional=False):
+    """整段缺省时的**分档出口**（v4.13.0 起这几项的统一写法）。
+
+    为什么既不是"一律 WARN"（改前）、也不是"一律 FAIL"：
+      · **一律 FAIL 不可行** —— 实测 24 份活跃 L2 plan 里 11 份缺 `meta.入口判定`：
+        直接 FAIL 等于**追认历史计划**，违反本技能写死的「不追认历史计划」。
+      · **一律 WARN 会造噪音** —— 实测新建一个 plan 立刻被 6–7 条同义 WARN 追着要
+        method/retrieval/homework/learning/thinking/清理。L1 轻任务本就不需要这些字段，
+        噪音会把真信号（交付物缺失、越界、不可逆副作用…）淹掉 —— 而"被淹掉"恰恰是
+        这些 WARN 想防的那件事，就成了自我否定。
+      · 故按**已显式声明的层级**分档：
+          - 已声明 L1 ⇒ 只登记，由 `flush_absent` 汇成**一条 SKIP**：
+            "不属本档的缺口"是明确结论，**不是沉默**（静音 ≠ 通过）；
+          - L2 / 层级不明 ⇒ 直接逐条 WARN（该被追着要的地方保持逐条指名）。
+
+    `conditional=True`（v4.13.0 补，用于 method-judge / retrieval-judge）：
+      这两项的**落盘本身是条件性的** —— 契约明写「`needs_tool=false` 的步骤不写决策记录
+      （"不引入"是合法且常见结论）」（见 capability-routing 硬规则 4 与 method-judge 契约）。
+      于是"未记录"有**两义**：① 该记没记 ② 本就无需记。机器不可区分，
+      故**只报"未检测"，不判"缺口"** —— 把合法结论当成失误，是判据在造信号。
+      ⚠️ 与「无输入两态要分开」同源：区分不了就**不许择一断言**，只能如实报"未能判定"。
+    """
+    if conditional:
+        skip(item, note)
+        return
+    if _tier_is_l1(meta):
+        ABSENT[item] = note
+    else:
+        warn(item, note)
+
+
+def reset_absent():
+    """清空缺省登记 —— check_plan 入口调用，防上一轮残留（该函数可能异常提前返回）。"""
+    ABSENT.clear()
+
+
+def flush_absent(meta):
+    """把本轮的缺省登记合并成**一条**（check_plan 末尾调用；漏调 ⇒ L1 的缺省会静默消失）。"""
+    n = len(ABSENT)
+    items = "、".join(sorted(ABSENT))
+    ABSENT.clear()
+    if not n:
+        return
+    skip("判定字段覆盖率",
+         "本计划已声明 L1：未落盘 %d 项（%s）—— 这几项是 L2 全流程的产出，"
+         "L1 未做**不算缺口**（与 WARN 区分：这不是「该做没做」）；已落盘的字段仍按合法性校验"
+         % (n, items))
+
+
 def _check_fuse(meta: dict, steps: list, plan_path: Path) -> None:
     """熔断门禁（v2.5.2）：已熔断的任务不得作为可交付物。
 
@@ -768,9 +832,9 @@ def _check_cleanup(meta: dict, plan_path: Path | None = None) -> None:
     """
     v = meta.get(CLEANUP_KEY, None)
     if not v:
-        warn("meta.清理",
-             "未记录 —— 阶段 6 第 7 条（任务产物清理）本应产出。**只提示不阻断**："
-             "向后兼容旧 plan，不追认历史计划；本项**不是门禁**")
+        _absent("meta.清理",
+                "未记录 —— 阶段 6 第 7 条（任务产物清理）本应产出。**只提示不阻断**："
+                "向后兼容旧 plan，不追认历史计划；本项**不是门禁**", meta)
         return
     if not isinstance(v, dict):
         fail("meta.清理 合法", f"应为映射，实际 {type(v).__name__}")
@@ -939,9 +1003,9 @@ def _check_entry_verdict(meta: dict) -> None:
     """
     v = meta.get(ENTRY_KEY, None)
     if not v:
-        warn("meta.入口判定",
-             "未记录 —— 阶段 0 第 1 步（self-judge）本应产出。**只提示不阻断**："
-             "向后兼容旧 plan，不追认历史计划；本项**不是门禁**（校准无法机器强制）")
+        _absent("meta.入口判定",
+                "未记录 —— 阶段 0 第 1 步（self-judge）本应产出。**只提示不阻断**："
+                "向后兼容旧 plan，不追认历史计划；本项**不是门禁**（校准无法机器强制）", meta)
         return
     if not isinstance(v, dict):
         fail("meta.入口判定 合法", f"应为映射，实际 {type(v).__name__}")
@@ -1000,9 +1064,13 @@ def _check_method_select(meta: dict) -> None:
     """
     v = meta.get(METHOD_KEY, None)
     if v is None or (isinstance(v, list) and not v):
-        warn("meta.方法选用",
-             "未记录 —— 阶段 3 第②步（method-judge）本应每步产出一条，追加到列表。"
-             "**只提示不阻断**：向后兼容旧 plan，不追认历史计划；本项**不是门禁**（校准无法机器强制）")
+        _absent("meta.方法选用",
+                "未记录 —— 阶段 3 第②步（method-judge）。**本项落盘是条件性的**：仅当该步存在"
+                "多条可行路径、或选错代价高时才产出（capability-routing 硬规则 4：`needs_tool=false`"
+                "的步骤**不写决策记录**是合法且常见的结论）⇒ 未记录**无法判定是「该记未记」还是"
+                "「本就无需记」**，故这里只报「未检测」（SKIP），**不判缺口**；一旦填写则必须结构合法，"
+                "非法即 FAIL。**刻意不称门禁**（校准无法机器强制，见 references/method-judge.md §10）",
+                meta, conditional=True)
         return
     # 单映射（过渡期偶发）归一化为 1 元素列表，便于统一校验
     entries = v if isinstance(v, list) else [v]
@@ -1108,9 +1176,13 @@ def _check_retrieval_verdict(meta: dict) -> None:
     """
     v = meta.get(RETRIEVAL_KEY, None)
     if v is None or (isinstance(v, list) and not v):
-        warn("meta.检索判定",
-             "未记录 —— 阶段 3 第 5 条之前（retrieval-judge）本应每次检索产出一条，追加到列表。"
-             "**只提示不阻断**：向后兼容旧 plan，不追认历史计划；本项**不是门禁**（校准无法机器强制）")
+        _absent("meta.检索判定",
+                "未记录 —— 阶段 3 第 5 条之前（retrieval-judge）。**本项落盘是条件性的**：仅当确需"
+                "检索时才产出（`needs_retrieval=false`／「不必检索」是合法且常见的结论）⇒ 未记录"
+                "**无法判定是「该记未记」还是「本就无需记」**，故这里只报「未检测」（SKIP），"
+                "**不判缺口**；一旦填写则必须结构合法，非法即 FAIL。"
+                "**刻意不称门禁**（校准无法机器强制，见 references/retrieval-judge.md §10）",
+                meta, conditional=True)
         return
     # 单映射（过渡期偶发）归一化为 1 元素列表，便于统一校验
     entries = v if isinstance(v, list) else [v]
@@ -1219,9 +1291,9 @@ def _check_homework_verdict(meta: dict) -> None:
     """
     v = meta.get(HOMEWORK_KEY, None)
     if not v:
-        warn("meta.作业判定",
-             "未记录 —— 阶段 0 作业识别（homework-judge）本应产出。**只提示不阻断**："
-             "向后兼容旧 plan，不追认历史计划；本项**不是门禁**（校准无法机器强制）")
+        _absent("meta.作业判定",
+                "未记录 —— 阶段 0 作业识别（homework-judge）本应产出。**只提示不阻断**："
+                "向后兼容旧 plan，不追认历史计划；本项**不是门禁**（校准无法机器强制）", meta)
         return
     if not isinstance(v, dict):
         fail("meta.作业判定 合法", f"应为映射，实际 {type(v).__name__}")
@@ -1362,9 +1434,9 @@ def _check_learning_verdict(meta: dict) -> None:
     """
     v = meta.get(LEARNING_KEY, None)
     if not v:
-        warn("meta.学习判定",
-             "未记录 —— 阶段 6 收尾（learning-judge）本应产出。**只提示不阻断**："
-             "向后兼容旧 plan，不追认历史计划；本项**不是门禁**（校准无法机器强制）")
+        _absent("meta.学习判定",
+                "未记录 —— 阶段 6 收尾（learning-judge）本应产出。**只提示不阻断**："
+                "向后兼容旧 plan，不追认历史计划；本项**不是门禁**（校准无法机器强制）", meta)
         return
     if not isinstance(v, dict):
         fail("meta.学习判定 合法", f"应为映射，实际 {type(v).__name__}")
@@ -1517,9 +1589,9 @@ def _check_thinking_verdict(meta: dict) -> None:
     """
     v = meta.get(THINKING_KEY, None)
     if not v:
-        warn("meta.思考判定",
-             "未记录 —— 阶段 0 第 0 步（thinking-judge）本应产出。**只提示不阻断**："
-             "向后兼容旧 plan，不追认历史计划；本项**不是门禁**（价值观判定无机器 oracle）")
+        _absent("meta.思考判定",
+                "未记录 —— 阶段 0 第 0 步（thinking-judge）本应产出。**只提示不阻断**："
+                "向后兼容旧 plan，不追认历史计划；本项**不是门禁**（价值观判定无机器 oracle）", meta)
         return
     if not isinstance(v, dict):
         fail("meta.思考判定 合法", f"应为映射，实际 {type(v).__name__}")
