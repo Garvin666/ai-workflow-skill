@@ -131,6 +131,7 @@ from checks_core import (  # noqa: F401
 
 # ---------------------------------------------------------------------------
 # v4.13.0：整段缺省的分档出口（降噪 + 报覆盖率）
+# v4.14.0：口径变硬 —— L2/层级不明 ⇒ 整段缺省**直接 FAIL**（用户拍板）；L1 ⇒ 仍汇成一条 SKIP
 # ---------------------------------------------------------------------------
 ABSENT = {}   # {检查项: 说明} —— 各 _check_* 在「整段缺省」分支登记，由 flush_absent 统一产出
 
@@ -138,41 +139,38 @@ ABSENT = {}   # {检查项: 说明} —— 各 _check_* 在「整段缺省」分
 def _tier_is_l1(meta):
     """本计划是否**已显式声明**为 L1。
 
-    ⚠️ 缺层级信息 ⇒ False（**按 L2 处理**）：层级不明时宁可多提示；
-       这里没有"猜它是轻任务于是静音"这条路（fail-open 的反面）。
+    ⚠️ 缺层级信息 ⇒ False（**按 L2 处理**）：v4.14.0 起 L2 的整段缺省**直接 FAIL**，
+       故「层级不明」= 从严（宁可多判红，也不静默放行 —— fail-open 的反面）。
+       这里没有"猜它是轻任务于是静音"这条路。
     """
     return str((meta or {}).get("任务层级", "") or "").strip().upper() == "L1"
 
 
-def _absent(item, note, meta, conditional=False):
-    """整段缺省时的**分档出口**（v4.13.0 起这几项的统一写法）。
+def _absent(item, note, meta):
+    """整段缺省时的**分档出口**（v4.13.0 起统一写法；v4.14.0 起 L2 升 FAIL）。
 
-    为什么既不是"一律 WARN"（改前）、也不是"一律 FAIL"：
-      · **一律 FAIL 不可行** —— 实测 24 份活跃 L2 plan 里 11 份缺 `meta.入口判定`：
-        直接 FAIL 等于**追认历史计划**，违反本技能写死的「不追认历史计划」。
-      · **一律 WARN 会造噪音** —— 实测新建一个 plan 立刻被 6–7 条同义 WARN 追着要
-        method/retrieval/homework/learning/thinking/清理。L1 轻任务本就不需要这些字段，
-        噪音会把真信号（交付物缺失、越界、不可逆副作用…）淹掉 —— 而"被淹掉"恰恰是
-        这些 WARN 想防的那件事，就成了自我否定。
-      · 故按**已显式声明的层级**分档：
-          - 已声明 L1 ⇒ 只登记，由 `flush_absent` 汇成**一条 SKIP**：
-            "不属本档的缺口"是明确结论，**不是沉默**（静音 ≠ 通过）；
-          - L2 / 层级不明 ⇒ 直接逐条 WARN（该被追着要的地方保持逐条指名）。
+    v4.14.0 口径（用户 2026-09-28 拍板「L2 一律升 FAIL」）：
+      · **已声明 L1** ⇒ 只登记，由 `flush_absent` 汇成**一条 SKIP**
+        —— L1 本就不跑这些判定，"不属本档的缺口"是明确结论，**不是沉默**（静音 ≠ 通过）；
+      · **L2 / 层级不明** ⇒ **逐条 FAIL**。
 
-    `conditional=True`（v4.13.0 补，用于 method-judge / retrieval-judge）：
-      这两项的**落盘本身是条件性的** —— 契约明写「`needs_tool=false` 的步骤不写决策记录
-      （"不引入"是合法且常见结论）」（见 capability-routing 硬规则 4 与 method-judge 契约）。
-      于是"未记录"有**两义**：① 该记没记 ② 本就无需记。机器不可区分，
-      故**只报"未检测"，不判"缺口"** —— 把合法结论当成失误，是判据在造信号。
-      ⚠️ 与「无输入两态要分开」同源：区分不了就**不许择一断言**，只能如实报"未能判定"。
+    ⚠️ 与前版的区别（必须留痕，别当成"小改"）：v4.13.0 此处是 WARN，理由是
+    （a）不追认历史计划（实测 24 份活跃 L2 里 11 份缺 `meta.入口判定`）；
+    （b）避免 6–7 条同义 WARN 把真信号淹掉。用户已明确选择硬口径 ⇒ 本版按 FAIL 执行，
+    但**存量影响面必须实测并逐份列出**（不得含糊成"影响不大"），且 L1 出口保留。
+
+    ⚠️ **配套的契约变更（缺一不可）**：既然缺省即 FAIL，则这几项在 L2 **必须落盘**，
+    **含显式否定结论** —— `needs_tool=false` / `needs_retrieval=false` 也要**写下来**。
+    否则"合法结论"会被判成"缺口"，那是判据在造信号（与「无输入两态要分开」同源）。
+    契约见 references/method-judge.md §10 与 references/retrieval-judge.md §10。
+
+    ⚠️ 本项只判「**有没有落盘**」与「结构是否合法」，**不判判得对不对** ——
+    校准无机器 oracle，不因升 FAIL 就变成准确率门禁。
     """
-    if conditional:
-        skip(item, note)
-        return
     if _tier_is_l1(meta):
         ABSENT[item] = note
     else:
-        warn(item, note)
+        fail(item, note)
 
 
 def reset_absent():
@@ -181,7 +179,10 @@ def reset_absent():
 
 
 def flush_absent(meta):
-    """把本轮的缺省登记合并成**一条**（check_plan 末尾调用；漏调 ⇒ L1 的缺省会静默消失）。"""
+    """把本轮的缺省登记合并成**一条**（check_plan 末尾调用；漏调 ⇒ L1 的缺省会静默消失）。
+
+    ⚠️ v4.14.0 起**只有 L1 会走到这里** —— L2/层级不明的缺省已在 `_absent` 里直接 FAIL。
+    """
     n = len(ABSENT)
     items = "、".join(sorted(ABSENT))
     ABSENT.clear()
@@ -189,7 +190,8 @@ def flush_absent(meta):
         return
     skip("判定字段覆盖率",
          "本计划已声明 L1：未落盘 %d 项（%s）—— 这几项是 L2 全流程的产出，"
-         "L1 未做**不算缺口**（与 WARN 区分：这不是「该做没做」）；已落盘的字段仍按合法性校验"
+         "L1 未做**不算缺口**（v4.14.0 起 L2/层级不明会**直接逐条 FAIL**，"
+         "故须先显式声明 `meta.任务层级: L1` 才免判）；已落盘的字段仍按合法性校验"
          % (n, items))
 
 
@@ -833,8 +835,10 @@ def _check_cleanup(meta: dict, plan_path: Path | None = None) -> None:
     v = meta.get(CLEANUP_KEY, None)
     if not v:
         _absent("meta.清理",
-                "未记录 —— 阶段 6 第 7 条（任务产物清理）本应产出。**只提示不阻断**："
-                "向后兼容旧 plan，不追认历史计划；本项**不是门禁**", meta)
+                "未记录 —— 阶段 6 第 7 条（任务产物清理）本应产出。"
+                "**L2 必填**：v4.14.0 起整段缺省**直接判 FAIL**（不再 WARN）。本项只判「有没有落盘」，**不"
+                "判判得对不对**（校准无机器 oracle）。若本计划确属 L1，请显式写 `meta.任务层级: L1` —— 那样只"
+                "汇成一条 SKIP，不判缺口。", meta)
         return
     if not isinstance(v, dict):
         fail("meta.清理 合法", f"应为映射，实际 {type(v).__name__}")
@@ -1004,8 +1008,10 @@ def _check_entry_verdict(meta: dict) -> None:
     v = meta.get(ENTRY_KEY, None)
     if not v:
         _absent("meta.入口判定",
-                "未记录 —— 阶段 0 第 1 步（self-judge）本应产出。**只提示不阻断**："
-                "向后兼容旧 plan，不追认历史计划；本项**不是门禁**（校准无法机器强制）", meta)
+                "未记录 —— 阶段 0 第 1 步（self-judge）本应产出。"
+                "**L2 必填**：v4.14.0 起整段缺省**直接判 FAIL**（不再 WARN）。本项只判「有没有落盘」，**不"
+                "判判得对不对**（校准无机器 oracle）。若本计划确属 L1，请显式写 `meta.任务层级: L1` —— 那样只"
+                "汇成一条 SKIP，不判缺口。", meta)
         return
     if not isinstance(v, dict):
         fail("meta.入口判定 合法", f"应为映射，实际 {type(v).__name__}")
@@ -1065,12 +1071,11 @@ def _check_method_select(meta: dict) -> None:
     v = meta.get(METHOD_KEY, None)
     if v is None or (isinstance(v, list) and not v):
         _absent("meta.方法选用",
-                "未记录 —— 阶段 3 第②步（method-judge）。**本项落盘是条件性的**：仅当该步存在"
-                "多条可行路径、或选错代价高时才产出（capability-routing 硬规则 4：`needs_tool=false`"
-                "的步骤**不写决策记录**是合法且常见的结论）⇒ 未记录**无法判定是「该记未记」还是"
-                "「本就无需记」**，故这里只报「未检测」（SKIP），**不判缺口**；一旦填写则必须结构合法，"
-                "非法即 FAIL。**刻意不称门禁**（校准无法机器强制，见 references/method-judge.md §10）",
-                meta, conditional=True)
+                "未记录 —— 阶段 3 第②步（method-judge）。**L2 必须落盘（v4.14.0 契约变更）**："
+                "各步都要写下选用的工具／方法，**含显式否定结论** —— 该步不必引入工具也要写成"
+                "`needs_tool: false`：「这一步不必引入工具」是**结论**，不是免写理由。"
+                "缺省即 FAIL；一旦填写则必须结构合法，非法亦 FAIL。"
+                "本项只判有无与结构，**不判选得对不对**（见 references/method-judge.md §10）。", meta)
         return
     # 单映射（过渡期偶发）归一化为 1 元素列表，便于统一校验
     entries = v if isinstance(v, list) else [v]
@@ -1177,12 +1182,11 @@ def _check_retrieval_verdict(meta: dict) -> None:
     v = meta.get(RETRIEVAL_KEY, None)
     if v is None or (isinstance(v, list) and not v):
         _absent("meta.检索判定",
-                "未记录 —— 阶段 3 第 5 条之前（retrieval-judge）。**本项落盘是条件性的**：仅当确需"
-                "检索时才产出（`needs_retrieval=false`／「不必检索」是合法且常见的结论）⇒ 未记录"
-                "**无法判定是「该记未记」还是「本就无需记」**，故这里只报「未检测」（SKIP），"
-                "**不判缺口**；一旦填写则必须结构合法，非法即 FAIL。"
-                "**刻意不称门禁**（校准无法机器强制，见 references/retrieval-judge.md §10）",
-                meta, conditional=True)
+                "未记录 —— 阶段 3 第 5 条之前（retrieval-judge）。**L2 必须落盘（v4.14.0 契约变更）**："
+                "确需检索的自然要写下；**确不需检索的也要写下否定结论**（`needs_retrieval: false` /"
+                "「本任务无需检索」）—— 否则「该记未记」与「本就无需记」机器不可区分。"
+                "缺省即 FAIL；一旦填写则必须结构合法，非法亦 FAIL。"
+                "本项只判有无与结构，**不判检索得对不对**（见 references/retrieval-judge.md §10）。", meta)
         return
     # 单映射（过渡期偶发）归一化为 1 元素列表，便于统一校验
     entries = v if isinstance(v, list) else [v]
@@ -1292,8 +1296,10 @@ def _check_homework_verdict(meta: dict) -> None:
     v = meta.get(HOMEWORK_KEY, None)
     if not v:
         _absent("meta.作业判定",
-                "未记录 —— 阶段 0 作业识别（homework-judge）本应产出。**只提示不阻断**："
-                "向后兼容旧 plan，不追认历史计划；本项**不是门禁**（校准无法机器强制）", meta)
+                "未记录 —— 阶段 0 作业识别（homework-judge）本应产出。"
+                "**L2 必填**：v4.14.0 起整段缺省**直接判 FAIL**（不再 WARN）。本项只判「有没有落盘」，**不"
+                "判判得对不对**（校准无机器 oracle）。若本计划确属 L1，请显式写 `meta.任务层级: L1` —— 那样只"
+                "汇成一条 SKIP，不判缺口。", meta)
         return
     if not isinstance(v, dict):
         fail("meta.作业判定 合法", f"应为映射，实际 {type(v).__name__}")
@@ -1435,8 +1441,10 @@ def _check_learning_verdict(meta: dict) -> None:
     v = meta.get(LEARNING_KEY, None)
     if not v:
         _absent("meta.学习判定",
-                "未记录 —— 阶段 6 收尾（learning-judge）本应产出。**只提示不阻断**："
-                "向后兼容旧 plan，不追认历史计划；本项**不是门禁**（校准无法机器强制）", meta)
+                "未记录 —— 阶段 6 收尾（learning-judge）本应产出。"
+                "**L2 必填**：v4.14.0 起整段缺省**直接判 FAIL**（不再 WARN）。本项只判「有没有落盘」，**不"
+                "判判得对不对**（校准无机器 oracle）。若本计划确属 L1，请显式写 `meta.任务层级: L1` —— 那样只"
+                "汇成一条 SKIP，不判缺口。", meta)
         return
     if not isinstance(v, dict):
         fail("meta.学习判定 合法", f"应为映射，实际 {type(v).__name__}")
@@ -1572,7 +1580,7 @@ def _check_learning_sample(meta: dict) -> None:
 def _check_thinking_verdict(meta: dict) -> None:
     """v4.11.0：检查项 24 —— `meta.思考判定` 结构合法 + **D 系列跨字段自洽**（thinking-judge 的产出）。
 
-    口径与既有快判检查项同源：整段缺省 → **WARN**（C10：向后兼容旧 plan，**不追认历史计划**）；
+    口径与既有快判检查项同源：**L2／层级不明 ⇒ 整段缺省判 FAIL**（v4.14.0 起，用户 2026-09-28 拍板）；**L1 出口**：显式声明 `meta.任务层级: L1` ⇒ 汇总为**一条 SKIP**（「不算缺口」）；
     字段存在但非法 → **FAIL**。⚠️「没填」≠「填错了」（设计 §3.9 判据纪律第 2 条）。
 
     ⚠️ **它不是门禁** —— `confidence` / `veto` 由模型自填，机器只能校验**结构合法与跨字段自洽**
@@ -1590,8 +1598,10 @@ def _check_thinking_verdict(meta: dict) -> None:
     v = meta.get(THINKING_KEY, None)
     if not v:
         _absent("meta.思考判定",
-                "未记录 —— 阶段 0 第 0 步（thinking-judge）本应产出。**只提示不阻断**："
-                "向后兼容旧 plan，不追认历史计划；本项**不是门禁**（价值观判定无机器 oracle）", meta)
+                "未记录 —— 阶段 0 第 0 步（thinking-judge）本应产出。"
+                "**L2 必填**：v4.14.0 起整段缺省**直接判 FAIL**（不再 WARN）。本项只判「有没有落盘」，**不"
+                "判判得对不对**（校准无机器 oracle）。若本计划确属 L1，请显式写 `meta.任务层级: L1` —— 那样只"
+                "汇成一条 SKIP，不判缺口。", meta)
         return
     if not isinstance(v, dict):
         fail("meta.思考判定 合法", f"应为映射，实际 {type(v).__name__}")

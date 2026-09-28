@@ -316,7 +316,7 @@ def check_plan(plan_path: Path, base: Path) -> int:
     _check_scope(meta, steps, base)
     _check_irreversible(meta, steps)
     _check_user_release(meta)
-    reset_absent()   # v4.13.0：清上一轮残留（本函数可能异常提前返回）
+    reset_absent()   # v4.13.0 起：清上一轮残留（本函数可能异常提前返回）
     _check_entry_verdict(meta)
     _check_method_select(meta)
     _check_method_select_sample(meta)
@@ -352,7 +352,7 @@ def check_plan(plan_path: Path, base: Path) -> int:
     except Exception as e:                       # noqa: BLE001
         warn("思考判定抽样人审（检查器异常）",
              f"{type(e).__name__}: {e} —— 该检查项契约上只 WARN，故降级为 WARN")
-    # v4.13.0：把散落的「整段缺省」合并为一条（必须在所有 *_verdict 之后）。
+    # v4.13.0 起：把散落的「整段缺省」合并为一条（L1 出口专用；L2 已在 _absent 里直接 FAIL）。
     #   漏调 ⇒ 已声明 L1 的计划其缺省项会**静默消失**（静音 ≠ 通过），故此处不可省。
     flush_absent(meta)
     _check_stage_gates(steps)

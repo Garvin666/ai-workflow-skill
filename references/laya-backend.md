@@ -69,6 +69,9 @@ python scripts/laya_client.py --selfcheck          # 探测服务可用性（0 �
 ```bash
 python scripts/laya_record.py run --file <样本.json> --judge self-judge \
        --a "code" --state "<请求原文>" [--ensure]        # ⭐ 推荐（v4.13.0）：一条命令走完 探活→判定→配对→落盘
+     #   v4.14.0 起一次跑多 judge（带键可重复，各 judge 共用同一份 --state）：
+     $PY ~/.workbuddy/skills/ai-workflow/scripts/laya_record.py run --file "<样本>" \
+       --a self-judge=code --a thinking-judge=接受 --state "<请求原文>"
 python scripts/laya_record.py append --file <样本.json> --judge self-judge \
        --a "code" --b-file <laya_client 的 stdout 存成的 JSON> [--state "<请求原文>"]   # B 侧已拿到手时用
 python scripts/laya_record.py stats  --file <样本.json>          # 进度（不判阈值：出口阈值未定值）
@@ -91,7 +94,7 @@ python scripts/laya_record.py selftest
 ⚠️ **样本文件位置**：`--file` **不设默认路径**（默认路径会掩盖"写错位置"这类静默故障）；建议放 `~/.workbuddy/laya/samples/pairs.json`（**部署物目录，不入任何 git 仓** —— 样本含请求指纹/原文）。
 ⚠️ **首条真机样本（2026-09-28）**：`n_qualified` 仍为 **0** —— 缺省标注是 `agent_seed`，需**人工抽查**改 `provenance` 才进分母。即便攒够 50 条，**没有人工标也一样测不出一致率**。
 > ⭐ **v4.12.0 补上「升格路径」**：此前 `stats` 会告警"需人工抽查后改 provenance"，但**没有任何命令能改** —— 告警指向的动作**无工具承载** ⇒ 出口条件在结构上仍不可达（与「无人触发的分支」同族）。现由 `review` 承载：只改 `provenance`（**绝不碰 a/b**）、不可比对样本**拒绝升格**、**刻意不提供「全部标合格」**（一键全标＝伪造人工抽查）；`stats` 在分母为 0 时**直接打印该命令**，把"缺的是人"接到动作上。
-> ⭐ **v4.13.0 再补「一条命令」（`run`）**：`append` 只收**已经拿到手**的 B 侧文件 ⇒ 调用方要先手工探活、手工跑判定、手工转存 —— **摩擦即漏采**（实测真机样本长期停在 0 条，正是这个形状）。`run` 把整条链路合并：探活（**复用 `laya_ensure` 的同源判据，绝不另造**）→ 跑 B 侧 → 与 `--a` 配对 → 落盘。三条纪律**做进代码**：`provenance` 硬编码 `agent_seed` 且**不提供 `--provenance` 开关**（⇒ `run` **没有任何冒充人工标的入口**）、B 侧不可达/非 JSON ⇒ `b=None`、`--state` 默认只落 sha1。真机实测（2026-09-28）：self-judge 779.2 ms ／ thinking-judge 2824.2 ms，`model_key=multilingual`、`d16_violations=0`；样本 2→4 条，`n_qualified` 仍 **0**。
+> ⭐ **v4.13.0 再补「一条命令」（`run`）**：`append` 只收**已经拿到手**的 B 侧文件 ⇒ 调用方要先手工探活、手工跑判定、手工转存 —— **摩擦即漏采**（实测真机样本长期停在 0 条，正是这个形状）。`run` 把整条链路合并：探活（**复用 `laya_ensure` 的同源判据，绝不另造**）→ 跑 B 侧 → 与 `--a` 配对 → 落盘。三条纪律**做进代码**：`provenance` 硬编码 `agent_seed` 且**不提供 `--provenance` 开关**（⇒ `run` **没有任何冒充人工标的入口**）、B 侧不可达/非 JSON ⇒ `b=None`、`--state` 默认只落 sha1。真机实测（2026-09-28）：self-judge 779.2 ms ／ thinking-judge 2824.2 ms，`model_key=multilingual`、`d16_violations=0`；样本 2→4 条，`n_qualified` 仍 **0**。**v4.14.0 补**：`--a <judge>=<取值>` 可重复 ⇒ **一次跑多 judge**（各 judge 共用同一份 `--state`；输入本就不同的请分次调用）——把「同一份输入要跑 N 份 judge」的采样从 N 次调用降到 1 次。
 > ⚠️ **`n_qualified` 恒为 0 是个真结论，不是工具没做好**：分母**只含人工标**（D12/D13），而**没有任何机制会自动产生人工标** —— 缺的不是样本量，是**人**。`run` 只解决了"样本生产"，**不解决"人工标"**，也不该解决（自动产生的人工标 = 自证）。
 
 ### 2.2 ★ 可用性网关：确认它在跑（v4.12.0 新增）
@@ -334,6 +337,7 @@ confidence; clamping choice:11+=0.1006. Treat confidence from the affected bucke
 
 ## 变更记录
 
+- **2026-09-28（v4.14.0 随附）**：① §2.1 `run` 的 `--a` 支持**带键可重复**（`--a self-judge=code --a thinking-judge=接受`）⇒ **一次跑多 judge**，各 judge **共用同一份 `--state`**（判的是同一份输入；输入本就不同的请分次调用）；三条纪律在批量路径上**同样硬编码**（`provenance` 仍恒为 `agent_seed`，无任何开关）；多 judge 时 `--b-out` 按 judge 加后缀（防静默覆盖）。② `laya_record selftest` **47 → 57 项**。**未改动任何判定口径、阈值与路由规则**（Laya 侧零改动）。
 - **2026-09-28（v4.13.0 随附）**：① §2.1 把 **`run`** 列为推荐路径（一条命令走完 探活→B 侧判定→配对→落盘；三条纪律**做进代码**，`run` 无任何冒充人工标的入口），`append` 降为低层路径；增注 **`n_qualified` 恒为 0 是真结论**（缺的是人，`run` 不解决也不该解决"人工标"）。② §1「开机自启」行补**黑名单实测**：`schtasks.exe` 被安全策略禁用 ⇒ 官方计划任务路径在现宿主**不可执行**（环境约束，非技能缺陷），可行通道 = 启动文件夹项 + `laya_ensure with/ensure`（**不依赖常驻**）。**未改动任何判定口径、阈值与路由规则。**
 - **2026-09-28（v4.11.2 随附）**：① 新增 **§2.1「采样落盘」** —— `scripts/laya_record.py` 作为**样本生产者**，补上「`agree --pairs` 有算法、却没人生产样本」这一环；三条硬纪律（**不编造 B 值**／**不冒充人工标**／**不落原文**）各配 selftest 阴性对照；`thinking-judge` 记 `b_field=verdict_probe` 且 `comparable=false`（只留痕不进一致率，C16/D15）；`status=ok ∧ model_key≠multilingual` 打 `d16_violation`；`--file` **不设默认路径**且样本文件**不得入 git 仓**。② §5 出口条件补**更正注记**：条件 2 此前只写「N 不够」，实测为**两头都缺**（连样本生产者都没有）；并如实登记首条真机样本 `n_qualified` 仍为 **0**。③ 运维事实登记：**服务不常驻时客户端一律 `exit 3`**（"装了"≠"在跑"），故用例前置 `--selfcheck`／按需拉起／登录自启项。**未改动任何既有判据、阈值与路由口径。**
 - **2026-09-28（v4.11.0 随附）**：① 接入**第六份 judge `thinking_judge`**（§2 用法、"不注入候选"与"**B 侧刻意不产 `verdict`**"说明、§3 带宽同源注记、§5 节点图增「阶段 0 **第 0 步**」、§6.4 钉死表增两行 + 真机实测坐实「**Router 只看 `state`**」`script_profile.latin=0.6136`、4.1× 延迟）；② 新增**跨格式同源判据**（`checks_parity._check_thinking_band_source`）锁死 `judges.json.ambiguity_band` ↔ `checks_core.THINKING_NUOL_BAND`；③ **D16** 落为结构判据（`laya.status=="ok"` 而 `model_key≠"multilingual"` → 检查项 24 FAIL）。**未改动任何既有判据、阈值与路由口径。**

@@ -498,6 +498,11 @@ def _fixture(root: Path, *, status="完成", fuse="", with_deliv_in_tmp=True) ->
         f"  工作区根: \"{root.as_posix()}\"\n"
         "  创建时间: \"2026-01-01 00:00\"\n"
         "  验证信号: \"夹具：out/result.txt 存在\"\n"
+        # ⚠️ v4.14.0 起必须**显式声明层级**：本夹具不含任何 L2 全流程字段，
+        #    不声明即「层级不明」⇒ 按 fail-closed 判 7 条 FAIL ⇒ T3 门禁
+        #    「只数 FAIL」会（正确地）拦下它，整个 selftest 连带红 10 项。
+        #    声明 L1 后由 flush_absent 走 L1 出口 ⇒ 汇成 1 条 SKIP、FAIL=0。
+        "  任务层级: \"L1\"\n"
         "  复盘沉淀: \"无沉淀：本目录只是 selftest 夹具，没有可沉淀内容\"\n"
         f"  熔断状态: \"{fuse}\"\n"
         "steps:\n"
@@ -591,17 +596,21 @@ def main_selftest() -> int:
         tp = _tamper(R / "tamper_names.py", kill_names=True)
         t3 = _fixture(r3)
         rc, out = _run(t3, r3, apply=True, extra=("--no-trash",), script=tp)
+        gone3 = not (t3 / "tmp" / "确认表.md").exists()
         case("S3 阴性对照（撤掉 PROTECT_NAMES）→ 保护名单项被删除",
-             not (t3 / "tmp" / "确认表.md").exists(),
-             "撤掉后仍删不掉 ⇒ 该保护不是它实现的（假绿）")
+             gone3,
+             "撤掉后已删掉 ⇒ 该保护确实由该名单实现（非假绿）" if gone3
+             else "撤掉后仍删不掉 ⇒ 该保护不是它实现的（假绿）")
 
         r4 = R / "c4"; r4.mkdir()
         td2 = _tamper(R / "tamper_deliv.py", kill_deliv=True)
         t4 = _fixture(r4)
         rc, out = _run(t4, r4, apply=True, extra=("--no-trash",), script=td2)
+        gone4 = not (t4 / "tmp" / "declared_deliverable.md").exists()
         case("S4 阴性对照（撤掉交付物保护）→ tmp 内的交付物被删除",
-             not (t4 / "tmp" / "declared_deliverable.md").exists(),
-             "撤掉后仍删不掉 ⇒ 该保护不是它实现的（假绿）")
+             gone4,
+             "撤掉后已删掉 ⇒ 该保护确实由交付物清单实现（非假绿）" if gone4
+             else "撤掉后仍删不掉 ⇒ 该保护不是它实现的（假绿）")
 
         # ── S5/S6 阴性对照：触发条件不满足 → 拒绝且不动手
         r5 = R / "c5"; r5.mkdir()

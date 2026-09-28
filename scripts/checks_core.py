@@ -187,7 +187,7 @@ SEDIMENT_TOKENS = ("沉淀", "复盘", "sediment", "metrics")
 #   ⚠️ 两条结构约束（内核 N2「底线不可加权稀释」的机检形态）：
 #     · `拒绝` **不得作为 distribution 的键**（D7）—— 把否决层并进 softmax 是最危险的退化形式之一；
 #     · `T5` **不得出现在 dimensions**（D9）—— 把否决层降格成维度分（与 D7 同源，堵另一条路）。
-#   机检落点：`checks.py plan` 检查项 24（结构合法 + D1–D19 跨字段自洽；整段缺省只 WARN、填写则非法即 FAIL）、
+#   机检落点：`checks.py plan` 检查项 24（结构合法 + D1–D19 跨字段自洽；v4.14.0 起整段缺省在 **L2 判 FAIL**、L1 汇一条 SKIP；填写则非法即 FAIL）、
 #     检查项 25（抽样人审指路，只 WARN）；口径守卫见 `checks.py skill`；跨格式阈值同源另有一条独立判据
 #     （`checks_parity._check_thinking_band_source`）。
 THINKING_KEY = "思考判定"
@@ -311,17 +311,19 @@ plan 子命令检查项:
         一旦填写必须结构合法（最大重试次数整数 ≥1 / 触发条件为 T1–T3 子集 /
         终止策略在枚举内），步骤级覆盖同口径；语义（重试是否真改了）不机器判定，靠抽查。
     13. 入口判定（v4.2.0）：meta「入口判定」可选 —— 阶段 0 第 1 步 self-judge 的产出，
-        完整契约见 references/self-judge.md。**整段缺省 → WARN**（向后兼容旧 plan，
-        **不追认历史计划**）；一旦填写须结构合法（category ∈ chat/code/content、
+        完整契约见 references/self-judge.md。**L2／层级不明 ⇒ 整段缺省判 FAIL**（v4.14.0 起，用户 2026-09-28 拍板）；**L1 出口**：显式声明 `meta.任务层级: L1` ⇒ 汇总为**一条 SKIP**（「不算缺口」）。
+        一旦填写须结构合法（category ∈ chat/code/content、
         distribution 恰含三键且和=1、confidence ∈ [0,1]、dimensions 含 D1–D5、
         route_hint 非空、ambiguity 为 bool、secondary 留空或在枚举内），非法即 FAIL。
-        ⚠️ **它不是门禁**：confidence 由模型自填、校准无法被机器证明（手册 §10 原样写明）。
+        ⚠️ **它仍不是准确率门禁**：升格判的是「有没有落盘」；confidence 由模型自填、校准无法被机器证明。
     14. 方法选用（v4.4.0）：meta「方法选用」可选 —— 阶段 3 第②步 method-judge 的产出，
-        完整契约见 references/method-judge.md。**整段缺省 → WARN**（向后兼容旧 plan，
-        **不追认历史计划**）；一旦填写须结构合法（gap_class ∈ 知识/算力/事实/手脚 及其 '+' 组合、
+        完整契约见 references/method-judge.md。**L2／层级不明 ⇒ 整段缺省判 FAIL**（v4.14.0 起，用户 2026-09-28 拍板）；**L1 出口**：显式声明 `meta.任务层级: L1` ⇒ 汇总为**一条 SKIP**（「不算缺口」）。
+        ⭐ **v4.14.0 同批契约变更**：L2 **每步都要落盘**，**含显式否定结论**（`needs_tool: false` 也要写 ——
+        「这一步不必引入工具」是**结论**，不是免写理由）；否则「该记未记」与「本就无需记」机器不可区分
+        （v4.13.0 曾因此只报 SKIP）。一旦填写须结构合法（gap_class ∈ 知识/算力/事实/手脚 及其 '+' 组合、
         candidates 为含 tool/fit_score 的列表、needs_tool 为 bool、confidence ∈ [0,1]、
         route_hint 非空），非法即 FAIL。
-        ⚠️ **它不是门禁**：confidence 由模型自填、校准无法被机器证明（手册 §10 原样写明）。
+        ⚠️ **它仍不是准确率门禁**：升格判的是「有没有落盘」；confidence 由模型自填、校准无法被机器证明。
     15. 方法选用抽样人审（v4.4.0）：**非门禁，只指路** —— 当 `meta.方法选用` 存在
         `needs_tool=true` 或 `confidence < 0.95` 的条目时，WARN 列出建议抽样的条目；
         均不满足则 OK。契约 §10 把「工具选用↔人工复核**一致率**」列为**人审**信号，本项
@@ -329,30 +331,31 @@ plan 子命令检查项:
         **一致率**、**不声称准确率**。
 
     16. 检索判定（v4.5.0）：meta「检索判定」可选 —— 阶段 3 第 5 条之前由 `retrieval-judge` 产出，
-        完整契约见 references/retrieval-judge.md。**整段缺省 → WARN**（向后兼容旧 plan，
-        **不追认历史计划**）；一旦填写须结构合法（source_class ∈ 本地资产/历史留痕/知识库/
+        完整契约见 references/retrieval-judge.md。**L2／层级不明 ⇒ 整段缺省判 FAIL**（v4.14.0 起，用户 2026-09-28 拍板）；**L1 出口**：显式声明 `meta.任务层级: L1` ⇒ 汇总为**一条 SKIP**（「不算缺口」）。
+        ⭐ **v4.14.0 同批契约变更**：L2 每次动手查之前都要落盘，**含否定结论**（`needs_retrieval: false`／
+        「本任务无需检索」也要写）。一旦填写须结构合法（source_class ∈ 本地资产/历史留痕/知识库/
         技能手册/联网 及其 '+' 组合、candidates 为含 tool/fit_score 的列表、needs_retrieval 为 bool、
         confidence ∈ [0,1]、route_hint 非空），非法即 FAIL。
-        ⚠️ **它不是门禁**：confidence 由模型自填、校准无法被机器证明（手册 §10 原样写明）。
+        ⚠️ **它仍不是准确率门禁**：升格判的是「有没有落盘」；confidence 由模型自填、校准无法被机器证明。
     17. 检索判定抽样人审（v4.5.0）：**非门禁，只指路** —— 当 `meta.检索判定` 存在
         `needs_retrieval=true` 或 `confidence < 0.95` 的条目时，WARN 列出建议抽样的条目；
         均不满足则 OK。口径与检查项 15 逐条相同：只把**抽样池**指出来、**判定靠人**；
         未证实前只报**一致率**、**不声称准确率**。
     18. 作业判定（v4.7.0）：meta「作业判定」可选 —— 阶段 0 作业识别由 `homework-judge` 产出，
         完整契约见 references/homework-judge.md、模式语义见 references/homework-mode.md。
-        **整段缺省 → WARN**（向后兼容旧 plan，**不追认历史计划**）；一旦填写须结构合法
+**L2／层级不明 ⇒ 整段缺省判 FAIL**（v4.14.0 起，用户 2026-09-28 拍板）；**L1 出口**：显式声明 `meta.任务层级: L1` ⇒ 汇总为**一条 SKIP**（「不算缺口」）。一旦填写须结构合法
         （mode ∈ 作业题/讲解题/非作业、distribution 恰含三键且和=1、confidence ∈ [0,1]、
         dimensions 含 W1–W5、ambiguity 为 bool、route_hint 非空），且 **`needs_homework` 派生值
         必须 = `mode ≠ 非作业`**（不等即 FAIL —— 这是确定性判据，不采信模型自报），非法即 FAIL。
-        ⚠️ **它不是门禁**：confidence 由模型自填、校准无法被机器证明。
+        ⚠️ **它仍不是准确率门禁**：升格判的是「有没有落盘」；confidence 由模型自填、校准无法被机器证明。
     19. 作业判定抽样人审（v4.7.0）：**非门禁，只指路** —— 口径与检查项 15/17 逐条相同。
     20. 学习判定（v4.8.0）：meta「学习判定」可选 —— 阶段 6 收尾由 `learning-judge` 产出，
         完整契约见 references/learning-judge.md、管线与门槛见 references/learning-model.md。
-        **整段缺省 → WARN**（向后兼容旧 plan，**不追认历史计划**）；一旦填写须结构合法
+**L2／层级不明 ⇒ 整段缺省判 FAIL**（v4.14.0 起，用户 2026-09-28 拍板）；**L1 出口**：显式声明 `meta.任务层级: L1` ⇒ 汇总为**一条 SKIP**（「不算缺口」）。一旦填写须结构合法
         （kind ∈ 偏好/领域知识/流程坑/事实/无、distribution 恰含五键且和=1、confidence ∈ [0,1]、
         dimensions 含 V1–V5、ambiguity 为 bool、route_hint 非空），并有两条**确定性判据**：
         `needs_learning` 必须 = `kind ≠ 无`；`kind` 含『无』又含其它类型 → FAIL（"没有"与"有"并列无意义）。
-        ⚠️ **它不是门禁**：confidence 由模型自填；且**结构合法不代表"学对了"**（判得准不准靠抽查）。
+        ⚠️ **它仍不是准确率门禁**：confidence 由模型自填；且**结构合法不代表"学对了"**（判得准不准靠抽查）。
     21. 学习判定抽样人审（v4.8.0）：**非门禁，只指路** —— 口径与检查项 15/17/19 逐条相同。
 
     22. 审美判据（v4.9.0）：meta「审美判据」可选 —— 设计类产物（交付物含 `.css`）的机器验收。
@@ -374,7 +377,7 @@ plan 子命令检查项:
         ⚠️ **不采信 plan 里自报的 FAIL 数** —— 判据只有一条：「我实跑出来是什么」。
 
     23. 任务产物清理（v4.10.0）：meta「清理」可选 —— 阶段 6 第 7 条 `scripts/cleanup_task.py`
-        的登记。**整段缺省 → WARN**（向后兼容旧 plan，**不追认历史计划**；**本项不是门禁**）；
+        的登记。**L2／层级不明 ⇒ 整段缺省判 FAIL**（v4.14.0 起，用户 2026-09-28 拍板）；**L1 出口**：显式声明 `meta.任务层级: L1` ⇒ 汇总为**一条 SKIP**（「不算缺口」）。
         一旦填写须结构合法（`状态` ∈ 已清理/无待清理项/未完成/已拒绝、`清单` 若填则必须
         解析到位、`文件数`/`字节数` 若填则须为非负整数），非法即 FAIL。
         ⚠️ **状态由执行者填写、机器只校验结构** —— 「确实安全清过」靠抽查，
