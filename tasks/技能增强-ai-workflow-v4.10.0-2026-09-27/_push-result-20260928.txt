@@ -1,0 +1,60 @@
+=== push_ontology（本体 → Garvin666/ai-workflow-skill@main）===
+模式：APPLY（真实推送）
+本地 git 根：C:\Users\<用户名>\.workbuddy\skills\ai-workflow
+改动面：3d57f90..dev
+
+本地：写入 24 项 / 删除 0 项
+远端 HEAD = 42e882eca4039787dfe18cbb63837e95a548c879
+base_tree = cced9bac092ccdac4cda97ac4487231087dd906a
+远端 blob 路径 165 个
+
+  [写] SKILL.md
+        新建 blob  10a4ee86cb
+  [写] _archive/changelog.md
+        新建 blob  9bfd77ae89
+  [写] assets/plan-template.yaml
+        新建 blob  b18a87cbac
+  [写] references/aesthetic-rubric.yaml
+        新建 blob  494de5d099
+  [写] references/data-model.md
+        新建 blob  1c1a7aef99
+  [写] references/ops.md
+        新建 blob  13ca739e58
+  [写] scripts/check_aesthetics.py
+        新建 blob  4197c57e66
+  [写] scripts/checks.py
+        新建 blob  c23aca9242
+  [写] scripts/checks_core.py
+        新建 blob  70d00b5569
+  [写] scripts/checks_judges.py
+        新建 blob  024139dbf8
+  [写] scripts/checks_parity.py
+        新建 blob  d653576c9f
+  [写] scripts/cleanup_task.py
+        新建 blob  ee4a43d65a
+  [=] scripts/homework_model.py  同内容跳过
+  [=] scripts/laya_client.py  同内容跳过
+  [=] scripts/perf_baseline.py  同内容跳过
+  [=] scripts/verify_push.py  同内容跳过
+  [写] tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/挂接记录.md
+        新建 blob  456eef80ed
+  [写] tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/清理清单-20260927-224725.txt
+        新建 blob  0f98267c4a
+  [写] tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/漂移扫描.txt
+        新建 blob  b83fa634c8
+  [写] tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/确认表.md
+        新建 blob  957b605ce5
+  [写] tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/缺陷修复与漂移扫描.md
+        新建 blob  cf88e3255a
+  [写] tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/门禁夹具输出.txt
+        新建 blob  da85579479
+  [写] tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/阴性对照.txt
+        新建 blob  34e0944d32
+  [写] tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/验收报告.md
+        新建 blob  fd2fadf95c
+
+小计：新建 20 / 复用 0 / 同内容跳过 4 / 删除 0 / 删除跳过 0
+
+新 tree   = 3e66e3d1e33533586d64bc0ac3ce75788cf55a25
+新 commit = 70f9c721a83ebbf38c4156fdf07920c3d2d536ae
+ref main 已更新：42e882eca4 → 70f9c721a8

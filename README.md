@@ -1,6 +1,6 @@
 # AI Workflow（ai-workflow）
 
-AI 标准化多阶段工作方法论 —— 一套「流程编排 + 机器可校验门禁」的自研技能（当前版本 **v4.7.0**）。
+AI 标准化多阶段工作方法论 —— 一套「流程编排 + 机器可校验门禁」的自研技能（当前版本 **v4.11.0**）。
 
 它不只是一个提示词模板：每个阶段都有对应的**机器判据**（自检、口径守卫、出站扫描、独立验收），流程产物（计划、决策、履历）全部落盘留痕，可审计、可回归。
 
@@ -14,19 +14,22 @@ AI 标准化多阶段工作方法论 —— 一套「流程编排 + 机器可校
 适用于：产出文件 / 代码 / 报告、多步且步骤间有依赖、数据分析、跨文件改造、调研查重、方案评审等场景。
 不适用于：纯问答 / 查询 / 翻译 / 单文件读取。
 
-内置四种**快判（judge）**，与主流程同构、可独立调用：
+内置六种**快判（judge）**，与主流程同构、可独立调用：
 
 | 快判 | 回答的问题 | 契约 |
 | --- | --- | --- |
 | self-judge | 这条消息该进流程还是直接答（chat / code / content 三态） | `references/self-judge.md` |
 | method-judge | 这一步该选哪个工具 / 方法 | `references/method-judge.md` |
 | retrieval-judge | 该不该查、查哪类源、能否断言「不存在」 | `references/retrieval-judge.md` |
-| homework-judge | 是否叠加**作业模式**（解题结构 H1–H5） | `references/homework-judge.md` |
+| homework-judge | 是否叠加**作业模式**（精简解题结构 S0–S2） | `references/homework-judge.md` |
+| learning-judge | 这次有什么值得学（偏好 / 领域知识 / 流程坑 / 事实 / 无） | `references/learning-judge.md` |
+| thinking-judge | **这个任务该不该按原样做**（接受 / 修正 / 澄清 / 拒绝 四态 + 否决轴 A1–A6） | `references/thinking-panel.md` |
 
 ## 功能说明
 
 - **流程编排**：入口分型（消息 / 正式需求 / Bug）、任务分层（轻操作豁免 / 快速通道 / 全流程）、自适应计划与重规划、决策留痕（能力决策 + 计划修订，机器校验）。
-- **作业模式**（v4.7.0）：面向课程作业 / 习题的解题结构 —— 审题 → 思路分析 → 分步求解 → 关键步骤解释 → 答案与验证，配数学计算 / 编程实现 / 论述写作三类题型骨架。
+- **思考板块**（v4.11.0）：阶段 0 **第 0 步**的**任务审计快判** —— 判「该不该按原样做」，产出四态裁决（接受 / 修正 / 澄清 / 拒绝）落 `meta.思考判定`；否决轴 A1–A6 命中即拒绝（**审计不产生授权、不替代红线**），配 Laya 影子对照。
+- **作业模式**（v4.10.1）：面向课程作业 / 习题的**精简解题结构 S0–S2**（简要已知 → 解题过程（验证内联）→ 答案），配数学计算 / 编程实现 / 论述写作三类题型骨架。
 - **机器门禁**：`checks.py`（技能自检 / 计划校验 / Anti-drop 对账 / 熔断门禁）、`gate.py`（删改既有文件前的运行时闸门，fail-closed）、`guard_constants.py`（跨模块常量同源守卫）、`outbound_scan.py`（外发内容脱敏扫描）。
 - **双仓推送体系**：本体 → `ai-workflow-skill`，自研工具 → `ai-workflow-tools`；`push_router.py` 分流路由（默认 dry-run），`push_ontology.py` 走 Git Data API 增量，`publish_tools.py` 单文件推送，`verify_push.py` 推送后独立验收（与推送通道零代码共享）。
 - **效率工具**：`ai_call.py`（AI 调用 / 批量并发）、`http_fetch.py`（GitHub 搜索 / 抓取缓存 / 链接探活）、`data_query.py`（DuckDB 大目录检索）、`office_io.py`（Excel / Word / PDF 读写）。
@@ -91,11 +94,12 @@ ai-workflow/
 │   ├── ai_call.py / http_fetch.py / data_query.py / office_io.py
 │   ├── laya_client.py        # 离线决策服务客户端（影子期只作对照）
 │   ├── homework_model.py     # 作业模式聚合模型（Realization A）
+│   ├── thinking_model.py     # 思考板块聚合模型（Realization A，v4.11.0）
 │   ├── archive_tasks.py      # 任务目录归档（只移动不删除）
 │   ├── gen_skill_index.py / perf_baseline.py / git_check.py
 │   ├── judges.json / model_tiers.json
 │   └── setup_env.ps1 / run_stage.ps1
-├── references/               # 25 份下沉手册（judge 契约 / 流程模型 / 门禁口径 / 推送路由…）
+├── references/               # 29 份下沉手册（= 28 .md + 1 aesthetic-rubric.yaml；judge 契约 / 流程模型 / 门禁口径 / 推送路由…）
 ├── assets/                   # 计划模板 / 报告模板 / 台账模板 / 题型骨架（templates/）
 ├── tasks/                    # 活跃任务档案（plan.yaml / 报告 / 交付物）
 │   └── _archive/             # 历史任务归档（仅本地保留，不入版本控制）

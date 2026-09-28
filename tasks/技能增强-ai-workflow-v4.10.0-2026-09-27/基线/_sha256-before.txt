@@ -1,0 +1,7 @@
+f9dc99d5ab646374a80b00ba732e2f4fb1ca126cbedea3462b1bd98f0610f356      96448  SKILL.md
+dd7885eb78bbfd05e0746778a49e46ae3f826fad59d88a3822c5c15adf903bf0      89196  scripts/checks_judges.py
+8818b3968e0a1b241db94ace6521224087b9af80d911ef51a9f64bf78cd68cf6      46989  scripts/checks_core.py
+96d9a64f18bdd11b7b36bf90964c66a474ecc02e9ee598e36c1020d0f2db1688      18983  scripts/checks.py
+f9729b6732d869d122e83dcfd542eed56a4d56dd5f357c77d2863f355b192238      56813  references/ops.md
+507360d10d51c8fc20b33edcd43ee41de2ba427d67ec13aec8fae85efd1d35af      23424  assets/plan-template.yaml
+10965d80f23996c3160934c78fbf43bdfc6320ffdb159daebb7633c7f422dc09     226640  _archive/changelog.md

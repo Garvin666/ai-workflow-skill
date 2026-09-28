@@ -1,0 +1,20 @@
+# 清理清单 —— 模式选用模型-ai-workflow-v4.7.0-2026-09-23
+# 时间：2026-09-27 22:43:48
+# 用途：删除是不可逆动作，本清单是「删了什么」的永久证据（sha256 可复核）。
+# 条目：15
+
+5c40e67b34fb228da4a547f43995d2c009ec83a0febca316d0f2c45bfe442b2f       4544  tmp/_anchor_loocv.py
+f8a3b0c8c22c1dc4b43f726fca2705846cf3c585d1d487c5825dd7ba22381245       4559  tmp/_audit_dualcopy.py
+905d187c1d087d7acbc0b12dd979f7ec43108ad4814314875ec2b8e6f31b38d3       6946  tmp/_audit_gate18.py
+315a617ad00687e96add06050a0755f283e227fd29e4ed41c445669ef24424d5       1065  tmp/_hash_sources.py
+c7c47f77dd1f54db499dd298dc9f42e33258a358666504b3bb399aa22ae1b0c1       2856  tmp/_probe_gaps.py
+9b186d90d957075ed0f53b68809c7d1a73614c8e7f2d34a0a972760261beddab       2230  tmp/_selfproof.py
+7c3bd0972063287f8cfa3305d7f0fb90984d20779556c789e7ae3b1dfd7909a2       6031  tmp/_update_memory.py
+af193034348224297ced6d30ea54283f174c51a4bf0efaf122eb38d8fd6fe2dd       4844  tmp/_update_memory2.py
+19d320432fda96147b19870b57fdc1463c79a2698506c8ae0a251bb425e12be0       8189  tmp/_verify_gate18.py
+9c8f152a5b068f4c06dcd6ea74f2ae032c64c28f4e687a6ef6f0a61dceaebda4       3120  tmp/_write_trace.py
+7c246d33c4b9ac7d8a9d129eef49b65c8e69c1a1bd2923091499ab8667bc4982       2014  tmp/demo-pairs.json
+6d4dd2fb03efbd6359d167a9c396b6d2f8e7f0c2fe09ecd41061ae3d2433b8ae       1241  tmp/哈希前后.txt
+6cefe01c37204845c65da9d2965f4fac34c41b75e8c51bc4e44895adeeb6deea       1109  tmp/审计输出-判据加固.txt
+177762bf5c664f62148fc0ae177caff5d046764dd6f8befa1b22b3af75061e43       2017  tmp/自证输出-判据加固.txt
+5755f9c60bff0525fcb5032ab8e0b424c0a657c54b017f704f140757d4605d27       1781  tmp/门禁输出-判据加固.txt

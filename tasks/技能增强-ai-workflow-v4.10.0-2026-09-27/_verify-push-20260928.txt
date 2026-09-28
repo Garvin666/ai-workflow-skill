@@ -1,0 +1,108 @@
+=== 推送结果 · 独立验收 ===
+验收器：verify_push.py
+零代码共享：不 import push_ontology.py / push_router.py / publish_tools.py
+本地 rev：dev    技能根（= 本地 git 根）：C:\Users\<用户名>\.workbuddy\skills\ai-workflow
+
+-- 判据 0：验收前提（工作区干净 + rev 合法）--
+[FAIL] 工作区无未提交改动 —— 27 项未提交；登记表读的是工作区文件，与已推送版本可能不同步
+         M SKILL.md
+         M _archive/changelog.md
+         M references/decision-tables.md
+         M scripts/check_aesthetics.py
+         M scripts/checks.py
+[ OK ] 本地 rev 可解析 —— dev → 104 个 blob
+[transport] gh api（子进程）
+
+-- 判据 1：远端本体仓 HEAD --
+[ OK ] 远端 HEAD == 期望值 —— 实际 70f9c721a8 / 期望 70f9c721a8
+[ OK ] 远端 HEAD ≠ 推送前值（确非空跑） —— 推送前 42e882eca4
+
+-- 判据 2：本地 rev ⊆ 远端（全量逐文件 blob sha 比对）--
+[ OK ] 本地全部文件存在于远端 —— 本地 104 项 / 远端 176 项 / 缺失 0 项
+[ OK ] 同名文件 blob sha 逐一相等 —— 不一致 0 项
+
+-- 判据 3：远端独有项均为推送前既有（混合仓的工作区档案侧）--
+[ OK ] 无本次新出现的远端独有项 —— 远端独有 72 项，其中本次新出现 0 项
+[ OK ] 远端 blob 数未减少（无意外删除） —— 165 → 176
+
+-- 判据 4 / 6：自研工具（由 meta.自研工具 自动发现）--
+[ OK ] 读到自研工具登记 —— 16 项（来自 12 份 plan.yaml 汇总）
+[ OK ] 标注头存在：scripts/guard_constants.py —— 注释行命中：# [自研工具] guard_constants.py
+[ OK ] 标注头五项齐全：scripts/guard_constants.py —— 标识/名称/用途/适用场景/仓库链接 齐
+[ OK ] 工具仓版本一致：scripts/guard_constants.py —— 远端 7fd1f91deb = 独立重算 7fd1f91deb（14777 字节，CRLF 0 处）
+[ OK ] 跨仓一致性：scripts/guard_constants.py —— 本体仓 7fd1f91deb / 工具仓 7fd1f91deb
+[ OK ] 标注头存在：scripts/publish_tools.py —— 注释行命中：# [自研工具] publish_tools.py
+[ OK ] 标注头五项齐全：scripts/publish_tools.py —— 标识/名称/用途/适用场景/仓库链接 齐
+[ OK ] 工具仓版本一致：scripts/publish_tools.py —— 远端 6a2fac1ac9 = 独立重算 6a2fac1ac9（19475 字节，CRLF 0 处）
+[ OK ] 跨仓一致性：scripts/publish_tools.py —— 本体仓 6a2fac1ac9 / 工具仓 6a2fac1ac9
+[ OK ] 标注头存在：SKILL.md —— frontmatter selfbuilt: true
+[ OK ] 标注头五项齐全：SKILL.md —— 标识/名称/用途/适用场景/仓库链接 齐
+[ OK ] 本体登记归属正确（不进工具仓） —— ai-workflow（技能本体） → Garvin666/ai-workflow-skill
+[ OK ] 本体未被误推入工具仓：SKILL.md —— 工具仓内无此路径
+[ OK ] 标注头存在：scripts/push_ontology.py —— 注释行命中：# [自研工具] push_ontology.py
+[ OK ] 标注头五项齐全：scripts/push_ontology.py —— 标识/名称/用途/适用场景/仓库链接 齐
+[ OK ] 工具仓版本一致：scripts/push_ontology.py —— 远端 19a61403de = 独立重算 19a61403de（14899 字节，CRLF 0 处）
+[ OK ] 跨仓一致性：scripts/push_ontology.py —— 本体仓 19a61403de / 工具仓 19a61403de
+[ OK ] 标注头存在：scripts/push_router.py —— 注释行命中：# [自研工具] push_router.py
+[ OK ] 标注头五项齐全：scripts/push_router.py —— 标识/名称/用途/适用场景/仓库链接 齐
+[ OK ] 工具仓版本一致：scripts/push_router.py —— 远端 50618e61a6 = 独立重算 50618e61a6（32048 字节，CRLF 0 处）
+[ OK ] 跨仓一致性：scripts/push_router.py —— 本体仓 50618e61a6 / 工具仓 50618e61a6
+[ OK ] 标注头存在：scripts/verify_push.py —— 注释行命中：# [自研工具] verify_push.py
+[ OK ] 标注头五项齐全：scripts/verify_push.py —— 标识/名称/用途/适用场景/仓库链接 齐
+[ OK ] 工具仓版本一致：scripts/verify_push.py —— 远端 2da8c7d591 = 独立重算 2da8c7d591（33137 字节，CRLF 0 处）
+[ OK ] 跨仓一致性：scripts/verify_push.py —— 本体仓 2da8c7d591 / 工具仓 2da8c7d591
+[ OK ] 标注头存在：scripts/gen_skill_index.py —— 注释行命中：# [自研工具] gen_skill_index.py
+[ OK ] 标注头五项齐全：scripts/gen_skill_index.py —— 标识/名称/用途/适用场景/仓库链接 齐
+[ OK ] 工具仓版本一致：scripts/gen_skill_index.py —— 远端 fef5af385e = 独立重算 fef5af385e（13334 字节，CRLF 0 处）
+[ OK ] 跨仓一致性：scripts/gen_skill_index.py —— 本体仓 fef5af385e / 工具仓 fef5af385e
+[ OK ] 标注头存在：scripts/perf_baseline.py —— 注释行命中：# [自研工具] perf_baseline.py
+[ OK ] 标注头五项齐全：scripts/perf_baseline.py —— 标识/名称/用途/适用场景/仓库链接 齐
+[ OK ] 工具仓版本一致：scripts/perf_baseline.py —— 远端 e1c3169370 = 独立重算 e1c3169370（15428 字节，CRLF 0 处）
+[ OK ] 跨仓一致性：scripts/perf_baseline.py —— 本体仓 e1c3169370 / 工具仓 e1c3169370
+[ OK ] 标注头存在：scripts/outbound_scan.py —— 注释行命中：# [自研工具] outbound_scan.py
+[ OK ] 标注头五项齐全：scripts/outbound_scan.py —— 标识/名称/用途/适用场景/仓库链接 齐
+[ OK ] 工具仓版本一致：scripts/outbound_scan.py —— 远端 6869d3af26 = 独立重算 6869d3af26（9736 字节，CRLF 0 处）
+[ OK ] 跨仓一致性：scripts/outbound_scan.py —— 本体仓 6869d3af26 / 工具仓 6869d3af26
+[ OK ] 标注头存在：scripts/gate.py —— 注释行命中：# [自研工具] gate.py
+[ OK ] 标注头五项齐全：scripts/gate.py —— 标识/名称/用途/适用场景/仓库链接 齐
+[ OK ] 工具仓版本一致：scripts/gate.py —— 远端 5e770b0b29 = 独立重算 5e770b0b29（18269 字节，CRLF 0 处）
+[ OK ] 跨仓一致性：scripts/gate.py —— 本体仓 5e770b0b29 / 工具仓 5e770b0b29
+[ OK ] 标注头存在：scripts/guard_constants.py —— 注释行命中：# [自研工具] guard_constants.py
+[ OK ] 标注头五项齐全：scripts/guard_constants.py —— 标识/名称/用途/适用场景/仓库链接 齐
+[ OK ] 工具仓版本一致：scripts/guard_constants.py —— 远端 7fd1f91deb = 独立重算 7fd1f91deb（14777 字节，CRLF 0 处）
+[ OK ] 跨仓一致性：scripts/guard_constants.py —— 本体仓 7fd1f91deb / 工具仓 7fd1f91deb
+[ OK ] 标注头存在：scripts/laya_client.py —— 注释行命中：# [自研工具] laya_client.py
+[ OK ] 标注头五项齐全：scripts/laya_client.py —— 标识/名称/用途/适用场景/仓库链接 齐
+[ OK ] 工具仓版本一致：scripts/laya_client.py —— 远端 f0ebad8052 = 独立重算 f0ebad8052（23409 字节，CRLF 0 处）
+[ OK ] 跨仓一致性：scripts/laya_client.py —— 本体仓 f0ebad8052 / 工具仓 f0ebad8052
+[SKIP] 登记项已推送：kb_learn.py —— 仓库链接仍为「待推送」—— 阶段 6 回填后重跑
+[ OK ] 标注头存在：scripts/git_check.py —— 注释行命中：# [自研工具] git_check.py
+[ OK ] 标注头五项齐全：scripts/git_check.py —— 标识/名称/用途/适用场景/仓库链接 齐
+[ OK ] 工具仓版本一致：scripts/git_check.py —— 远端 b3b61999bc = 独立重算 b3b61999bc（14484 字节，CRLF 0 处）
+[ OK ] 跨仓一致性：scripts/git_check.py —— 本体仓 b3b61999bc / 工具仓 b3b61999bc
+[SKIP] 登记项已推送：kb_learn.py —— 仓库链接仍为「待推送」—— 阶段 6 回填后重跑
+[ OK ] 标注头存在：scripts/homework_model.py —— 注释行命中：# [自研工具] homework_model.py
+[ OK ] 标注头五项齐全：scripts/homework_model.py —— 标识/名称/用途/适用场景/仓库链接 齐
+[ OK ] 工具仓版本一致：scripts/homework_model.py —— 远端 812977ca51 = 独立重算 812977ca51（34373 字节，CRLF 0 处）
+[ OK ] 跨仓一致性：scripts/homework_model.py —— 本体仓 812977ca51 / 工具仓 812977ca51
+
+   汇总：指向工具仓 13 项 / 指向本体仓 1 项
+
+-- 判据 5：发布物自证（远端 SKILL.md 自身 + 它指向的下沉手册）--
+[ OK ] 期望版本已确定 —— 4.10.0（从本地 rev 自动推导）
+[ OK ] 远端 SKILL.md 版本 = 期望 —— 命中 version: 4.10.0
+[ OK ] 远端 SKILL.md 含「selfbuilt: true」
+[ OK ] 远端 SKILL.md 含「references/push-routing.md」
+[ OK ] 远端 SKILL.md 含「_archive/changelog.md」
+[ OK ] 远端 references/push-routing.md 含「两类资源的分流推送路由」
+[ OK ] 远端 references/push-routing.md 含「触发条件」
+[ OK ] 远端 references/push-routing.md 含「判定依据」
+[ OK ] 远端 references/push-routing.md 含「冲突处理策略」
+[ OK ] 远端 references/push-routing.md 含「推送后的独立验收」
+
+-- 判据 7：两仓均为 public --
+[ OK ] Garvin666/ai-workflow-skill public —— visibility=public
+[ OK ] Garvin666/ai-workflow-tools public —— visibility=public
+
+=== 结果：有 1 项 FAIL（OK 76 / FAIL 1 / SKIP 2 / WARN 0）===
+    ⚠️ SKIP 项需人工确认，不当作通过

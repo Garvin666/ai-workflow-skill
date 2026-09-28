@@ -1,0 +1,30 @@
+# 清理清单 —— 学习模型开源对标与优化-2026-09-25
+# 时间：2026-09-28 08:11:09
+# 用途：删除是不可逆动作，本清单是「删了什么」的永久证据（sha256 可复核）。
+# 条目：25
+
+9ff42dd34789ed3cbd971eb489ba879a99fd90f7721ae0b4e746e1b5dd88cf80        984  tmp/probe_kb/learning/decisions.jsonl
+be22a997c48c507a11b05bf0064e88c34303de94ed777a79bfc24af13937d1cc       1146  tmp/probe_kb/learning/pool.jsonl
+a4f2a01d11bbbce2a0b44fd835662a4e556e2c3f3cc3cab495d42f02b406fe4e        240  tmp/probe_kb/learning/state.json
+d35acfbe00e46d772f5068cb19d33686456faab6d27e31453a246dfb781ec4d4       9561  tmp/probe_p0_before_after.py
+92c149bfd0d81553f35066955ed192ee74e473fe62a0968584d63958a2de5ccf     512002  tmp/readmes/IAAR-Shanghai__Awesome-AI-Memory.md
+2461bae179e10e0178ca0dca8e20404f8d68e39a6c97ea7c79abfa3297bff18e      13474  tmp/readmes/MemoriLabs__Memori.md
+214ae0762a962f4540c1a3ff72e458ef612fd235ff9ede15f8d5cd27a17a6cea      11846  tmp/readmes/NevaMind-AI__memU.md
+262324a9ad8e0b6b30cf3962f94f638e7c0780f66c5f1535157bc802f30a6886      33385  tmp/readmes/Shichun-Liu__Agent-Memory-Paper-List.md
+9d6b07aaa0a677a38449bd6d3a1bcccff334ea0d2c924483c0ecf6ba895a6f3a      36329  tmp/readmes/TeleAI-UAGI__telemem.md
+55a3b3356ebd41266c152a171be8f1b7b5d2007ad16e5da42b6c0197fd20d6b8      21834  tmp/readmes/TencentCloud__TencentDB-Agent-Memory.md
+6f7185bb241d8ed5f7c0b8c4716b4f5e5cf1e9a3c630c3a1a92e54c3f5fb88b0       6390  tmp/readmes/agiresearch__A-mem.md
+7fb0637eab55b8cdd2b5e2f0c3a563774813a792b67a678175c3844ffb3e68c4       2052  tmp/readmes/d7d7da__reflect-skill.md
+348dc8fdf06b2656a970116f3ba2c6bb14d449b361a702d6df3c3a1f42a93379      12402  tmp/readmes/kayba-ai__agentic-context-engine.md
+8f0841b692932d03f9717f14fba1acfbbc7946bc1b3323219cdfb7af98c15478       2505  tmp/readmes/letta-ai__sleep-time-compute.md
+7509347d34a767a2ef37ceb6cf6c714de9e8d84fe66ad5eea92bbae824a8fbeb      11914  tmp/readmes/mem0ai__mem0.md
+4349d19397560c29aa03ddfff8b7da40fd167effda720b02a5f9cc2549409b01      51319  tmp/readmes/riponcm__projectmem.md
+4e365c56f8eb4bdf4357f74d18708714abc46a77c73555912c7a93fdfa8c1a49      18621  tmp/readmes/thedotmack__claude-mem.md
+12f2af41150895a19492ec246d6a2cc5efbe9e48874e0cba844f798933e720d2      14625  tmp/readmes/tigerless-labs__agent-memory.md
+f89ea9f58197ea8e26a1217815b9849108820e4b5253c24d17198acf96d7ec72      16313  tmp/readmes/topoteretes__cognee.md
+376c6b0b83bd2be65a2d1c843680c56a7cc1bc4d8553dee9f227074e59239a6f      25011  tmp/readmes/vectorize-io__hindsight.md
+0bda3106022ab40452d0f356904e2d7c5dc51df770e80b0a2bb26b5da16b13c0      22127  tmp/readmes/volcengine__OpenViking.md
+6c0bae463418a609557dbca046c645737183a3e324e8b3e1addbbf98d25ca792       4924  tmp/run_p0_acceptance.py
+75277d1ed8753c0c2d4133d2334c63e2260ec58288adab071fcfc278b05b2219       1903  tmp/scan_skeletons.py
+64d1856024cf1bb04fdc084deb15b38741cf31747cbea6aeb91ddbde8a52dd53      51538  tmp/skeletons.txt
+a1d414a26d7ec2b2c25434e4992e4c649e72efe3536ee2623c88cd30dd1a1b5d       2750  tmp/verify_memory.py

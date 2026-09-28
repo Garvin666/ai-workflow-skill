@@ -39,10 +39,13 @@ python scripts/laya_client.py --judge method-judge  --what "取 GitHub star 数"
 python scripts/laya_client.py --judge retrieval-judge --need "该仓库是否还在维护" --clues "只有 owner/repo" \
        --workspace "<工作区根>" --candidates "本地资产,联网,历史留痕"
 python scripts/laya_client.py --judge homework-judge --state "求函数 f(x)=x^2-4x+3 的最小值"   # v4.7.0 新增
+python scripts/laya_client.py --judge thinking-judge --state "帮我把这三份 CSV 合并成一份（含手机号列）"   # v4.11.0 新增
 python scripts/laya_client.py --selfcheck          # 探测服务可用性（0 可用 / 2 不可用 / 3 降级）
 ```
 
-> `homework-judge` **不注入任何候选**（`build_questions` 对其无候选分支）—— 它的 Choice 是固定的模式三态，不依赖候选池，因此**不落在 `choice:11+` 越界温度桶**里。
+> `homework-judge` 与 `thinking-judge` **都不注入任何候选**（`build_questions` 对二者无候选分支）—— 前者的 Choice 是固定的模式三态；后者的题组是 `veto`(noul) + `veto_axis`(7 选项 choice) + `ambiguity`(noul) + `dimensions`(4×score) + `verdict_probe`(4 选项 choice) + `aux_probes`(3×noul)，均不依赖候选池，因此**都不落在 `choice:11+` 越界温度桶**里。
+>
+> ⚠️ **`thinking-judge` B 侧刻意不产 `verdict`（v4.11.0）**：B 侧只回**三件套** `{laya, verdict_probe, aux_probes}` —— 主裁决 `verdict` 必须由**与 A 侧同一个** `thinking_model.aggregate` 算出；`verdict_probe` 是"直接问结论"这条**结构上不同**的路径的**旁证**，**只留痕、不进一致率、不进派生**（C16/D15）。这与 `homework_judge` "派生字段不来自问句"同属一类设计。
 
 输出即该 judge 的契约字段（见 `self-judge.md` §4 / `method-judge.md` §4 / `retrieval-judge.md` §4 / `homework-judge.md` §4），并附 `_laya` 元信息（`model_key` / `entropy_confidence` / `latency_ms` / `attempts` / `degraded`）。
 
@@ -71,6 +74,8 @@ python scripts/laya_client.py --selfcheck          # 探测服务可用性（0 �
 其余映射：`ambiguity = noul ∈ [0.35, 0.65]`；`gap_class`/`source_class`/`mode` 在 top2 差距 < 0.15 时输出 `A+B` 组合；`needs_tool`/`needs_retrieval = noul ≥ 0.5`；`secondary` 在 top1/top2 差距 < 0.15 时输出。
 
 **`homework_judge` 的两处刻意差异（v4.7.0）**：① `needs_homework` =（`mode` 恰为「作业题」）—— **派生字段，不来自任何问句**，从设计上消除 `mode` 与 flag 自相矛盾（同型坑见 `method-judge` 的 `needs_tool` × `gap_class`）；② **刻意不产 `secondary`** —— 模式本就允许并用，一件事只在一处表达（组合态只体现为 `mode = A+B`）。
+
+**`thinking_judge` 的带宽同源（v4.11.0）**：`ambiguity = noul ∈ [0.35, 0.65]` 与 A 侧常量 `checks_core.THINKING_NUOL_BAND` **同值同源** —— 由**跨格式同源判据**（`checks_parity._check_thinking_band_source`）锁死：`judges.json` 的 `ambiguity_band` 必须**逐值等于**该常量，不等即 `checks.py skill` FAIL。这是"同一个带宽两处各写各的"这类静默漂移的机器判据（阈值单一事实源 = 乙·C 案）。
 
 ---
 
@@ -101,6 +106,8 @@ python scripts/laya_client.py --selfcheck          # 探测服务可用性（0 �
 ## 5. 与工作流节点的关系
 
 ```
+阶段 0 第 0 步  thinking-judge ─┬─ A：thinking_model.aggregate（主判据，产出写 meta.思考判定）  ← 路由只认这个
+                               └─ B：Laya（影子，三件套 {laya, verdict_probe, aux_probes}，不产 verdict）
 阶段 0 第 1 步  self-judge ─┬─ A：脑内协议（主判据，产出写 meta.入口判定）  ← 路由只认这个
                             └─ B：Laya（影子，产出并列留痕，不参与路由）
 阶段 0 第 3 步前 homework-judge ── 同上（落 meta.作业判定，v4.7.0）
@@ -192,6 +199,8 @@ confidence; clamping choice:11+=0.1006. Treat confidence from the affected bucke
 | method-judge（中文三字段 + 英文候选名） | **`english`** | `English Latin text` | **10621.9** |
 | retrieval-judge（中文三字段 + 中文候选名） | **`english`** | `English Latin text` | **14856.5** |
 | method-judge（**同一 payload + `model=multilingual`**） | `multilingual` | `explicit model='multilingual'` | **1960.2** |
+| thinking-judge（中文请求原文 + 英文标识符 `gen_skill_index.py` / `DEFAULT_ROOTS`） | **`english`** | `English Latin text`（`script_profile.latin=0.6136`） | **4912.4** |
+| thinking-judge（**同一 payload + `model=multilingual`**） | `multilingual` | `explicit model='multilingual'` | **1194.2** |
 
 结论三条：
 1. **Router 是按"字母里 Han 的占比"判语言的**，而 judge 的 payload 里塞了英文标识符（`http_fetch.py` / `gh api` / `Grep` / `web_search` / `pushed_at`）与英文候选名 —— 只要这些把占比压下去，**中文步骤就会被判成英文**，`--default multilingual` **根本兜不住**（default 只在无法判定时生效，而这里是"判定了、判错了"）。
@@ -202,6 +211,8 @@ confidence; clamping choice:11+=0.1006. Treat confidence from the affected bucke
 
 > **v4.7.0 追加（⚠️ 未实测）**：`PINNED_MODEL_BY_KIND` 已增 `"homework_judge": "multilingual"` —— **本项未经真机验证**（本轮服务未运行，仅跑了"不可达 → exit 3 降级"路径）。推定依据：`homework-judge` 的 payload 是**中文题干 + 中文 mode 取值**（`作业题`/`讲解题`/`非作业`），与 `self_judge` 同属"纯中文"形态、**通常**会路由到 multilingual；但 §6.4 已证 Router 会看走眼，故**首次真跑时必须读服务端 `routing.reason` 复核**，不得默认为对。
 > ⚠️ **钉死值是硬编码**：换 checkpoint 名**不会自动跟随**（同 §6.4 口径）；`self_judge` 仍不钉。
+
+> **v4.11.0 追加（真机实测 —— 坐实 Router 的输入面）**：`PINNED_MODEL_BY_KIND` 增 `"thinking_judge": "multilingual"`。本轮实测把"路由到底看什么"钉死了：**Router 判语言的输入只有 `state` 一个字段**（该 judge 700+ token 的中文 `instructions` **完全不参与**）。本模块 `state` ＝ 用户请求原文，只要夹带标识符（实测 `gen_skill_index.py` + `DEFAULT_ROOTS`），`script_profile.latin` 就升到 **0.6136** → 判成 `english`，`latency_ms` **4912.4 vs 1194.2（4.1×）**。⚠️ 这是"**影子跑错模型 ⇒ 对照无效却被当成有效**"的又一实例 ⇒ **D16** 把它写成**结构判据**：`laya.status=="ok"` 而 `model_key≠"multilingual"` 即 `checks.py plan` 检查项 24 **FAIL**。
 
 **落地后复验（同一三用例真机）**：
 
@@ -262,6 +273,7 @@ confidence; clamping choice:11+=0.1006. Treat confidence from the affected bucke
 
 ## 变更记录
 
+- **2026-09-28（v4.11.0 随附）**：① 接入**第六份 judge `thinking_judge`**（§2 用法、"不注入候选"与"**B 侧刻意不产 `verdict`**"说明、§3 带宽同源注记、§5 节点图增「阶段 0 **第 0 步**」、§6.4 钉死表增两行 + 真机实测坐实「**Router 只看 `state`**」`script_profile.latin=0.6136`、4.1× 延迟）；② 新增**跨格式同源判据**（`checks_parity._check_thinking_band_source`）锁死 `judges.json.ambiguity_band` ↔ `checks_core.THINKING_NUOL_BAND`；③ **D16** 落为结构判据（`laya.status=="ok"` 而 `model_key≠"multilingual"` → 检查项 24 FAIL）。**未改动任何既有判据、阈值与路由口径。**
 - **2026-09-23（v4.7.0 随附）**：① 接入第四份 judge `homework_judge`（§2 用法与"不注入候选"说明、§3 两处刻意差异、§5 节点、§6.4 钉死表增项并标注**未实测**）；② 新增 **§4.1「环境代理会劫持本地回环」**（真实缺陷：`HTTP_PROXY` 让回环请求拿到 502 → 服务活着却被判不可用 → 静默降级；修法为回环走 `ProxyHandler({})` opener + 连接类异常阴性对照）；③ §7 排障补一行。**未改动任何既有判据、阈值与路由口径。**
 - **2026-09-23（新增）**：本文件随"Laya 本地最小部署 + 接入"任务新增。用户决定：接入形态 A（扩写本体）、权重走 hf-mirror、双 checkpoint、装于用户目录、`setx` 持久化 token、注册开机自启；**§7.3 约束保留（C1 影子形态）**。同步新增 `scripts/laya_client.py`、`scripts/judges.json`，并在三份 judge 手册 §7.3 加指向注记。
 - **2026-09-23（同日追加实测）**：① 新增 **§6.4「路由会看走眼」**（含服务端 `routing.reason` 原文与延迟对照，推翻"`--default multilingual` 即够"的假设）；② §6.2 加时点注记 —— "`Grep` 被高估"**复测未复现**，改判为"`fit_score` 跨调用不稳定"（两轮共同支持），而 `needs_tool`/`gap_class` 自相矛盾**两轮均复现**；③ §6.3 该行补 §6.4 交叉引用；④ 运维脚本 `.workbuddy/laya/bin/register_autostart.ps1` 补**提权前置门禁**（非提权下 `Register-ScheduledTask` 报「拒绝访问」，原脚本会把该失败掩盖成"无法对 Null 数组进行索引"）。

@@ -32,6 +32,9 @@ from checks_core import (  # noqa: F401
     HOMEWORK_MODES,
     CLEANUP_STATES,
     LEARNING_KINDS,
+    THINKING_VERDICTS,
+    THINKING_VETO_AXES,
+    THINKING_NUOL_BAND,
     _BARE_CELL,
     _DECL_BEGIN,
     _DECL_END,
@@ -190,6 +193,103 @@ def _p_learning_kinds(text: str) -> set:
     if isinstance(data, dict) and isinstance(data.get("learning_judge"), dict):
         crit = (data["learning_judge"].get("kind") or {}).get("criteria") or {}
         vals |= set(crit)
+    return vals
+
+def _p_thinking_verdicts(text: str) -> set:
+    """思考裁决四态（v4.11.0）—— **一个物理量、三种载体**：
+
+      · **手册表格**（`references/thinking-panel.md` §1.1）：`| **接受** | 含义 | 后续动作 |`
+        —— 首格是**加粗中文词**；表头 `| 裁决 | 含义 | 后续动作 |`（本文件唯一）。
+      · **受守卫镜像**（`references/data-model.md` §2.2）：表头 `| 思考裁决 | 含义 |`。
+      · **模板 json**（`scripts/judges.json` 的 `thinking_judge.verdict_probe.criteria`）：走 json 解析。
+
+    ⚠️ **为什么手册侧锚定整条表头（含第 3 格）**：`| **中文加粗** |` 在 `thinking-panel.md` 里
+    **不唯一**（§1.2 维度表、§3.2 `route_hint` 表首格同为加粗中文词）。若只锚前两格，
+    会把 `维度`/`裁决` 混读 —— 故用**完整表头字面**（`| 裁决 | 含义 | 后续动作 |`）唯一锚定，
+    与 `_p_homework_modes`/`_p_learning_kinds` 的「结构性锚定」同款思路。
+
+    ⚠️ **镜像侧锚点唯一性**：本文件已有 `| 类型 | 含义 |`（提交类型）/`| 学习类型 | 含义 |`
+    （学习类型）/`| 清理状态 | 含义 |`（清理状态）三张 `| X | 含义 |` 型表 —— 故本表表头
+    必须**分别为唯一字符串**：`| 思考裁决 | 含义 |`。
+
+    ⚠️ 并集模型固有边界（与既有各守卫共有，如实登记）：**"多写"会 FAIL，"少写"不会**。
+    """
+    vals: set = set()
+    # 手册侧：锚定**整条表头**（含「后续动作」一列），避免与 §1.2 维度表撞锚
+    m = re.search(r"^\|\s*裁决\s*\|\s*含义\s*\|\s*后续动作\s*\|\s*$", text, re.M)
+    if m:
+        block: list[str] = []
+        for ln in text[m.end():].splitlines():
+            if ln.strip().startswith("|"):
+                block.append(ln)
+            elif block:
+                break
+        vals |= {x.strip() for x in re.findall(r"^\|\s*\*\*([^*|]+?)\*\*\s*\|", "\n".join(block), re.M)}
+    # 镜像侧：表头 `| 思考裁决 | 含义 |`（唯一）
+    m2 = re.search(r"^\|\s*思考裁决\s*\|\s*含义\s*\|\s*$", text, re.M)
+    if m2:
+        block2: list[str] = []
+        for ln in text[m2.end():].splitlines():
+            if ln.strip().startswith("|"):
+                block2.append(ln)
+            elif block2:
+                break
+        vals |= {x.strip() for x in re.findall(r"^\|\s*\*\*([^*|]+?)\*\*\s*\|", "\n".join(block2), re.M)}
+    # judges.json 分支：json 解析成功且含 thinking_judge 才取值；md 文件解析失败 → 静默跳过
+    try:
+        data = json.loads(text)
+    except (ValueError, TypeError):
+        return vals
+    if isinstance(data, dict) and isinstance(data.get("thinking_judge"), dict):
+        crit = (data["thinking_judge"].get("verdict_probe") or {}).get("criteria") or {}
+        vals |= set(crit)
+    return vals
+
+def _p_thinking_axes(text: str) -> set:
+    """思考否决轴 A1–A6（v4.11.0）—— **一个物理量、三种载体**（同 `_p_thinking_verdicts`）：
+
+      · **手册表格**（`references/thinking-panel.md` §1.3）：表头
+        `| 否决轴 | 内容 | 对应价值观 | 命中例 | 不该命中例 | 易混淆边界 |`，首格 `**A1**`。
+      · **受守卫镜像**（`references/data-model.md` §2.2）：表头 `| 思考否决轴 | 含义 |`。
+      · **模板 json**（`scripts/judges.json` 的 `thinking_judge.veto_axis.criteria`）。
+
+    ⚠️ **json 侧为何必须按 `A\\d` 过滤**：`veto_axis.criteria` 的合法取值**含 `无`**
+    （`veto.triggered == false` 时 axis 只允许 `""`/`无`，见 `THINKING_AXIS_EMPTY`）——
+    但 `无` **不属于** `THINKING_VETO_AXES`（A1–A6），若整取键集会得 7 项 ⇒ 与常量 6 项比对**假 FAIL**。
+    故 json 侧只收 `A\\d` 键（`无` 是「轴为空」的表示，不是第七根轴，由 `THINKING_AXIS_EMPTY` 单独登记）。
+    ⚠️ 手册/镜像两侧表格本身只列 A1–A6（无「无」行），无需过滤 —— 但正则同样只认 `**A\\d**` 型首格。
+
+    ⚠️ 并集模型固有边界（与既有各守卫共有，如实登记）：**"多写"会 FAIL，"少写"不会**。
+    """
+    vals: set = set()
+    # 手册侧：表头 `| 否决轴 | 内容 | …`（本文件唯一）
+    m = re.search(r"^\|\s*否决轴\s*\|\s*内容\s*\|", text, re.M)
+    if m:
+        block: list[str] = []
+        for ln in text[m.end():].splitlines():
+            if ln.strip().startswith("|"):
+                block.append(ln)
+            elif block:
+                break
+        vals |= {x.strip() for x in re.findall(r"^\|\s*\*\*(A\d)\*\*\s*\|", "\n".join(block), re.M)}
+    # 镜像侧：表头 `| 思考否决轴 | 含义 |`（唯一）
+    m2 = re.search(r"^\|\s*思考否决轴\s*\|\s*含义\s*\|\s*$", text, re.M)
+    if m2:
+        block2: list[str] = []
+        for ln in text[m2.end():].splitlines():
+            if ln.strip().startswith("|"):
+                block2.append(ln)
+            elif block2:
+                break
+        vals |= {x.strip() for x in re.findall(r"^\|\s*\*\*(A\d)\*\*\s*\|", "\n".join(block2), re.M)}
+    # judges.json 分支：只收 A\d 键（刻意排除「无」）
+    try:
+        data = json.loads(text)
+    except (ValueError, TypeError):
+        return vals
+    if isinstance(data, dict) and isinstance(data.get("thinking_judge"), dict):
+        crit = (data["thinking_judge"].get("veto_axis") or {}).get("criteria") or {}
+        vals |= {k for k in crit if re.fullmatch(r"A\d", str(k))}
     return vals
 
 def _resolve_sources(skill_dir: Path, spec) -> list[Path]:
@@ -386,6 +486,64 @@ def _check_parity(skill_dir: Path) -> None:
             ok(f"口径守卫：{label}", f"{scope} ↔ {want_s}（{len(want)} 项一致）")
 
 
+def _check_thinking_band_source(skill_dir: Path) -> None:
+    """跨格式阈值同源判据（v4.11.0，§10.2 第 6 项**案 C**）—— 断言
+    `judges.json` 的 `thinking_judge.thresholds.ambiguity_band` == `checks_core.THINKING_NUOL_BAND` 逐值相等。
+
+    **存在意义**：该带宽的**唯一取值载体**在 JSON（Laya 侧 questions 模板）里，而
+    `guard_constants.py` 走 `ast.parse` 取模块级常量，**结构上够不到 JSON 字段** ⇒
+    「跨格式同源」此前**没有任何机制承担**。本条即为此缺口补的判据（三案中唯一能"防"的案 C）。
+
+    ⚠️ **为什么不并入 `PARITY_ITEMS`**：`PARITY_ITEMS` 的模型是「若干文档 → 一个解析器 → 一个集合」，
+    比的是**字符串集合**；本条比的是**浮点数组逐值相等**，且需另查「每个 question 都含 `type`/`instructions`」
+    —— 语义不同，塞进并集模型会把数值退化成字符串比对（`[0.35, 0.65]` 的 repr 差异即假 FAIL）。
+
+    ⚠️ **附带校验（§7.2）**：`thinking_judge` 模板的**每个 question（有 `type` 的项）都必须含
+    `instructions`** —— 实测缺 `instructions` 会被 Laya 服务端 **HTTP 400** 拒绝，影子对照**静默失效**。
+
+    阴性对照（验收用）：把 `judges.json` 的 `ambiguity_band` 改成 `[0.35, 0.66]` → 本条必须 FAIL；
+    复原 → PASS。另把任一 question 的 `instructions` 删掉 → 也必须 FAIL。
+    """
+    label = "跨格式阈值同源（思考）"
+    try:
+        jpath = skill_dir / "scripts" / "judges.json"
+        raw = jpath.read_text(encoding="utf-8") if jpath.exists() else ""
+    except OSError:
+        raw = ""
+    if not raw:
+        fail(label, "judges.json 缺失或读不到（守卫读不到规则 = 没有规则）")
+        return
+    try:
+        data = json.loads(raw)
+    except ValueError as exc:
+        fail(label, f"judges.json 解析失败：{str(exc)[:80]}")
+        return
+    tpl = data.get("thinking_judge") if isinstance(data, dict) else None
+    if not isinstance(tpl, dict):
+        fail(label, "judges.json 缺 thinking_judge 模板")
+        return
+    got = (tpl.get("thresholds") or {}).get("ambiguity_band")
+    want = list(THINKING_NUOL_BAND)
+    ok_band = False
+    if isinstance(got, list) and len(got) == len(want):
+        try:
+            ok_band = all(abs(float(a) - float(b)) <= 1e-9 for a, b in zip(got, want))
+        except (TypeError, ValueError):
+            ok_band = False
+    if not ok_band:
+        fail(label, f"judges.json thinking_judge.thresholds.ambiguity_band = {got!r} "
+                    f"≠ checks_core.THINKING_NUOL_BAND = {want!r}（跨格式不同源）")
+        return
+    bad = [k for k, q in tpl.items() if isinstance(q, dict) and "type" in q and "instructions" not in q]
+    if bad:
+        fail(label, f"thinking_judge 模板 question 缺 instructions：{'/'.join(sorted(bad))}"
+                    f"（服务端会 400 拒绝 ⇒ 影子静默失效）")
+        return
+    n_q = sum(1 for q in tpl.values() if isinstance(q, dict) and "type" in q)
+    ok(label, f"ambiguity_band={want!r} 与 checks_core.THINKING_NUOL_BAND 逐值相等；"
+              f"{n_q} 个 question 均含 type/instructions")
+
+
 def _p_cleanup_states(text: str) -> set:
     """清理状态（v4.10.0）—— **一个物理量、两种载体**：
 
@@ -448,6 +606,15 @@ PARITY_ITEMS = (
     #      镜像侧锚表头 `| 清理状态 | 含义 |`（避开 `| 类型 |` 与 `| 学习类型 |` 两处已占用锚点）。
     ("清理状态", ("assets/plan-template.yaml", "references/data-model.md"),
      _p_cleanup_states, CLEANUP_STATES),
+    # v4.11.0 新增「思考裁决」（thinking-judge）：**三源**（手册 + 受守卫镜像 + 模板 json）——
+    #   与「学习类型」同型。⚠️ 手册侧锚点取**整条表头** `| 裁决 | 含义 | 后续动作 |`（该文件 §1.2
+    #   维度表首格同为加粗中文词，只锚前两格会撞锚 → 假 FAIL）。
+    ("思考裁决", ("references/thinking-panel.md", "references/data-model.md", "scripts/judges.json"),
+     _p_thinking_verdicts, THINKING_VERDICTS),
+    # v4.11.0 新增「思考否决轴」（A1–A6 价值观否决轴）：**三源**同上。
+    #   ⚠️ json 侧必须按 `A\d` 过滤 —— `veto_axis.criteria` 合法含 `无`，而 `无` 不在 THINKING_VETO_AXES。
+    ("思考否决轴", ("references/thinking-panel.md", "references/data-model.md", "scripts/judges.json"),
+     _p_thinking_axes, THINKING_VETO_AXES),
     # ⚠️「入口判定主类」**不在本表内**（v4.2.0 第五轮换口径后由 `_check_category_decl` 单独判）：
     # 本表的模型是「若干源 → 一个解析器 → 一个集合」，多源时取并集比对；而主类那项需要
     # **跨文件的唯一性判定（源规格面内）**（声明块须恰一处），并集模型表达不了它 ——

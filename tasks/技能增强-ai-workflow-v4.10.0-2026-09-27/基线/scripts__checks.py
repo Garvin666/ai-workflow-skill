@@ -25,13 +25,11 @@ from checks_core import (          # noqa: F401 —— 下划线开头的模块�
 )
 from checks_parity import (  # noqa: F401
     _check_parity,
-    _check_thinking_band_source,
 )
 from checks_judges import (  # noqa: F401
     _check_aesthetic,
     _check_autonomy,
     _check_category_decl,
-    _check_cleanup,
     _check_closure,
     _check_entry_verdict,
     _check_fuse,
@@ -51,8 +49,6 @@ from checks_judges import (  # noqa: F401
     _check_scope,
     _check_selftools,
     _check_stage_gates,
-    _check_thinking_sample,
-    _check_thinking_verdict,
     _check_user_release,
 )
 from checks_cmds import (  # noqa: F401
@@ -87,72 +83,6 @@ from checks_core import (  # noqa: F401
     results,
     skip,
 )
-
-def _check_metrics_idempotent(skill_dir: Path) -> None:
-    """幂等**行为**守卫（v4.10.1）：`metrics --finalize` 必须使 `_metrics.jsonl` 恰好一行。
-
-    为什么必须做「行为级」而不是再加一句文档：`SKILL.md` 阶段 6 第 3 条写「**每任务一行**」，
-    而落点按任务分文件 ⇒ 同一物理量的两处表述。旧实现无条件追加、**实测**产生 2~3 行（受控
-    复现 + 真实工作区各一例），说明纯文档口径约束不住，必须真跑命令数行数。
-
-    三个场景，**每个都可失败**（故不是恒真断言）：
-      A 空目录连跑 2 次           → 恒 1 行（首次写入后必须是覆盖，不是追加）
-      B 预置 2 行（造缺陷现场）   → 跑 1 次收敛为 1 行（自愈历史脏数据）
-      C 预置 1 行                 → 行数仍 1，且内容刷新为最新终值（幂等 + 内容不陈旧）
-
-    ⚠️ **本守卫的射程**：它只证「重复调用不增行」。不证「指标项统计得对」—— 那是
-    `cmd_metrics` 的字段口径问题，本项不作判据。**不得**读成「metrics 已全部正确」。
-    阴性对照（人工执行、留档，不入自检）：把 `cmd_metrics` 退回 `_jsonl_append` → 场景 A
-    得 2 行、B 得 3 行 ⇒ 本守卫 FAIL。
-    """
-    import contextlib
-    import io
-    import json as _json
-
-    with tempfile.TemporaryDirectory(prefix="aiwf_metrics_") as td:
-        d = Path(td)
-        plan = d / "plan.yaml"
-        plan.write_text(
-            'meta:\n  任务: "幂等守卫用例"\n  任务层级: L2\n  熔断状态: "正常"\n'
-            '  计划修订: []\n  用户放行: []\n  不可逆副作用: []\n'
-            'steps:\n  - id: 1\n    状态: 完成\n',
-            encoding="utf-8")
-        tf = d / "_metrics.jsonl"
-
-        def _run() -> None:
-            with contextlib.redirect_stdout(io.StringIO()):
-                cmd_metrics(plan, True)
-
-        def _lines() -> list:
-            return [x for x in tf.read_text(encoding="utf-8-sig").splitlines() if x.strip()]
-
-        # A 空目录连跑 2 次
-        _run()
-        _run()
-        n_a = len(_lines())
-        (ok if n_a == 1 else fail)("metrics 幂等：空目录连跑 2 次恒 1 行", "实测 %d 行" % n_a)
-
-        # B 预置 2 行 → 一次调用收敛
-        tf.write_text('{"task": "旧1"}\n{"task": "旧2"}\n', encoding="utf-8")
-        _run()
-        n_b = len(_lines())
-        (ok if n_b == 1 else fail)("metrics 幂等：预置 2 行收敛为 1 行", "实测 %d 行" % n_b)
-
-        # C 预置 1 行 → 幂等且内容为最新终值
-        tf.write_text('{"task": "旧", "done": 0}\n', encoding="utf-8")
-        _run()
-        ls = _lines()
-        detail = "实测 %d 行" % len(ls)
-        good = len(ls) == 1
-        if good:
-            try:
-                rec = _json.loads(ls[0])
-            except ValueError:
-                rec, good = {}, False
-            good = good and rec.get("done") == 1 and rec.get("superseded") == 1
-            detail = "内容=%s" % (ls[0][:80] if ls else "")
-        (ok if good else fail)("metrics 幂等：预置 1 行时刷新内容且不增行", detail)
-
 
 def check_skill(skill_dir: Path) -> int:
     skill_md = skill_dir / "SKILL.md"
@@ -247,17 +177,12 @@ def check_skill(skill_dir: Path) -> int:
     # v3.5.0 / P0-3：口径守卫 —— 手册/模板里写的取值必须与代码常量同源。放在最后，
     # 因为前面几项都是"代码自身"的完整性判据，这一项是"文档 ↔ 代码"的一致性判据。
     _check_parity(skill_dir)
-    # v4.11.0：跨格式阈值同源判据（思考模块的 ambiguity_band 在 judges.json 里，guard_constants 走 AST
-    # 够不到 JSON）—— 单列，不并入 PARITY_ITEMS（后者比字符串集合，本条比浮点数组 + question 结构）。
-    _check_thinking_band_source(skill_dir)
     # v4.2.0 第五轮：主类枚举单独判（声明块 FAIL + 启发式 WARN）—— 它的模型是「跨文件唯一性（源规格面内）」，塞不进 PARITY_ITEMS 的并集模型
     _check_category_decl(skill_dir)
     # v4.3.0 / 批次 B：平台门控 vs 真实 import（AST 口径，不认注释与字符串里的同名字面量）
     _check_platform(skill_dir)
     # v4.3.0 / 批次 C：运行时闸门可用性与同源（gate.py 缺失、或口径另存一份副本，均 FAIL）
     _check_gate(skill_dir)
-    # v4.10.1：`metrics --finalize` 的幂等**行为**守卫（SKILL.md 六「每任务一行」↔ 实现）
-    _check_metrics_idempotent(skill_dir)
     return 0
 
 def check_plan(plan_path: Path, base: Path) -> int:
@@ -330,25 +255,6 @@ def check_plan(plan_path: Path, base: Path) -> int:
     # v4.9.0：检查项 22 = 审美判据门禁（设计类产物：交付物含 .css）。与上面几条**不同族** ——
     # 它不做识别，也不信 plan 里自报的数字：登记了产物，就把校验器**实跑一遍**，跑出 FAIL 即 FAIL。
     _check_aesthetic(meta, steps, base)
-    # v4.10.0：检查项 23 = 任务产物清理登记（可选字段；缺省 WARN、填写须合法；
-    #   登记了 `清单` 却解析不到文件即 FAIL）。与检查项 22 同源口径：可选、填了就不能糊弄。
-    _check_cleanup(meta, plan_path)
-    # v4.11.0：检查项 24 = 思考判定结构合法（含 D1–D11、D14–D19 跨字段自洽；D12/D13 的靶面在
-    #   报表/gold 而不在 plan.yaml，机器落点是 thinking_model.py 的 selftest/gold）；25 = 抽样人审
-    #   指路（只 WARN）。⭐ 独立 try 包裹（设计 §9.2 第 4 条）：check_plan 原仅 1 个 try
-    #   （except yaml.YAMLError），新增检查器若抛异常会穿透到 main ⇒ rc=1 且 stdout 残缺
-    #   （整批结果被吞）——「崩栈比跳过更坏」。异常一律降级：24 → FAIL（没跑成必须显式）；
-    #   25 → WARN（该检查项契约上永不计入 FAIL，崩溃只是「未能指路」）。
-    try:
-        _check_thinking_verdict(meta)
-    except Exception as e:                       # noqa: BLE001 —— 刻意兜底，防穿透崩栈
-        fail("meta.思考判定 合法（检查器异常）",
-             f"{type(e).__name__}: {e} —— 已降级为 FAIL，不让异常吞掉整批输出")
-    try:
-        _check_thinking_sample(meta)
-    except Exception as e:                       # noqa: BLE001
-        warn("思考判定抽样人审（检查器异常）",
-             f"{type(e).__name__}: {e} —— 该检查项契约上只 WARN，故降级为 WARN")
     _check_stage_gates(steps)
     _check_model_tiers(steps)
     _check_reflection_retry(meta, steps)
@@ -416,7 +322,7 @@ def main() -> None:
     p.add_argument("--attempt", type=int, help="重试轮次（v4.1.0：action=retry 时填第几轮）")
     p.add_argument("--replay", action="store_true", help="回放该任务的完整时序")
 
-    p = sub.add_parser("metrics", help="任务级指标沉淀（v4.0.0 / U8：写入 <任务目录>/_metrics.jsonl，v4.10.1 起幂等）")
+    p = sub.add_parser("metrics", help="任务级指标沉淀（v4.0.0 / U8：写入 tasks/_metrics.jsonl）")
     p.add_argument("plan", help="plan.yaml 路径或任务目录")
     p.add_argument("--finalize", action="store_true", help="收尾时汇总写入一次")
 

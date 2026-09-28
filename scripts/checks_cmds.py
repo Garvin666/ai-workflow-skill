@@ -351,8 +351,41 @@ def cmd_trace(plan_path: Path, step: str | None, action: str, command: str,
     print("[OK] trace 已追加 —— %s（step=%s）" % (tf, step))
     return 0
 
+def _metrics_upsert(path: Path, rec: dict) -> "tuple[int, dict]":
+    """把 `rec` **幂等**写入 `_metrics.jsonl`：使该文件恰好一行（v4.10.1）。
+
+    为什么不用 `_jsonl_append`（本函数存在的全部理由）：
+      · `SKILL.md` 阶段 6 第 3 条明文写「**每任务一行**」，而 `_metrics.jsonl` 按任务分文件
+        （v4.3.0 路径口径）⇒ 「一个文件 = 一个任务 = 一行」是**天然唯一键**。
+      · 旧实现无条件追加，产生两类脏数据：① 重复收尾 → 同任务多行、统计双计；② 中途调用的
+        **半成品行**（如 `done=6`）与终值行（`done=9`）并存 ⇒ 数据自相矛盾。两类均已实测
+        （受控复现 3 行 / 真实工作区 2 行）。
+      · ⚠️ **不要为了修它去改 `_jsonl_append`** —— 同一 helper 也服务于 `trace.jsonl`
+        （本文件 `_cmd_trace` 内），那里**必须保持追加语义**（`--replay` 依赖逐条时序）。
+
+    唯一键取「文件自身」而非 `meta.任务` 文本：任务在收尾前改名时文本键会失配，反而造出
+    「又变成两行」这一新失败模式。
+
+    自愈：文件里已有的重复行**不是**报错，而是本次一并收敛，旧行数记入写入记录的
+    `superseded` 字段 —— 使「替换掉了几条」可审计，而不是静默抹掉。
+
+    原子性：先写 `<name>.tmp` 再 `os.replace`，避免半写状态被消费方读到。
+
+    返回 `(被替换的旧行数, 实际写入的记录)`；旧行数为 0 表示首次写入。
+    """
+    prev_n = 0
+    if path.exists():
+        prev_n = sum(1 for ln in path.read_text(encoding="utf-8-sig").splitlines() if ln.strip())
+    out = dict(rec)
+    out["superseded"] = prev_n
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(json.dumps(out, ensure_ascii=False) + "\n", encoding="utf-8")
+    _os.replace(tmp, path)
+    return prev_n, out
+
 def cmd_metrics(plan_path: Path, finalize: bool) -> int:
-    """U8：任务级指标沉淀 —— 收尾时把本任务指标追加进**本任务目录**的 `_metrics.jsonl`
+    """U8：任务级指标沉淀 —— 收尾时把本任务指标写入**本任务目录**的 `_metrics.jsonl`
     （即 `tasks/<任务>/_metrics.jsonl`）。
 
     ⚠️ **路径口径修正（v4.3.0）**：此前 docstring 与 `SKILL.md` 都写作"工作区级
@@ -363,6 +396,12 @@ def cmd_metrics(plan_path: Path, finalize: bool) -> int:
 
     目的：此前**没有任何任务级统计**（返修轮次、熔断频次、门禁 FAIL 率、步骤耗时全无），
     技能自身演进缺数据依据。
+
+    ⚠️ **幂等修正（v4.10.1）**：本命令此前**无条件追加**，与上面那段「每任务一行」的口径不符
+    —— 重复 `--finalize` 会在同一任务目录堆出多行，其中中途调用的**半成品行**（当时步骤尚未
+    跑完，如 `done=6`）与终值行（`done=9`）并存，使任何按行聚合的统计重复计数、且数据自相
+    矛盾。现改走 `_metrics_upsert`（读旧行 → 单行原子重写）：重复调用**恒为一行**，历史重复
+    行在下次调用时自动收敛。首次写入与刷新在输出上**显式区分**，刷新还会报出替换了几条。
     """
     if not finalize:
         print("[ERROR] 目前只支持 --finalize（收尾时汇总一次，避免中途写入半成品）", file=sys.stderr)
@@ -390,7 +429,10 @@ def cmd_metrics(plan_path: Path, finalize: bool) -> int:
         "released": len(meta.get("用户放行") or []),
     }
     tf = _task_dir(pp) / "_metrics.jsonl"
-    _jsonl_append(tf, rec)
-    print("[OK] 指标已追加 —— %s" % tf)
-    print("    " + json.dumps(rec, ensure_ascii=False)[:220])
+    superseded, written = _metrics_upsert(tf, rec)
+    if superseded:
+        print("[OK] 指标已刷新（幂等覆盖，替换旧记录 %d 条）—— %s" % (superseded, tf))
+    else:
+        print("[OK] 指标已写入（首次）—— %s" % tf)
+    print("    " + json.dumps(written, ensure_ascii=False)[:260])
     return 0

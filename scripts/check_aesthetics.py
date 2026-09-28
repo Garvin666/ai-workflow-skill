@@ -243,11 +243,32 @@ v1.3.0（2026-09-27）—— G12/G13/R3 的**可达性审计**：no-op 与**假�
     D. 取数层新增**块级**解析（`_BLOCK_RE` / `_NTH_RE` / `_LAYER_DECL_RE`）与四项登记
        （`motion_decls` / `motion_without_time` / `rhythm_ladders` / `radial_blocks`）。
     ⚠️ 本版**一条阈值都没动**（`tolerance_px 0.5` / `tolerance_ms 1.0` / `ΔE00 2.0` / `3.0` 全部原样）。
+
+v1.7.0（2026-09-27）——「已声明未消费的参数」由一次性探针升级为**常驻审计** + V1 契约归位
+    A. `--audit` 新增**悬空参数**常驻检查（`_dangling_params`）：AST 解析本模块，报出
+       「`PARAM_SPEC` 声明了、检查器**从未读取**」的键。v1.6.0 时这是一次性脚本
+       （`tmp/v160/audit_params.py`），**发现即会过期**；现在每次 audit 都跑。
+       实测基线：**7 个检查器 / 9 个键** —— G2 `expected`、G8 `expected`·`field`、
+       G9 `expected`、M3 `elements`、W1 `coverage`、V1 `elements`、C1 `max`。
+       ⚠️ 这些**不是「通过」**：它们只是「算不出来」，故**单列一类、不并入「一致」计数**，
+       措辞为 WARN。为什么不当场判 FAIL：它们**全部是 `judgeability: spec` 判据**，
+       而 `extract_spec()` 只产出**存在性布尔**（`has_accent` / `has_cta` / `has_series` …），
+       **没有计数字段** ⇒ 「期望值/期望数量」类参数在 spec 层**没有判定依据**。
+       要真落地须先扩展取数层（外加判据名与实现口径的对齐），方向待拍板。
+    B. `chk_shot_spec_present`（V1）改**走 `params.elements`**：原先「构图 ∧ 光比/色温」被硬编码
+       在 `extract_spec()` 里，判据集却声明了 `elements: [构图, 光比或色温]` —— 参数形同虚设。
+       现由 `_ELEMENT_KEYWORDS` 做「契约项 → 关键词」适配：**契约可配，实现只做翻译**。
+       行为分界未变（PASS 仍要求两项同时出现），仅 detail 措辞更明确；`extract_spec` 的
+       死字段 `has_shot` 一并移除。
+    C. `PARAM_SPEC` 清掉 `memory_point_count.field` —— 该键**无判据集声明、无实现读取、
+       note 未提及**，属纯冗余白名单（留着会让人以为「配了就能用」）。
+    ⚠️ 本版**未改判据集**：`aesthetic-rubric.yaml` 条文与阈值一字未动（判据仍 30 条）。
 """
 
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import math
 import os
@@ -262,7 +283,7 @@ try:  # Windows 控制台中文输出
 except Exception:
     pass
 
-VERSION = "1.6.0"
+VERSION = "1.7.0"
 PRODUCTS = ("ui", "ppt", "chart", "image")
 # 覆盖 reason 的占位文本（写了等于没写）
 PLACEHOLDER_REASONS = {
@@ -748,9 +769,7 @@ def extract_spec(md: str) -> dict:
         "has_memory_point": any(("记忆点" in ln or "视觉焦点" in ln) for ln in lines),
         "has_cta": any(("主按钮" in ln or "主 CTA" in ln or "主CTA" in ln) for ln in lines),
         "has_feedback": any(("点击" in ln or "hover" in ln.lower() or "悬停" in ln) for ln in lines),
-        "has_shot": any(("构图" in ln) for ln in lines) and any(
-            ("光比" in ln or "色温" in ln) for ln in lines
-        ),
+        # v1.7.0：`has_shot` 已移除 —— V1 改由 params.elements 驱动（见 chk_shot_spec_present）
         "has_series": any("系列" in ln for ln in lines),
     }
 
@@ -1414,12 +1433,32 @@ def chk_interactive_feedback_coverage(ctx, params):
     return "FAIL", "spec 未声明交互反馈（点击 / hover / 悬停）——「每一次点击都有回应」缺失"
 
 
+# v1.7.0：契约项 → 关键词的**适配层**。契约（`params.elements`）可配，实现只做翻译；
+# 键不存在 ⇒ 显式 FAIL（不静默按空集处理，否则「契约写错了」会退化成 PASS）。
+_ELEMENT_KEYWORDS = {
+    "构图": ("构图",),
+    "光比或色温": ("光比", "色温"),
+}
+
+
 def chk_shot_spec_present(ctx, params):
+    """V1：由 `params.elements` 驱动（v1.7.0 之前硬编码在 extract_spec 里，参数形同虚设）。"""
     if not ctx["spec"]:
         return "SKIP", "未提供 spec"
-    if ctx["spec"]["has_shot"]:
-        return "PASS", "spec 已声明构图 + 光比/色温"
-    return "FAIL", "spec 未同时声明构图与光比/色温"
+    elems = params.get("elements")
+    if elems is None:
+        return "FAIL", "判据未声明 params.elements —— 契约缺失，无法判定"
+    if not isinstance(elems, list) or not elems:
+        return "FAIL", f"params.elements 应为非空列表（当前 {elems!r}）"
+    bad = [e for e in elems if e not in _ELEMENT_KEYWORDS]
+    if bad:
+        return "FAIL", f"params.elements 含无关键词映射的项 {bad} —— 契约无法翻译成可判定的谓词"
+    lines = ctx["spec"]["lines"]
+    missing = [e for e in elems
+               if not any(k in ln for k in _ELEMENT_KEYWORDS[e] for ln in lines)]
+    if not missing:
+        return "PASS", f"spec 已声明 {' + '.join(elems)}"
+    return "FAIL", f"spec 未声明 {'、'.join(missing)}（契约要求同时声明 {' + '.join(elems)}）"
 
 
 def chk_series_count_max(ctx, params):
@@ -1709,6 +1748,10 @@ PARAM_SPEC = {
                             "row_overlap": _N},
     "baseline_rhythm": {"baseline_px": _N, "tolerance_px": _N},
     "accent_unique": {"expected": _N},
+    # v1.7.0：`field` 与 `expected` 一样**未被实现读取**（属悬空参数，由 _dangling_params 报出）。
+    # ⚠️ 但它**确实被判据 V2 声明**（V2 与 G8 复用同一 check，V2 的 params 写了 expected + field）
+    #    ⇒ **不能从白名单里删** —— 删了 audit 立刻因「未知参数键 field」判 FAIL（本版实测踩中）。
+    #    教训：同一 check 可被多条判据复用，判「到底有没有人声明」必须**逐条核**，不能看一条就下结论。
     "memory_point_count": {"expected": _N, "field": _S},
     "primary_cta_count": {"expected": _N},
     "motion_types_present": {"required": _L},
@@ -1810,6 +1853,47 @@ def apply_overrides(criteria: list, overrides: list):
 # --------------------------------------------------------------------------
 # 七、审计
 # --------------------------------------------------------------------------
+def _dangling_params(src_path=None) -> list:
+    """AST 解析本模块，找出 `PARAM_SPEC` 声明了、但检查器**从未读取**的参数键。
+
+    v1.7.0：v1.6.0 时这是一次性脚本（`tmp/v160/audit_params.py`），**发现即会过期**
+    （下次改动无人重跑）。现挂进 `--audit` 常驻。
+
+    判据：函数体内是否出现 `params.get(k)` / `params[k]`。这是**必要非充分**条件 ——
+    读了参数也可能读错键，故本检查只负责**报出**，不冒充「判据正确」。
+
+    返回 [(check_name, [未消费的键, ...]), ...]；默认读本文件，可传入副本用于阴性对照。
+    """
+    src = Path(src_path or __file__).read_text(encoding="utf-8")
+    tree = ast.parse(src)
+    out = []
+    for node in tree.body:
+        if not isinstance(node, ast.FunctionDef) or not node.name.startswith("chk_"):
+            continue
+        name = node.name[len("chk_"):]
+        decl = set(PARAM_SPEC.get(name) or {})
+        if not decl:
+            continue
+        read = set()
+        for n in ast.walk(node):
+            if isinstance(n, ast.Call):
+                f = n.func
+                if (isinstance(f, ast.Attribute) and f.attr == "get"
+                        and isinstance(f.value, ast.Name) and f.value.id == "params"
+                        and n.args and isinstance(n.args[0], ast.Constant)
+                        and isinstance(n.args[0].value, str)):
+                    read.add(n.args[0].value)
+            elif isinstance(n, ast.Subscript):
+                if (isinstance(n.value, ast.Name) and n.value.id == "params"
+                        and isinstance(n.slice, ast.Constant)
+                        and isinstance(n.slice.value, str)):
+                    read.add(n.slice.value)
+        miss = sorted(decl - read)
+        if miss:
+            out.append((name, miss))
+    return out
+
+
 def audit_rubric(rubric: dict) -> int:
     """判据 ↔ 实现 一致性审计：
     ① check 有实现且类别匹配 ② applies_to 取值合法 ③ params 键/类型/枚举合法（v1.2.0 P2-2）
@@ -1860,6 +1944,24 @@ def audit_rubric(rubric: dict) -> int:
     for f in fails:
         print(f"[FAIL] {f}")
     print(f"=== 结果：一致 {ok}，人审点 {skips}，不一致 {len(fails)}，判据总数 {total} ===")
+    # v1.7.0：悬空参数常驻检查。**单列一类、不并入上面的「一致」** —— 它们不是「通过」，
+    # 而是「该判据声明的参数没人读」；措辞用 WARN，避免把「未实现」伪装成「合格」。
+    try:
+        dang = _dangling_params()
+    except Exception as ex:  # 崩栈比跳过更坏 ⇒ 降级为显式 FAIL，绝不向上抛
+        print(f"[FAIL] 悬空参数探针自身崩栈：{type(ex).__name__}: {ex}")
+        return 1
+    if dang:
+        check2ids = {}
+        for c in rubric.get("criteria") or []:
+            if c.get("check"):
+                check2ids.setdefault(c["check"], []).append(c.get("id"))
+        nkeys = sum(len(k) for _, k in dang)
+        print(f"=== 悬空参数：{nkeys} 个键 / {len(dang)} 个检查器"
+              f"（**已声明未消费 —— 未实现 ≠ 通过**，不并入「一致」）===")
+        for name, miss in dang:
+            ids = ",".join(x for x in check2ids.get(name, []) if x)
+            print(f"[WARN] {ids or '?'}/{name}: {miss} —— 检查器未读取该键")
     return 1 if fails else 0
 
 

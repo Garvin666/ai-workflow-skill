@@ -1,0 +1,24 @@
+# 清理清单 —— 作业模式-ai-workflow-v4.7.0-2026-09-23
+# 时间：2026-09-28 08:10:21
+# 用途：删除是不可逆动作，本清单是「删了什么」的永久证据（sha256 可复核）。
+# 条目：19
+
+99f59b7aaa2a7932a507100374dd2579c1a8537dd1397a116cb495362b286e72       3930  tmp/_append_changelog_entries.py
+9e1468a7900808025859d1efde8d0be7a38ea7734e7d4265c847a5a02d098abf       5624  tmp/_append_memory.py
+2ac3db86a5c83396c2c4c3df63882013c176386fee453c3afb1097228b1b3dd4       1383  tmp/_count_consts.py
+179f6264c23680606ae9a823dee005d1f034e53dc942c95c296e00d082ae756b       2275  tmp/_fix_plan_quotes.py
+6e530f35a2f409d3b51c7a0136d2c8ab854cfb1a665a8d99b21f47942e6be589       1427  tmp/_hash_after.txt
+6e530f35a2f409d3b51c7a0136d2c8ab854cfb1a665a8d99b21f47942e6be589       1427  tmp/_hash_before.txt
+20136d3ad3525698fc503859c86bc12469f2bb9de04fb0b31ee690760d4fbde2       1603  tmp/_hash_sources.py
+4c3b0e6e4a72cbd50b51a50bc7ebacf0833073ba94fce84fd71cff94834af1a2       5314  tmp/_negative_controls.py
+2e8b240c86e9378c264228aba070db5d852b3d650f6493f3d5a5c1532da2a493       6881  tmp/_offline_check.py
+34c92a522029efdb43c1119cf7efe8f5a09f529ac6892f037cb1859f9a351474       2356  tmp/_run_gates.py
+91b3cbd8468724313173dd9833827a63d9270620b494de392f79985be729b0d7       4464  tmp/_update_memory_md.py
+85ccd5f31fefd00053e3786f0b6a4287a16f8d70cb8b6aa7a0520db3fa937893       3364  tmp/_write_trace.py
+585feb8b3b9f37f62571ad5574e0232008699e46016b32ff911648346849c67e        716  tmp/plan-nc1.yaml
+cbeb7f6c9499c4eaa9e4867ae7975c0ec8dc91e480682c437213258bf84bd5e6        719  tmp/plan-nc2.yaml
+bc47eb34d981393ae72ae5690b42c71ef065e5bacfa3a3f9835980f581e0a810        716  tmp/plan-nc3.yaml
+a493e50c5efb0c202d20d96d4363df4eaa4e2d5e214da73bc41b26ef0e9a4e95        716  tmp/plan-nc4.yaml
+fb0322015024f35d3f845297c8e2875625b69e9f0a66bc2a32e3fc96478d1cd0        654  tmp/plan-nc5.yaml
+57de65406548d94cc7d96de65342e0af7674a05ea2d8da9e0d214fe14cf866e7        339  tmp/自证输出-变更记录追加.txt
+2b963fb0c34adcb13e5e50873e639b7bd092c5921440e20007aada8cba24d771       2112  tmp/自证输出.txt

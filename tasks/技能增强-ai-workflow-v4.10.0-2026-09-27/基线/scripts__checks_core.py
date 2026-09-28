@@ -164,67 +164,7 @@ AESTHETIC_PROBE = "geom-probe.js"
 AESTHETIC_SCALE_KEY = "声明刻度源"
 AESTHETIC_SCALE_IDS = ("G12", "G13")
 AESTHETIC_EXEMPT_PLACEHOLDER = ("待定", "无", "暂无", "tbd", "n/a", "na", "-", "—", "？", "?")
-
-# v4.10.0：任务产物清理登记（检查项 23）—— 由 scripts/cleanup_task.py 产出并回填。
-#   「清理状态」与「步骤状态」（VALID_STATUS）是**不同物理量**：前者答"清理这件事的结果"，
-#   后者答"步骤做到哪了"。字形相近但语义无关，**不得合并、不得互推**（口径守卫见 checks_parity）。
-CLEANUP_KEY = "清理"
-CLEANUP_REQUIRED = ("状态",)
-CLEANUP_STATES = ("已清理", "无待清理项", "未完成", "已拒绝")
-CLEANUP_MANIFEST_KEY = "清单"
-CLEANUP_COUNT_KEYS = ("文件数", "字节数")
 SEDIMENT_TOKENS = ("沉淀", "复盘", "sediment", "metrics")
-
-# v4.11.0：thinking-judge（思考板块 · 任务审计快判）—— 判「该不该按原样做」；契约见 references/thinking-panel.md
-#   ⚠️ `THINKING_VERDICTS` 是「**裁决四态**」枚举，与 `VALID_CATEGORY`（主类三态）、`HOMEWORK_MODES`
-#     （模式三态）、`VALID_CAPABILITY`（能力四态）、`RETRIEVAL_SOURCE_CLASSES`（源类五态）、
-#     `LEARNING_KINDS`（学习类型五态）**都是不同的物理量** —— 它答的是"该不该按原样做"，
-#     **不得合并、不得互推**（C9）。口径守卫「思考裁决」项与 data-model.md 镜像、
-#     judges.json 的 thinking_judge.verdict_probe.criteria 同源（并集比对）。
-#   ⚠️ `THINKING_VETO_AXES`（A1–A6）是**价值观否决轴**，**比裁决四态更该有守卫** —— 它是价值观判定的
-#     核心枚举，且 A6（规避本模块自身，元轴）是最容易被漏的一项。口径守卫「思考否决轴」项与
-#     data-model.md 镜像、judges.json 的 thinking_judge.veto_axis.criteria 同源。
-#   ⚠️ 两条结构约束（内核 N2「底线不可加权稀释」的机检形态）：
-#     · `拒绝` **不得作为 distribution 的键**（D7）—— 把否决层并进 softmax 是最危险的退化形式之一；
-#     · `T5` **不得出现在 dimensions**（D9）—— 把否决层降格成维度分（与 D7 同源，堵另一条路）。
-#   机检落点：`checks.py plan` 检查项 24（结构合法 + D1–D19 跨字段自洽；整段缺省只 WARN、填写则非法即 FAIL）、
-#     检查项 25（抽样人审指路，只 WARN）；口径守卫见 `checks.py skill`；跨格式阈值同源另有一条独立判据
-#     （`checks_parity._check_thinking_band_source`）。
-THINKING_KEY = "思考判定"
-THINKING_REQUIRED = ("verdict", "distribution", "confidence", "dimensions", "veto", "amendments",
-                     "ambiguity", "band", "needs_human_confirm", "main_judge", "laya", "route_hint")
-THINKING_VERDICTS = ("接受", "修正", "澄清", "拒绝")
-THINKING_DIST_KEYS = ("接受", "修正", "澄清")   # ⭐ `拒绝` 刻意缺席（D7）；顺序即 canonical
-THINKING_VETO_AXES = ("A1", "A2", "A3", "A4", "A5", "A6")
-THINKING_DIMS = ("T1", "T2", "T3", "T4")        # ⭐ 不含 T5（D9）
-THINKING_BANDS = ("高", "中", "低")
-THINKING_AXIS_EMPTY = ("", "无")               # triggered=false 时 axis 只允许这两个（D10，仅 A 侧）
-THINKING_MAIN_JUDGES = ("A", "B")              # 定稿恒为 A；填 B ⇒ FAIL（D15，内核 N1）
-THINKING_LAYASTATUS = ("ok", "degraded", "absent")
-THINKING_PINNED_MODEL = "multilingual"         # C20：B 侧必须钉 multilingual；status=ok 时 model_key 须等于它（D16）
-THINKING_VERDICT_PROBE = ("接受", "修正", "澄清", "拒绝")
-THINKING_PROVENANCE = ("agent_seed", "user_spot_checked", "human_verified", "disputed")
-THINKING_PROBE_KEYS = ("aux_probes", "verdict_probe")   # 旁证：只留痕，不得进 dimensions/distribution（D11）
-THINKING_AUX_KEYS = ("scope_breach", "irreversible", "touches_credentials")
-# 修正案的「越线性」二态（D3/D4/D18 与 `thinking_model.derive` rule 4/5 共用）——
-#   授权内：全部修正项都在自主授权边界内 ⇒ rule 4 → 「修正」
-#   触界  ：任一修正项越界（含 `越线性` 缺失/取值未知 —— 宁严不宽）⇒ rule 5 → 「澄清」+ needs_human_confirm
-THINKING_AMEND_SIDES = ("授权内", "触界")
-# ⭐ 阈值单一事实源（**拍板：乙·C 案**，2026-09-28）—— 指标是「**Noul 不确定带**」，本模块的 Python 侧唯一定义处。
-#   · §10.2 第 7 项已定「`VETO_HIT` 与模糊带上界**必须恒等**」 ⇒ `VETO_HIT` 由本常量**下标派生**而非重复写字面量，
-#     **结构上不给两处漂移的机会**（若将来要单独抬高否决线，必须先改这条决定并拆常量，不得就地改一个字面量）。
-#   · 「模糊带下界」在一次读数里取 `THINKING_NUOL_BAND[0]` —— **不得**再命名一个新常量（§3.4 的实现约束），
-#     否则即重造当年被移除的 `NUOL_MID_BAND` 漂移面。
-#   · `judges.json` 的 `thinking_judge.thresholds.ambiguity_band` 是它的**受校验镜像**，由
-#     `checks_parity._check_thinking_band_source` 强制逐值相等（跨格式同源；`guard_constants.py` 走 AST 够不到 JSON）。
-#   · 字段名不得共用：「模糊」与「疑似违规」是两个物理量，故 `ambiguity` 与 `veto.suspect` **不得**互相代用。
-THINKING_NUOL_BAND = (0.35, 0.65)
-VETO_HIT = THINKING_NUOL_BAND[1]
-# ⭐ 置信分档（A 侧语义，C19）—— 阈值表**只对 A 侧定义**；`band = f(confidence)` 由 D19 守同源。
-#   ⚠️ 原设计文档只「命名」了这两个常量却从未给值（§7.27 登记的「声明了从未定义」形态），在此补值。
-THINKING_SAMPLE_BAND = (0.70, 0.95)   # (下界, 自采信上界)：<0.70 或 ambiguity ⇒ 低；0.70–0.95 ⇒ 中；≥0.95 ⇒ 高
-THINKING_GOLD_MIN_ANNOTATED = 3       # D12：`anchors_fitted=true` 所需的**人工标**样本下限（≥ 条）
-
 _TRACE_HINT = ("补救：每步执行后 `checks.py trace <plan> --step <id> --action <摘要>`；"
                "收尾 `checks.py metrics <plan> --finalize`")
 PLAT_MODULES = {
@@ -328,35 +268,8 @@ plan 子命令检查项:
         只把**抽样池**指出来，**判定靠人**（机器无法判"选得对不对"）；未证实前只报
         **一致率**、**不声称准确率**。
 
-    16. 检索判定（v4.5.0）：meta「检索判定」可选 —— 阶段 3 第 5 条之前由 `retrieval-judge` 产出，
-        完整契约见 references/retrieval-judge.md。**整段缺省 → WARN**（向后兼容旧 plan，
-        **不追认历史计划**）；一旦填写须结构合法（source_class ∈ 本地资产/历史留痕/知识库/
-        技能手册/联网 及其 '+' 组合、candidates 为含 tool/fit_score 的列表、needs_retrieval 为 bool、
-        confidence ∈ [0,1]、route_hint 非空），非法即 FAIL。
-        ⚠️ **它不是门禁**：confidence 由模型自填、校准无法被机器证明（手册 §10 原样写明）。
-    17. 检索判定抽样人审（v4.5.0）：**非门禁，只指路** —— 当 `meta.检索判定` 存在
-        `needs_retrieval=true` 或 `confidence < 0.95` 的条目时，WARN 列出建议抽样的条目；
-        均不满足则 OK。口径与检查项 15 逐条相同：只把**抽样池**指出来、**判定靠人**；
-        未证实前只报**一致率**、**不声称准确率**。
-    18. 作业判定（v4.7.0）：meta「作业判定」可选 —— 阶段 0 作业识别由 `homework-judge` 产出，
-        完整契约见 references/homework-judge.md、模式语义见 references/homework-mode.md。
-        **整段缺省 → WARN**（向后兼容旧 plan，**不追认历史计划**）；一旦填写须结构合法
-        （mode ∈ 作业题/讲解题/非作业、distribution 恰含三键且和=1、confidence ∈ [0,1]、
-        dimensions 含 W1–W5、ambiguity 为 bool、route_hint 非空），且 **`needs_homework` 派生值
-        必须 = `mode ≠ 非作业`**（不等即 FAIL —— 这是确定性判据，不采信模型自报），非法即 FAIL。
-        ⚠️ **它不是门禁**：confidence 由模型自填、校准无法被机器证明。
-    19. 作业判定抽样人审（v4.7.0）：**非门禁，只指路** —— 口径与检查项 15/17 逐条相同。
-    20. 学习判定（v4.8.0）：meta「学习判定」可选 —— 阶段 6 收尾由 `learning-judge` 产出，
-        完整契约见 references/learning-judge.md、管线与门槛见 references/learning-model.md。
-        **整段缺省 → WARN**（向后兼容旧 plan，**不追认历史计划**）；一旦填写须结构合法
-        （kind ∈ 偏好/领域知识/流程坑/事实/无、distribution 恰含五键且和=1、confidence ∈ [0,1]、
-        dimensions 含 V1–V5、ambiguity 为 bool、route_hint 非空），并有两条**确定性判据**：
-        `needs_learning` 必须 = `kind ≠ 无`；`kind` 含『无』又含其它类型 → FAIL（"没有"与"有"并列无意义）。
-        ⚠️ **它不是门禁**：confidence 由模型自填；且**结构合法不代表"学对了"**（判得准不准靠抽查）。
-    21. 学习判定抽样人审（v4.8.0）：**非门禁，只指路** —— 口径与检查项 15/17/19 逐条相同。
-
     22. 审美判据（v4.9.0）：meta「审美判据」可选 —— 设计类产物（交付物含 `.css`）的机器验收。
-        判据集：`references/aesthetic-rubric.yaml`（30 条）；校验器：`scripts/check_aesthetics.py`。
+        判据集：`references/aesthetic-rubric.yaml`（29 条）；校验器：`scripts/check_aesthetics.py`。
         **触发信号 = 交付物里出现 `.css`**（确定性信号，不看 category）。**整段缺省 → 只 WARN**
         （向后兼容旧 plan、不追认历史计划；且仅在确实有 `.css` 交付物时才提示，非设计类任务判 SKIP）。
         一旦填写须结构合法（`产物类型` ∈ ui/ppt/chart/image、`产物` 为非空的真实存在 `.css` 列表、
@@ -372,13 +285,6 @@ plan 子命令检查项:
         ⚠️ 同理，判据集里凡 source 讲「**画面内**」的（G1/G6/R1-R3）**必须吃渲染结果**：
         拿令牌清单顶该口径会造出成片假 FAIL（实测 21/21），故无 `--geom` 时这几条判 SKIP。
         ⚠️ **不采信 plan 里自报的 FAIL 数** —— 判据只有一条：「我实跑出来是什么」。
-
-    23. 任务产物清理（v4.10.0）：meta「清理」可选 —— 阶段 6 第 7 条 `scripts/cleanup_task.py`
-        的登记。**整段缺省 → WARN**（向后兼容旧 plan，**不追认历史计划**；**本项不是门禁**）；
-        一旦填写须结构合法（`状态` ∈ 已清理/无待清理项/未完成/已拒绝、`清单` 若填则必须
-        解析到位、`文件数`/`字节数` 若填则须为非负整数），非法即 FAIL。
-        ⚠️ **状态由执行者填写、机器只校验结构** —— 「确实安全清过」靠抽查，
-        **不得把本字段读成「工作区已干净」**（清理有失败项时只报「未完成」，见阶段 6 第 7 条）。
 
 状态取值: OK / FAIL / SKIP / **WARN**（WARN 只提示、不计入 FAIL，也不改变退出码）
 

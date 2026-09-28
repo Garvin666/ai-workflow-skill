@@ -90,7 +90,7 @@ meta:
                         #   ⚠️ 检查项 21 是**抽样人审信号**（非门禁）：组合态 / confidence<0.95 / ambiguity 会被列出提示复核
                         #   ⚠️ **本字段不授权写库改本体**：入库须过 kb_learn.py 的六条门槛；改技能本体须用户确认
   审美判据:             # 【可选，v4.9.0 新增】设计类产物（交付物含 `.css`）的机器验收 —— 检查项 22
-                        #   校验器 scripts/check_aesthetics.py ＋ 判据集 references/aesthetic-rubric.yaml（30 条）
+                        #   校验器 scripts/check_aesthetics.py ＋ 判据集 references/aesthetic-rubric.yaml（29 条）
                         #   ⚠️ **与四块快判不同族**：快判做"识别"（模型自报 confidence）；本项做"验收"，
                         #     **没有任何模型自填量** —— checks.py 会把校验器**实跑一遍**，
                         #     跑出 FAIL 即 FAIL。**登记里的数字一概不采信**（自报计数是"静默失真"高发面）
@@ -120,38 +120,6 @@ meta:
                         #     豁免留给「判据与该产物确有正当冲突」的个别情形，且**不得为消 FAIL 去改阈值**；
                         #     "豁免了却本次没 FAIL"会 WARN（防橡皮图章）
                         #   ⚠️ PASS / FAIL / SKIP 严格分开：**SKIP 不得并入通过率**（未检测 ≠ 通过）
-  清理:                 # 【可选，v4.10.0 新增】阶段 6「任务产物清理」的登记 —— 检查项 23
-                        #   由 scripts/cleanup_task.py 产出并回填；本字段只做留痕与对账
-                        #   · 状态(必填)：已清理 / 无待清理项 / 未完成 / 已拒绝
-                        #       对应脚本四种出口：删了 / 无可清项 / 有失败项(exit 1) / 触发条件不满足(exit 2)
-                        #   · 清单(可选)：清理清单文件名（**相对任务目录**，如 清理清单-20260927-224725.txt）—— 删前 sha256 快照，删后复核的依据
-                        #   · 文件数、字节数(可选)：非负整数，实际清理量，供对账
-                        #   ⚠️ **它不是门禁**：整段缺省 → `checks.py plan` 检查项 23 只出 WARN
-                        #     （向后兼容旧 plan，**不追认历史计划**）；一旦填写则必须结构合法，非法即 FAIL
-                        #   ⚠️ **本字段不代表「清理干净了」** —— 状态由执行者填写，机器只校验结构；
-                        #     「确实安全清过」靠抽查（与「用户放行」字段同一处诚实边界）
-  思考判定:             # 【可选，v4.11.0 新增】阶段 0 第 0 步 thinking-judge（任务审计·快判）产出 —— 检查项 24
-                        #   完整契约见 references/thinking-panel.md；模型见 scripts/thinking_model.py
-                        #   ⚠️ **执行序是「阶段 0 第 0 步」，落盘序却在末位**（带版本号字段按版本序排，勿混两个维度）
-                        #   十二字段：verdict(必填，接受/修正/澄清/拒绝) / distribution(必填，{接受,修正,澄清})
-                        #   / confidence(必填，0–1，= max(distribution)) / dimensions(必填，T1–T4，**不含 T5**)
-                        #   / veto(必填，{triggered,suspect,noul,axis,underlying_axis,evidence,alternative,appeal_hint})
-                        #   / amendments(必填，列表 [{项,原表述,修正为,依据,越线性}]，无则空列表)
-                        #   / ambiguity(必填，bool) / band(必填，高/中/低) / needs_human_confirm(必填，bool)
-                        #   / main_judge(必填，**定稿恒为 A**) / laya(必填，影子元信息或 null)
-                        #   / route_hint(必填，非空) —— 共 **12** 项；可选留痕 2 项(aux_probes/verdict_probe)不计入
-                        #   ⚠️ **它不是门禁**：整段缺省 → `checks.py plan` 检查项 24 只出 WARN
-                        #     （向后兼容旧 plan，**不追认历史计划**）；一旦填写则必须结构合法，非法即 FAIL
-                        #   ⭐ 几条**跨字段自洽判据（D 系列）**：`拒绝` 不得作 distribution 的键(D7)、`T5` 不得
-                        #     进 dimensions(D9)、`main_judge != "A"`(D15)、`confidence != max(distribution)`、
-                        #     `veto.triggered/suspect` 非布尔(D17)、澄清态携带修正案却未置 needs_human_confirm(D18)
-                        #   ⚠️ **`band` 与 `confidence` 同源**（D19）：档由 confidence 直接映射，不得各写各的
-                        #   ⚠️ **Noul 模糊带是单一事实源**：本字段的 `ambiguity` 与 Laya 侧 `ambiguity_band`
-                        #     同出一处常量(`checks_core.THINKING_NUOL_BAND`)，由跨格式同源判据锁死（不得各写各的）
-                        #   ⚠️ **结构合法 ≠ 判得对**：confidence/veto 由模型自填，机器只校结构；价值观判定**无机器 oracle**
-                        #   ⚠️ 检查项 25 是**抽样人审指路**（非门禁，永不计入 FAIL）：拒绝态 / 中间带 / 低置信 /
-                        #     触界待确认 / Laya 无对照 会被列出提示复核；未拟合前只说「一致率」，**不得称「准确率」**
-                        #   ⚠️ **本字段不授权行动**：C1 —— 只输出"该不该按原样做"，不输出"我可以做"（审计不产生授权）
   熔断状态: ""          # 【可选，留空即「正常」】正常 / 已熔断；熔断与复位都用 checks.py mark：
                         #   置熔断：mark <plan> --fuse 已熔断   复位：mark <plan> --fuse 正常（+ 步骤状态一并复位）
                         #   复位须用户明示，且两步缺一不可（见 SKILL.md「熔断机制」）

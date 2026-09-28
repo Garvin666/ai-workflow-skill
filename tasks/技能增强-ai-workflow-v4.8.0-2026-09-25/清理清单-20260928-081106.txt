@@ -1,0 +1,15 @@
+# 清理清单 —— 技能增强-ai-workflow-v4.8.0-2026-09-25
+# 时间：2026-09-28 08:11:06
+# 用途：删除是不可逆动作，本清单是「删了什么」的永久证据（sha256 可复核）。
+# 条目：10
+
+18214cda22813aacc1bfdbabd4040c21a8b19cee8fd9978ef54dff8ad6242c9e      24854  tmp/acceptance-log.txt
+7ea67a84d7d8febbedc8ec55d09b6c4f49b552229d727007cb0db7875c1b0f74       5065  tmp/patch_skill.py
+93cc12e7a912f80b1c316fa02aa46355e5efa755f796c56a9abce78af44b7606       4800  tmp/patch_skill2.py
+16ca2bb780dec9f3a4e08a2ec1c26e084f6db0b586c9d2abac047b2e40996bb6        284  tmp/sandbox_kb/config.json
+6339efcbfb14fab9d041f0284227f31ca8a1e994e64b58f0069a0793907b4f70        241  tmp/sandbox_kb/docs/learn-014e81472cfa.md
+7a826a3b15a23ec5d2262af891cd8c081b0225b5189d29874c7ba0ee34f2d53a      40395  tmp/sandbox_kb/kb.py
+e48c27d646bae3f8f877e7d61e0a9f6221dd58dde211a44481494ff5a94939fe        840  tmp/sandbox_kb/learning/decisions.jsonl
+e8de7e07b4c5192d74f1a170465d2278504abadc4b83e7a64918c5b5ea3fe504        390  tmp/sandbox_kb/learning/pool.jsonl
+4c45a97ee19d968bde1781e10c9e35c95b75b4670450f5ccb72bc5389f928d65        240  tmp/sandbox_kb/learning/state.json
+742fbac584377651cd120b5b87a40adbd923a8dd7548ef7f0799c90c8692749f        394  tmp/sandbox_kb/meta/docs.json
