@@ -1,0 +1,17 @@
+# 清理清单 —— 技能增强-ai-workflow-v4.10.0-2026-09-27
+# 时间：2026-09-27 22:47:25
+# 用途：删除是不可逆动作，本清单是「删了什么」的永久证据（sha256 可复核）。
+# 条目：12
+
+80b5179533574604baf43cc347ccd77dedf23555ad4d130fd77696d86eededba      12271  tmp/apply_gate.py
+85ddf2936f49454d3a48b6ca2c953a2680d3b36ec092555c38becec02ae03b34      15501  tmp/apply_hooks.py
+1dad9421ba3626ab9af0bca82c983a42cfde29c0f45c28b1e44f66fa817e20cf         20  tmp/batch.txt
+6ee3b2b48a4fa595815179c7ae73277f6a90a0648bd8ebe985560f11da70b510       2775  tmp/drift_scan.py
+81242bd5b065bc4affd92e37e4b2eeebf51050d4293798f73bba542bf7515f63       2707  tmp/gate_fixture.py
+2d711642b726b04401627ca9fbac32f5c8530fb1903cc4db02258717921a4881          1  tmp/gatefix/out.txt
+13d78f63e4c460a655ed3ab26e669814e2dc6068e6cc81741ce36a404a6426f2         10  tmp/gatefix/清单-1.txt
+af2eee3c7a31a082b06c0562e521758daee4dc98d80109e72e7aeea42fc9eb85       1302  tmp/probe_eol.py
+76eb6e155fe28fbf0b921531125f2574618110f8f24fb63135e67b6650afaaec       1790  tmp/probe_item_map.py
+63e9ef73462af03eee446ef6b0a1483ef2b7bf292219140ea401a15e984e4f26       1457  tmp/probe_rubric_count.py
+ee0d8828be9c6c1d39fbbb2a25f389bb0d2cc3f97e557c594972652e8b1ada3d       4827  tmp/skill-check-final.txt
+0e9431674bb402de7db89ca307ca0e555895decda4510196c2990728a4c2b847       1772  tmp/门禁夹具输出.txt

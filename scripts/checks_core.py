@@ -59,7 +59,11 @@ FUSE_REPORT = "熔断报告.md"
 FUSE_SECTIONS = ("触发条件", "已试路径", "卡点根因", "待决策选项", "复位条件")
 REF_WHITELIST = {"plan.yaml", "Ledger.md", "memory/YYYY-MM-DD.md", "README.md",
                  # 用户级人格/记忆文件：按约定存在于 ~/.workbuddy/，不在技能目录内，不应按技能内引用校验
-                 "USER.md", "MEMORY.md"}
+                 "USER.md", "MEMORY.md",
+                 # 个人知识库 CLI（真实位置 ~/.workbuddy/kb/kb.py，同属用户级工具、不在技能目录内）。
+                 # v4.8.0 学习模块起 references/ 多处按裸名引用它 ⇒ 补白名单的语义缺口，
+                 # 而不是把文档措辞改歪去绕过检查（与 USER.md/MEMORY.md 同一处置，见 CHANGELOG v3.1.1 与 v4.6.0）
+                 "kb.py"}
 REF_EXTERNAL_PREFIXES = (".workbuddy/", ".scratch/", "历史数据集/", "backend/", "frontend/",
                          "indicators/", "daily_scheduler/", "tests/")
 REF_PLACEHOLDER = re.compile(r"N{2,}|Y{2,}|M{2,}|D{2,}|<|>|\{|\}|xxx|XXX")
@@ -111,6 +115,64 @@ HOMEWORK_REQUIRED = ("mode", "distribution", "confidence", "dimensions", "ambigu
 HOMEWORK_MODES = ("作业题", "讲解题", "非作业")
 HOMEWORK_DIMS = ("W1", "W2", "W3", "W4", "W5")
 HOMEWORK_SAMPLE_BAND = 0.95
+# v4.8.0：learning-judge（学习信号 · 快判）—— 与上组同构；契约见 references/learning-judge.md
+#   ⚠️ `LEARNING_KINDS` 是「**学习类型**」枚举，与 `VALID_CATEGORY`（主类三态）、
+#     `HOMEWORK_MODES`（模式三态）、`VALID_CAPABILITY`（能力四态）**都是不同的物理量** ——
+#     它答的是"这次有什么值得学"，**不得合并、不得互推**；口径守卫「学习类型」项与
+#     references/data-model.md 镜像、scripts/judges.json 模板同源（三源并集比对）。
+#   ⚠️ `无` 是合法取值（表示"本任务无可学信号"），**但不得参与 `A+B` 组合** —— 那是确定性非法。
+#   机检落点：`checks.py plan` 检查项 20（结构合法 + `needs_learning` 派生字段自洽 + `无` 组合非法，
+#     缺省 WARN、填写则非法即 FAIL）、检查项 21（抽样人审指路，只 WARN）；口径守卫见 `checks.py skill`。
+LEARNING_KEY = "学习判定"
+LEARNING_REQUIRED = ("kind", "distribution", "confidence", "dimensions", "ambiguity", "route_hint")
+LEARNING_KINDS = ("偏好", "领域知识", "流程坑", "事实", "无")
+LEARNING_DIMS = ("V1", "V2", "V3", "V4", "V5")
+LEARNING_SAMPLE_BAND = 0.95
+# v4.9.0：审美判据门禁（设计类产物的机器验收）—— 校验器与判据集随技能发行
+#   ⚠️ 与四块快判（self/method/retrieval/homework/learning-judge）**不同族**：
+#     快判做「识别」（判这属于哪一类，校准无法机器证明）；本项做「验收」
+#     （判声明的东西有没有真跑、跑出来是不是 FAIL），**没有任何模型自填的置信度**。
+#   触发信号（确定性）：本 plan 的**交付物**里出现 `.css` —— 这是「设计类产物」的机器可判信号，
+#     不靠关键词、不靠 category（`content` 与 `code` 都会产出 css）。
+#   · 缺省 → **WARN**（只在有 `.css` 交付物时提示）：向后兼容旧 plan、不追认历史计划。
+#   · 填写 → 结构须合法（`产物类型` ∈ 枚举 / `产物` 为非空的、真实存在的 `.css` 列表 /
+#     `判据集` 存在，省略则用技能自带的 `references/aesthetic-rubric.yaml`），
+#     且 **checks.py 自己实跑校验器**并把 FAIL 当 FAIL —— **登记里的数字一律不采信**。
+#     这条是本项的第一设计约束：自报计数是「静默失真」的高发面（技能内已有前例），
+#     故判据不是「你登记了几个 FAIL」，而是「我实跑出来几个 FAIL」。
+#   · `豁免` 是唯一出口（口径不适用时用）：**必须写理由**、逐条留痕打印；
+#     且「豁免了但本次并没有 FAIL」会 WARN —— 防豁免项长期躺着变成橡皮图章。
+#   · **渲染层是可选的第二入口（v1.2.1 / P3）**：`产物` 每项可为 `{路径, 渲染色}`；登记了
+#     `渲染色`（geom JSON）就把 `--geom` 传给校验器，R1-R3（近乎对齐 / 兄弟尺寸 / 垂直韵律）
+#     才会**实跑**；没登记则这三条判 SKIP —— 届时要 WARN 明说「渲染层**未检测**，不是通过」，
+#     绝不把「没测」并进「已通过」。取数器：`scripts/geom-probe.js`（页面侧、只读 DOM）。
+#   机检落点：`checks.py plan` 检查项 22（`checks_judges._check_aesthetic`）。
+AESTHETIC_KEY = "审美判据"
+AESTHETIC_TOOL = "check_aesthetics.py"
+AESTHETIC_RUBRIC_DEFAULT = "references/aesthetic-rubric.yaml"
+AESTHETIC_PRODUCTS = ("ui", "ppt", "chart", "image")
+AESTHETIC_REQUIRED = ("产物类型", "产物")
+AESTHETIC_DESIGN_EXT = (".css",)
+AESTHETIC_GEOM_KEY = "渲染色"
+AESTHETIC_GEOM_EXT = (".json",)
+AESTHETIC_PROBE = "geom-probe.js"
+# v1.5.0：**声明刻度源** —— G12/G13（字号/时长刻度一致性）的声明侧令牌 CSS。
+#   此前门禁调校验器时不带 scale ⇒ 这两条判据在常规跑批里**永远 SKIP**（= 挂不上去）。
+#   登记本键后，门禁把 `--scale-from` 透给校验器，刻度层才真的跑起来。
+#   下限约束与渲染色同构：**声明了就必须解析到位**（解析不到即 FAIL，不静默退回「未检测」）；
+#   **没登记**则由「刻度层注记」明说「未检测，不是通过」。
+AESTHETIC_SCALE_KEY = "声明刻度源"
+AESTHETIC_SCALE_IDS = ("G12", "G13")
+AESTHETIC_EXEMPT_PLACEHOLDER = ("待定", "无", "暂无", "tbd", "n/a", "na", "-", "—", "？", "?")
+
+# v4.10.0：任务产物清理登记（检查项 23）—— 由 scripts/cleanup_task.py 产出并回填。
+#   「清理状态」与「步骤状态」（VALID_STATUS）是**不同物理量**：前者答"清理这件事的结果"，
+#   后者答"步骤做到哪了"。字形相近但语义无关，**不得合并、不得互推**（口径守卫见 checks_parity）。
+CLEANUP_KEY = "清理"
+CLEANUP_REQUIRED = ("状态",)
+CLEANUP_STATES = ("已清理", "无待清理项", "未完成", "已拒绝")
+CLEANUP_MANIFEST_KEY = "清单"
+CLEANUP_COUNT_KEYS = ("文件数", "字节数")
 SEDIMENT_TOKENS = ("沉淀", "复盘", "sediment", "metrics")
 _TRACE_HINT = ("补救：每步执行后 `checks.py trace <plan> --step <id> --action <摘要>`；"
                "收尾 `checks.py metrics <plan> --finalize`")
@@ -214,6 +276,58 @@ plan 子命令检查项:
         均不满足则 OK。契约 §10 把「工具选用↔人工复核**一致率**」列为**人审**信号，本项
         只把**抽样池**指出来，**判定靠人**（机器无法判"选得对不对"）；未证实前只报
         **一致率**、**不声称准确率**。
+
+    16. 检索判定（v4.5.0）：meta「检索判定」可选 —— 阶段 3 第 5 条之前由 `retrieval-judge` 产出，
+        完整契约见 references/retrieval-judge.md。**整段缺省 → WARN**（向后兼容旧 plan，
+        **不追认历史计划**）；一旦填写须结构合法（source_class ∈ 本地资产/历史留痕/知识库/
+        技能手册/联网 及其 '+' 组合、candidates 为含 tool/fit_score 的列表、needs_retrieval 为 bool、
+        confidence ∈ [0,1]、route_hint 非空），非法即 FAIL。
+        ⚠️ **它不是门禁**：confidence 由模型自填、校准无法被机器证明（手册 §10 原样写明）。
+    17. 检索判定抽样人审（v4.5.0）：**非门禁，只指路** —— 当 `meta.检索判定` 存在
+        `needs_retrieval=true` 或 `confidence < 0.95` 的条目时，WARN 列出建议抽样的条目；
+        均不满足则 OK。口径与检查项 15 逐条相同：只把**抽样池**指出来、**判定靠人**；
+        未证实前只报**一致率**、**不声称准确率**。
+    18. 作业判定（v4.7.0）：meta「作业判定」可选 —— 阶段 0 作业识别由 `homework-judge` 产出，
+        完整契约见 references/homework-judge.md、模式语义见 references/homework-mode.md。
+        **整段缺省 → WARN**（向后兼容旧 plan，**不追认历史计划**）；一旦填写须结构合法
+        （mode ∈ 作业题/讲解题/非作业、distribution 恰含三键且和=1、confidence ∈ [0,1]、
+        dimensions 含 W1–W5、ambiguity 为 bool、route_hint 非空），且 **`needs_homework` 派生值
+        必须 = `mode ≠ 非作业`**（不等即 FAIL —— 这是确定性判据，不采信模型自报），非法即 FAIL。
+        ⚠️ **它不是门禁**：confidence 由模型自填、校准无法被机器证明。
+    19. 作业判定抽样人审（v4.7.0）：**非门禁，只指路** —— 口径与检查项 15/17 逐条相同。
+    20. 学习判定（v4.8.0）：meta「学习判定」可选 —— 阶段 6 收尾由 `learning-judge` 产出，
+        完整契约见 references/learning-judge.md、管线与门槛见 references/learning-model.md。
+        **整段缺省 → WARN**（向后兼容旧 plan，**不追认历史计划**）；一旦填写须结构合法
+        （kind ∈ 偏好/领域知识/流程坑/事实/无、distribution 恰含五键且和=1、confidence ∈ [0,1]、
+        dimensions 含 V1–V5、ambiguity 为 bool、route_hint 非空），并有两条**确定性判据**：
+        `needs_learning` 必须 = `kind ≠ 无`；`kind` 含『无』又含其它类型 → FAIL（"没有"与"有"并列无意义）。
+        ⚠️ **它不是门禁**：confidence 由模型自填；且**结构合法不代表"学对了"**（判得准不准靠抽查）。
+    21. 学习判定抽样人审（v4.8.0）：**非门禁，只指路** —— 口径与检查项 15/17/19 逐条相同。
+
+    22. 审美判据（v4.9.0）：meta「审美判据」可选 —— 设计类产物（交付物含 `.css`）的机器验收。
+        判据集：`references/aesthetic-rubric.yaml`（30 条）；校验器：`scripts/check_aesthetics.py`。
+        **触发信号 = 交付物里出现 `.css`**（确定性信号，不看 category）。**整段缺省 → 只 WARN**
+        （向后兼容旧 plan、不追认历史计划；且仅在确实有 `.css` 交付物时才提示，非设计类任务判 SKIP）。
+        一旦填写须结构合法（`产物类型` ∈ ui/ppt/chart/image、`产物` 为非空的真实存在 `.css` 列表、
+        `判据集` 存在或省略取默认），且 **checks.py 实跑校验器**：
+        —— 实跑命中 FAIL 且未被 `豁免` 覆盖 → **FAIL**（阻断交付）；
+        —— `豁免` 是唯一出口，**必须写理由**并逐条留痕；「豁免了却本次并没有 FAIL」→ WARN（防橡皮图章）。
+        **渲染层**（v1.2.1 / P3）：`产物` 每项可为 `{路径, 渲染色}`；登记 `渲染色` 即把 `--geom`
+        传给校验器，R1-R3 才实跑；未登记则 R1-R3 判 SKIP 并出 WARN 明说「**未检测**，不是通过」。
+        取数器 `scripts/geom-probe.js`（页面侧、只读 DOM，由 CDP 驱动注入）。
+        ⚠️ v1.2.2：**「登记了渲染色」也不等于「R 组跑起来了」** —— geom 存在但作用域没命中 /
+        nodes 为空时 R 组仍全 SKIP，此时渲染层注记**照样是 WARN**（开关存在 ≠ 干预生效）。
+        故暴露率按**校验器实际产出的 R 组状态**计数，不按"带没带 geom"。
+        ⚠️ 同理，判据集里凡 source 讲「**画面内**」的（G1/G6/R1-R3）**必须吃渲染结果**：
+        拿令牌清单顶该口径会造出成片假 FAIL（实测 21/21），故无 `--geom` 时这几条判 SKIP。
+        ⚠️ **不采信 plan 里自报的 FAIL 数** —— 判据只有一条：「我实跑出来是什么」。
+
+    23. 任务产物清理（v4.10.0）：meta「清理」可选 —— 阶段 6 第 7 条 `scripts/cleanup_task.py`
+        的登记。**整段缺省 → WARN**（向后兼容旧 plan，**不追认历史计划**；**本项不是门禁**）；
+        一旦填写须结构合法（`状态` ∈ 已清理/无待清理项/未完成/已拒绝、`清单` 若填则必须
+        解析到位、`文件数`/`字节数` 若填则须为非负整数），非法即 FAIL。
+        ⚠️ **状态由执行者填写、机器只校验结构** —— 「确实安全清过」靠抽查，
+        **不得把本字段读成「工作区已干净」**（清理有失败项时只报「未完成」，见阶段 6 第 7 条）。
 
 状态取值: OK / FAIL / SKIP / **WARN**（WARN 只提示、不计入 FAIL，也不改变退出码）
 

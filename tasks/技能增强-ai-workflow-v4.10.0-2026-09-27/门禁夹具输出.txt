@@ -1,0 +1,30 @@
+=== 检查项 23（meta.清理）正反夹具 —— 原始输出 ===
+命令: python scripts/checks.py plan <夹具 plan.yaml> --base <技能根>
+
+[A 整段缺省（应 WARN，不 FAIL）]  exit=0
+   [WARN] meta.清理 — 未记录 —— 阶段 6 第 7 条（任务产物清理）本应产出。**只提示不阻断**：向后兼容旧 plan，不追认历史计划；本项**不是门禁**
+   === 结果：通过 13/23，FAIL=0，SKIP=3，WARN=7 ===
+
+[B 合法：状态+清单+计数（应 OK）]  exit=0
+   [ OK ] meta.清理 合法 — 状态=已清理（**留痕，非门禁**；结构合法不代表清得干净）
+   === 结果：通过 14/23，FAIL=0，SKIP=3，WARN=6 ===
+
+[C 状态越界（应 FAIL）]  exit=1
+   [FAIL] meta.清理 合法 — 状态=『已清』（只允许 已清理/无待清理项/未完成/已拒绝）
+   === 结果：通过 13/23，FAIL=1，SKIP=3，WARN=6 ===
+
+[D 登记的清单文件不存在（应 FAIL）]  exit=1
+   [FAIL] meta.清理 合法 — 清单『没有这个.txt』不存在（登记了就必须解析到位：C:\Users\26717\.workbuddy\skills\ai-workflow\tasks\技能增强-ai-workflow-v4.10.0-2026-09-27\tmp\gatefix\没有这个.txt）
+   === 结果：通过 13/23，FAIL=1，SKIP=3，WARN=6 ===
+
+[E 计数为负（应 FAIL）]  exit=1
+   [FAIL] meta.清理 合法 — 文件数=-1（须为非负整数）
+   === 结果：通过 13/23，FAIL=1，SKIP=3，WARN=6 ===
+
+[F 非映射（应 FAIL）]  exit=1
+   [FAIL] meta.清理 合法 — 应为映射，实际 str
+   === 结果：通过 13/23，FAIL=1，SKIP=3，WARN=6 ===
+
+[G 缺『状态』必填项（应 FAIL）]  exit=1
+   [FAIL] meta.清理 合法 — 缺『状态』或为空
+   === 结果：通过 13/23，FAIL=1，SKIP=3，WARN=6 ===

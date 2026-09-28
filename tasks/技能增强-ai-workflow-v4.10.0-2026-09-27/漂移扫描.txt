@@ -1,0 +1,605 @@
+==============================================================================
+一、版本号分布（只看技能本体 4.x 与判据集 1.x）
+  v1.0      出现  15 处  ← references/aesthetic-rubric.yaml:126, references/aesthetic-rubric.yaml:245, references/aesthetic-rubric.yaml:30, references/aesthetic-rubric.yaml:31, references/aesthetic-rubric.yaml:315, scripts/check_aesthetics.py:1024 …
+  v1.0.0    出现   1 处  ← tasks/学习模型开源对标与优化-2026-09-25/tmp/readmes/TeleAI-UAGI__telemem.md:83
+  v1.1      出现  12 处  ← Ledger.md:39, references/aesthetic-rubric.yaml:18, references/aesthetic-rubric.yaml:245, references/aesthetic-rubric.yaml:275, references/aesthetic-rubric.yaml:34, references/aesthetic-rubric.yaml:441 …
+  v1.1.0    出现  10 处  ← references/ops.md:51, scripts/check_aesthetics.py:1781, scripts/check_aesthetics.py:40, scripts/check_aesthetics.py:476, scripts/check_aesthetics.py:611, scripts/check_aesthetics.py:640 …
+  v1.2      出现   3 处  ← references/aesthetic-rubric.yaml:33, references/aesthetic-rubric.yaml:51, scripts/check_aesthetics.py:180
+  v1.2.0    出现  19 处  ← scripts/check_aesthetics.py:1022, scripts/check_aesthetics.py:1147, scripts/check_aesthetics.py:1472, scripts/check_aesthetics.py:1697, scripts/check_aesthetics.py:1796, scripts/check_aesthetics.py:1899 …
+  v1.2.1    出现  19 处  ← assets/plan-template.yaml:101, references/ops.md:51, scripts/check_aesthetics.py:2341, scripts/check_aesthetics.py:2647, scripts/check_aesthetics.py:70, scripts/check_aesthetics.py:81 …
+  v1.2.2    出现  37 处  ← SKILL.md:286, SKILL.md:574, assets/plan-template.yaml:118, references/aesthetic-rubric.yaml:187, references/aesthetic-rubric.yaml:235, references/aesthetic-rubric.yaml:462 …
+  v1.2.3    出现  10 处  ← scripts/check_aesthetics.py:1043, scripts/check_aesthetics.py:110, scripts/check_aesthetics.py:1151, scripts/check_aesthetics.py:133, scripts/check_aesthetics.py:1486, scripts/check_aesthetics.py:506 …
+  v1.3      出现   6 处  ← references/aesthetic-rubric.yaml:235, references/aesthetic-rubric.yaml:245, references/aesthetic-rubric.yaml:285, references/aesthetic-rubric.yaml:50, references/aesthetic-rubric.yaml:68, scripts/check_aesthetics.py:180
+  v1.3.0    出现  13 处  ← references/ops.md:51, scripts/check_aesthetics.py:1199, scripts/check_aesthetics.py:1241, scripts/check_aesthetics.py:132, scripts/check_aesthetics.py:2131, scripts/check_aesthetics.py:2394 …
+  v1.4      出现   7 处  ← references/aesthetic-rubric.yaml:100, references/aesthetic-rubric.yaml:295, references/aesthetic-rubric.yaml:305, references/aesthetic-rubric.yaml:482, references/aesthetic-rubric.yaml:67, references/aesthetic-rubric.yaml:86 …
+  v1.4.0    出现   1 处  ← tasks/学习模型开源对标与优化-2026-09-25/tmp/readmes/TeleAI-UAGI__telemem.md:77
+  v1.5      出现   8 处  ← references/aesthetic-rubric.yaml:113, references/aesthetic-rubric.yaml:295, references/aesthetic-rubric.yaml:305, references/aesthetic-rubric.yaml:335, references/aesthetic-rubric.yaml:84, scripts/check_aesthetics.py:1323 …
+  v1.5.0    出现  38 处  ← SKILL.md:286, references/ops.md:29, references/ops.md:51, scripts/check_aesthetics.py:1249, scripts/check_aesthetics.py:183, scripts/check_aesthetics.py:191 …
+  v1.6      出现   6 处  ← SKILL.md:573, references/aesthetic-rubric.yaml:112, references/aesthetic-rubric.yaml:346, references/ops.md:51, tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/SKILL.md:572, tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/references__ops.md:50
+  v1.6.0    出现  29 处  ← SKILL.md:286, references/ops.md:29, references/ops.md:51, scripts/check_aesthetics.py:1077, scripts/check_aesthetics.py:1081, scripts/check_aesthetics.py:1095 …
+  v1.7.0    出现   9 处  ← SKILL.md:608, references/ops.md:51, scripts/check_aesthetics.py:1436, scripts/check_aesthetics.py:1445, scripts/check_aesthetics.py:1751, scripts/check_aesthetics.py:1859 …
+  v1.7.1    出现   2 处  ← tasks/学习模型开源对标与优化-2026-09-25/tmp/readmes/TeleAI-UAGI__telemem.md:74, tasks/学习模型开源对标与优化-2026-09-25/tmp/skeletons.txt:130
+  v1.8.0    出现   1 处  ← tasks/学习模型开源对标与优化-2026-09-25/tmp/readmes/TeleAI-UAGI__telemem.md:73
+  v1.9.0    出现   1 处  ← tasks/学习模型开源对标与优化-2026-09-25/tmp/readmes/TeleAI-UAGI__telemem.md:72
+  v1.10.0   出现   1 处  ← tasks/学习模型开源对标与优化-2026-09-25/tmp/readmes/TeleAI-UAGI__telemem.md:71
+  v4.0      出现   1 处  ← tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:298
+  v4.0.0    出现  24 处  ← SKILL.md:154, SKILL.md:297, SKILL.md:311, SKILL.md:313, SKILL.md:464, assets/plan-template.yaml:159 …
+  v4.1.0    出现  20 处  ← SKILL.md:238, SKILL.md:82, assets/plan-template.yaml:173, assets/plan-template.yaml:197, references/reflection-retry.md:1, scripts/checks.py:325 …
+  v4.2.0    出现  42 处  ← SKILL.md:105, assets/ledger-template.md:18, assets/ledger-template.md:31, assets/ledger-template.md:33, assets/ledger-template.md:40, assets/plan-template.yaml:25 …
+  v4.3.0    出现  34 处  ← SKILL.md:3, SKILL.md:315, assets/plan-template.yaml:17, assets/plan-template.yaml:23, references/ops.md:47, references/skill-hygiene.md:32 …
+  v4.4.0    出现  28 处  ← SKILL.md:59, assets/plan-template.yaml:34, references/method-judge.md:1, references/method-judge.md:170, references/method-judge.md:295, references/method-judge.md:5 …
+  v4.4.1    出现   1 处  ← tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:149
+  v4.4.2    出现  25 处  ← Ledger.md:114, Ledger.md:116, Ledger.md:33, SKILL.md:199, SKILL.md:584, references/ops.md:53 …
+  v4.5.0    出现  27 处  ← Ledger.md:111, Ledger.md:115, Ledger.md:118, Ledger.md:33, Ledger.md:35, SKILL.md:179 …
+  v4.6.0    出现  34 处  ← Ledger.md:35, SKILL.md:410, references/data-model.md:215, references/data-model.md:220, references/git-conventions.md:16, references/git-conventions.md:3 …
+  v4.6.1    出现  12 处  ← Ledger.md:37, references/laya-backend.md:9, references/method-judge.md:220, references/retrieval-judge.md:240, references/self-judge.md:231, tasks/作业模式-ai-workflow-v4.7.0-2026-09-23/plan.yaml:169 …
+  v4.7.0    出现 173 处  ← Ledger.md:37, Ledger.md:39, Ledger.md:41, Ledger.md:43, README.md:29, README.md:3 …
+  v4.8.0    出现  95 处  ← SKILL.md:3, SKILL.md:320, SKILL.md:367, SKILL.md:387, assets/plan-template.yaml:77, references/data-model.md:218 …
+  v4.9.0    出现  26 处  ← SKILL.md:286, SKILL.md:573, assets/plan-template.yaml:92, references/ops.md:29, references/ops.md:53, scripts/checks.py:256 …
+  v4.10.0   出现  40 处  ← SKILL.md:10, SKILL.md:323, assets/plan-template.yaml:123, references/data-model.md:221, references/ops.md:38, scripts/checks.py:259 …
+
+==============================================================================
+二、检查项编号（应连续、无空洞、最大值与 SKILL.md 声明一致）
+  出现过的编号：[4, 9, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
+  空洞：[1, 2, 3, 5, 6, 7, 8, 10]
+  检查项 20: ['SKILL.md', 'assets/plan-template.yaml', 'references/decision-tables.md', 'references/learning-judge.md', 'references/learning-model.md', 'scripts/checks.py', 'scripts/checks_core.py', 'scripts/checks_judges.py', 'scripts/kb_learn.py', 'tasks/学习模型开源对标与优化-2026-09-25/tmp/p0_acceptance_log.txt', 'tasks/学习模型开源对标与优化-2026-09-25/tmp/patch_memory.py', 'tasks/学习模型开源对标与优化-2026-09-25/tmp/run_p0_acceptance.py', 'tasks/学习模型开源对标与优化-2026-09-25/学习模型开源对标与优化建议.md', 'tasks/学习模型开源对标与优化-2026-09-25/确认表.md', 'tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/SKILL.md', 'tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md', 'tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/assets__plan-template.yaml', 'tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/scripts__checks.py', 'tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/scripts__checks_core.py', 'tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/scripts__checks_judges.py', 'tasks/技能增强-ai-workflow-v4.8.0-2026-09-25/plan.yaml', 'tasks/技能增强-ai-workflow-v4.8.0-2026-09-25/tmp/patch_skill2.py', 'tasks/技能增强-ai-workflow-v4.8.0-2026-09-25/确认表.md']
+  检查项 21: ['assets/plan-template.yaml', 'scripts/checks_core.py', 'scripts/kb_learn.py', 'tasks/学习模型开源对标与优化-2026-09-25/P0落地验收报告.md', 'tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md', 'tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/assets__plan-template.yaml', 'tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/scripts__checks_core.py', 'tasks/技能增强-ai-workflow-v4.8.0-2026-09-25/验收报告.md']
+  检查项 22: ['SKILL.md', 'assets/plan-template.yaml', 'references/aesthetic-rubric.yaml', 'references/ops.md', 'scripts/checks.py', 'scripts/checks_core.py', 'scripts/checks_judges.py', 'tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/tmp/apply_gate.py', 'tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/SKILL.md', 'tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/assets__plan-template.yaml', 'tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/references__ops.md', 'tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/scripts__checks.py', 'tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/scripts__checks_core.py', 'tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/scripts__checks_judges.py']
+  检查项 23: ['assets/plan-template.yaml', 'references/data-model.md', 'scripts/checks.py', 'scripts/checks_core.py', 'scripts/checks_judges.py', 'tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/plan.yaml', 'tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/tmp/apply_gate.py', 'tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/tmp/apply_hooks.py', 'tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/tmp/gate_fixture.py', 'tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/tmp/门禁夹具输出.txt', 'tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/确认表.md']
+
+==============================================================================
+三、条数声明（同一物理量两处不同值即为漂移）
+  【0 条】出现在 49 处：
+      Ledger.md:39 :: | 2026-09-23 | code（self-judge） | **模式选用聚合模型（v4.7.0 补）**：为 `homework-judge` 补上缺失的**聚合**一段 —— W1–W5 维度分按确定性公式聚合
+      Ledger.md:56 :: - 2026-09-15（v3.0.0）：与外部参照 `obra/superpowers`（286,871 star，MIT）的**口径分界**已写入 SKILL.md「自主决策层」与 `references/ops.m
+      references/homework-judge.md:209 :: | ≥50 条**真机** B 侧输出（服务须先常驻） | 服务可用后跑；本轮服务未运行，**真机样本 0 条** |
+      references/homework-judge.md:271 :: > 但**真机样本仍为 0 条**，故该行结论**不变**：工具解决"能不能测"，不解决"有没有得测"。
+      references/homework-judge.md:345 :: - ⚠️ **本轮仍未闭环**：真机 B 侧样本 0 条、A 侧独立标注 0 条、拟合未做、阈值未定值（见 §5.2 表）。
+      references/laya-backend.md:123 :: > ⚠️ 但：**真机 B 侧样本仍为 0 条**、A 侧**独立标注 0 条**、`ANCHORS`/`TAU` **未拟合**、**一致率阈值仍未定值** ——
+      scripts/checks_judges.py:1531 :: warn("步骤闭环不变量（trace 自证）", f"trace.jsonl 存在但 0 条记录。{_TRACE_HINT}")
+      scripts/homework_model.py:331 :: #   而"样本不足"恰恰是**闭环节点最可能出现的实况**（真机样本 0 条）——
+      tasks/作业模式-ai-workflow-v4.7.0-2026-09-23/plan.yaml:174 :: 做什么: "台账与履历：_archive/changelog.md 追加 v4.7.0 条目；Ledger.md 追加履历行；补交付前自检报告"
+      tasks/作业模式-ai-workflow-v4.7.0-2026-09-23/plan.yaml:176 :: 预期产出: "changelog v4.7.0 条目 + Ledger 行 + 自检报告"
+      tasks/作业模式-ai-workflow-v4.7.0-2026-09-23/tmp/_append_changelog_entries.py:56 :: log("[SKIP] %s：末尾已有 v4.7.0 条目（不重复追加）" % fn)
+      tasks/作业模式-ai-workflow-v4.7.0-2026-09-23/tmp/_update_memory_md.py:54 :: print("已含 v4.7.0 条目，跳过（幂等）")
+      tasks/作业模式-ai-workflow-v4.7.0-2026-09-23/tmp/_update_memory_md.py:72 :: "③ v4.7.0 条目": "v4.7.0（2026-09-23，作业模式" in after,
+      tasks/作业模式-ai-workflow-v4.7.0-2026-09-23/tmp/_write_trace.py:26 :: ("12", "changelog v4.7.0 条目 + Ledger 履历行 + 交付前自检报告", "含版本/日期/改动清单/实测证据；含 8 项不得读成绿"),
+      tasks/学习模型开源对标与优化-2026-09-25/P0落地验收报告.md:49 :: | **3 证据固化** | 归档 **0** 条、无快照字段 | 归档 **1** 条、快照 `kind=原文`（长度 21）；**凭据藏在证据里** → 驳回、池 0 条、归档 **0** 条 |
+      tasks/学习模型开源对标与优化-2026-09-25/plan.yaml:79 :: 验证方式: "旧引擎复现『入库=2』『提案=0』『归档 0 条』；新引擎给出『冲突=2』『待废止=1 + 提案=1』『归档 1 条』且凭据场景驳回"
+      tasks/学习模型开源对标与优化-2026-09-25/tmp/patch_memory_p0.py:36 :: # R4：v4.8.0 条目的验收数字
+      tasks/学习模型开源对标与优化-2026-09-25/tmp/probe_findings.txt:11 :: 观察   : 0 条  []
+      tasks/学习模型开源对标与优化-2026-09-25/tmp/probe_findings.txt:12 :: 冲突   : 0 条  []
+      tasks/学习模型开源对标与优化-2026-09-25/tmp/probe_findings.txt:13 :: 驳回   : 0 条  []
+      tasks/学习模型开源对标与优化-2026-09-25/学习模型开源对标与优化建议.md:149 :: 观察 : 0 条
+      tasks/学习模型开源对标与优化-2026-09-25/学习模型开源对标与优化建议.md:150 :: 冲突 : 0 条        ← 应为 2 条
+      tasks/学习模型开源对标与优化-2026-09-25/学习模型开源对标与优化建议.md:237 :: "空跑告警": "本次 K4 判定全为『观察』且有 M>0 条因同一原因被挡 ⇒ 疑似门槛配置失效" }
+      tasks/学习模型开源对标与优化-2026-09-25/确认表.md:30 :: | 台账 | `_archive/changelog.md` | 新增 v4.8.0 补 P0 条目 |
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/tmp/_commitmsg.txt:12 :: - Ledger.md：追加 v3.0.0 条目
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/独立审核意见.md:92 :: - **v2.5.3（2026-09-11）…**  - **v2.6.0…**  - **v2.6.1…**  - **v2.6.2…**（不变更日志止于此，无 v3.0.0 条目）
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/返修复查-独立复核.md:20 :: | 6 | `ops.md` 中 decide/revise 与 v3.0.0 条目 | 均有 → P5 已修复 |
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/返修复查-独立复核.md:215 :: §二 脚本速查含用途、参数、上限与示例；§七 顶部**新增 v3.0.0 条目**（且该条目内含本次返修的完整记录）。`SKILL.md` 的两处索引（"脚本用法、故障排查、变更日志见 `references/ops.m
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/tmp/apply_hooks.py:133 :: "而内容早已含 v4.9.0 条款（**漏 bump**）② `SKILL.md` 与 changelog 头部都写「查历史**只读尾部**若干行」，"
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/tmp/apply_hooks.py:150 :: (CL, "追加 v4.10.0 条目",
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:189 :: - **v4.2.0（2026-09-20）新增「自我判断 · 意图快判」`self-judge` 子模块 —— 把 Jev（TypeSafe AI 的 System One 决策模型）的 System 1 结构化快判理
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:25 :: - **验证（真跑，非声称）**：`kb_learn.py selftest` **41/41 → 84/84**（+43 项，含 **CLI 级端到端**与**阴性对照**）；`checks.py skill` **两
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:318 :: - **P2-3 同步 `references/push-routing.md` 的过时口径**：该节长期写着「`.gitignore` 同路径撞车（**未解决**）＋候选修法…**勿自行选**」，而 2026-09-1
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:332 :: - **v3.4.0（2026-09-16）按《性能瓶颈分析与提速方案-ai-workflow-2026-09-16.md》执行 P1–P9 的提速与变更治理**（用户指令：「请直接开始执行该任务，完成后将最新的代码和改
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:405 :: - **验证**：`tests/test_optim_20260916.py` **23 → 34 用例**（新增跨模块守卫 + 真实异常样本回归 + 9 个参数化 ratio 边界）；**阴性对照**把旧实现内联回放跑
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:48 :: - **契约补写**：`homework-judge.md` 新增 **§5.1 聚合规则（唯一口径源）**（四步公式 + 档位映射表 + 真实示例三行）与 **§5.2 A/B 一致率**（测量链路图 + 四项指标 +
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/scripts__checks_judges.py:1478 :: warn("步骤闭环不变量（trace 自证）", f"trace.jsonl 存在但 0 条记录。{_TRACE_HINT}")
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/确认表.md:70 :: 1. `SKILL.md` 标题停在 **v4.8.0**，内容已含 v4.9.0 条款（漏 bump）。
+      tasks/技能增强-ai-workflow-v4.6.0-2026-09-22/plan.yaml:119 :: 做什么: "追加 _archive/changelog.md 的 v4.6.0 条目与 Ledger.md 履历行"
+      tasks/技能增强-ai-workflow-v4.8.0-2026-09-25/验收报告.md:30 :: | `_archive/changelog.md` | +v4.8.0 条目 |
+      tasks/模式选用模型-ai-workflow-v4.7.0-2026-09-23/plan.yaml:129 :: 做什么: "台账与履历：_archive/changelog.md 在 v4.7.0 条目下追加「补」记录；Ledger.md 追加履历行；写交付前自检报告"
+      tasks/模式选用模型-ai-workflow-v4.7.0-2026-09-23/tmp/_selfproof.py:5 :: 本轮服务未运行、真机样本 0 条，输出里必须显式标注，不得读成"已测过一致率"。
+      tasks/模式选用模型-ai-workflow-v4.7.0-2026-09-23/tmp/_update_memory.py:27 :: **不产生样本**（真机 Laya 样本 0 条）；`ANCHORS`/`TAU` **未拟合**。
+      tasks/模式选用模型-ai-workflow-v4.7.0-2026-09-23/tmp/_update_memory.py:45 :: `agree` **刻意不给默认阈值**（未传参只报告不判定）。**仍未闭环**：真机 B 侧样本 0 条、A 侧独立标注 0 条、
+      tasks/模式选用模型-ai-workflow-v4.7.0-2026-09-23/tmp/demo-pairs.json:2 :: "_note": "⚠️ 这是**格式夹具（fixture）**，用于演示 agree 子命令的输出形状，**不是真机 Laya 样本** —— 本轮服务未运行、真机样本 0 条。records[].a 为 A 侧（本模
+      tasks/模式选用模型-ai-workflow-v4.7.0-2026-09-23/tmp/自证输出.txt:49 :: [note] ⚠️ 这是**格式夹具（fixture）**，用于演示 agree 子命令的输出形状，**不是真机 Laya 样本** —— 本轮服务未运行、真机样本 0 条。records[].a 为 A 侧（本模型）判
+      tasks/模式选用模型-ai-workflow-v4.7.0-2026-09-23/判据加固记录.md:83 :: 5. **真机 B 侧样本仍为 0 条** —— 一致率出口条件**仍未闭环**。
+      tasks/模式选用模型-ai-workflow-v4.7.0-2026-09-23/确认表.md:56 :: 3. 一致率工具**不产生样本** —— 真机 Laya 输出 0 条时仍无数据可测；
+      tasks/模式选用模型-ai-workflow-v4.7.0-2026-09-23/自检报告.md:61 :: 3. 一致率工具**不产生样本** —— 真机 Laya 输出 **0 条**时仍无数据可测；
+  【1 条】出现在 53 处：
+      Ledger.md:15 :: | 2026-09-10 | 正式需求 | ai-workflow v2.5.0 用户体验评估（体验报告 + 可优化方向） | `tasks/体验评估-ai-workflow-v2.5.0-2026-09-10/` 下：
+      Ledger.md:16 :: | 2026-09-10 | **Bug/缺陷** | ai-workflow v2.5.1 修复 2 处真实代码缺陷 + 4 处主干部问题 + 10 项文档收口 | `SKILL.md`、`scripts/setup_
+      Ledger.md:43 :: | 2026-09-23 | code（self-judge） | **把「靠人工双写」的两处变成有机器信号（v4.7.0 补 3）**：① 第四处派生载体（`laya_client.map_homework_judge
+      Ledger.md:62 :: - 2026-09-15（v3.1.0）**规则自身的落地自证 + 两个踩坑（如实登记，不掩盖）**：`scripts/publish_tools.py` 是本规则产出后的**第一个**自研工具，已按规则在文件头标注五项
+      SKILL.md:16 :: > **适用范围**：本流程**只在被调用时生效**。「要不要调用」的依据是用户级 `USER.md` 硬规矩第 1 条 —— **凡属「任务」一律走本流程**（L0 轻操作仍豁免）。日常任务里「要不要先出计划、要不要先
+      SKILL.md:318 :: - ⚠️ **零沉淀不是中性结果**：hermes 原文 —— *"A pass that does nothing is a **missed learning opportunity**, not a neutral
+      SKILL.md:61 :: > **与强制式机制的分界**：外部参照的 `superpowers` 采用**无条件强制**（「只要有 1% 可能适用就必须调用」）。本技能**只取其机制，不取其强制**：「要不要走本流程」由 `USER.md` 硬规
+      assets/plan-template.yaml:17 :: 复盘沉淀: ""          # 【可选，v4.3.0 新增】本次的复盘沉淀：≥1 条，**或**显式写「无沉淀：<理由>」。
+      assets/plan-template.yaml:2 :: # 键名统一为中文，与 SKILL.md 阶段 3 第 1 条一致。
+      references/data-model.md:26 :: | 复盘沉淀 | 字符串 | 否 | ≥1 条，或显式「无沉淀：理由」 | 检查项 M-1′（WARN） |
+      references/ops.md:183 :: **硬规则**：子代理产出的链接**必须全量探活后才可进交付物**。实战数据：140 条中查出 3 条 404，其中 1 条是**编造的日期型假链接**，且它正被用于支撑一条结论。
+      references/ops.md:44 :: | **verify_push.py**（v3.2.1 自研） | **推送结果的独立验收器**（与三条推送通道**零代码共享**）：`--rev <本地 rev> [--prev-remote <推送前远端 HEAD>
+      references/ops.md:51 :: | **check_aesthetics.py**（v1.7.0 自研；随技能发行） | **审美判据校验器**（`check_aesthetics.py --rubric <判据集>`）：对 CSS / spec / 
+      references/orchestration.md:53 :: - 回收后立刻做「信任但验证」：抽查可复现的硬数据（API 实测值、文件存在性、关键数字），至少 1 条交叉验证。
+      references/push-routing.md:114 :: | **`--result-file` 落盘失败** | **只 WARN，绝不改变推送结论**；相对路径以**技能根**为基准解析（不随 cwd 走），且越出技能根的路径**拒绝写入**。**这条是实测事故推出来的**
+      references/retrieval-judge.md:198 :: | **阶段 1 第 1 条「三类并行收集」** | 上游同源 | 那三类的词汇与本模块五类的映射：相关文件→本地资产；历史任务→历史留痕；交付物与台账→历史留痕 |
+      references/retrieval-judge.md:31 :: > 本模块的 **`source_class` 取值域就是上表五类**（可组合，如 `本地资产+联网`）；**不另造一套**。上表的工具清单由 `SKILL.md` 阶段 3 第 5 条与阶段 1 第 1 条持有，本模块
+      references/security-guide.md:104 :: > **诚实标注（v3.5.0 更新）**：本清单**第 3 / 4 项已机器化** —— `scripts/outbound_scan.py` 扫描「将外发的全部文件」，命中即判 FAIL，并在 `push_route
+      references/self-judge.md:322 :: - **夹具同步重做**：阴性对照由 1 条扩为 2 条（`self-judge.md` 内改 `code`→`codex`；`SKILL.md` 内插主类表行），并写入 `_check_parity` docstrin
+      scripts/checks_judges.py:1102 :: warn("meta.检索判定 形态", "应为列表（每次检索一条），检测到单映射已按 1 条处理；"
+      scripts/checks_judges.py:994 :: warn("meta.方法选用 形态", "应为列表（每步一条），检测到单映射已按 1 条处理；"
+      scripts/push_router.py:87 :: # 而它此前一直是**纪律项**（无机器门禁）——诚实边界第 1 条写明"执行者可以漏项，流程不会自动拦"，
+      tasks/学习模型开源对标与优化-2026-09-25/P0落地验收报告.md:90 :: | 无 `trace.jsonl` ⇒ **步骤自证**只能靠回忆 | 1 条 WARN（`步骤闭环不变量`）；**不事后补造 trace** |
+      tasks/学习模型开源对标与优化-2026-09-25/P0落地验收报告.md:91 :: | `meta.不可逆副作用` 字段留空但步骤文本命中「删除」关键词 | 1 条 SKIP。**实情**：本模块**不删除任何东西**（废止只加标记），「删除」出现在"绝不删除"这类否定语境 ⇒ **刻意不登记**为副作
+      tasks/学习模型开源对标与优化-2026-09-25/plan.yaml:79 :: 验证方式: "旧引擎复现『入库=2』『提案=0』『归档 0 条』；新引擎给出『冲突=2』『待废止=1 + 提案=1』『归档 1 条』且凭据场景驳回"
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/tmp/autonomy-test/t1-template.yaml:2 :: # 键名统一为中文，与 SKILL.md 阶段 3 第 1 条一致。
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/独立审核意见.md:108 :: CASE pos-合规.yaml             rc=0  [ OK ] 决策记录 — 1 条 / [ OK ] 计划修订 — 1 条 → 10/10 通过，FAIL=0
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/独立审核意见.md:80 :: [ OK ] 决策记录 — 1 条
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/返修复查-独立复核.md:101 :: [ OK ] 决策记录 — 1 条
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/SKILL.md:16 :: > **适用范围**：本流程**只在被调用时生效**。「要不要调用」的依据是用户级 `USER.md` 硬规矩第 1 条 —— **凡属「任务」一律走本流程**（L0 轻操作仍豁免）。日常任务里「要不要先出计划、要不要先
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/SKILL.md:318 :: - ⚠️ **零沉淀不是中性结果**：hermes 原文 —— *"A pass that does nothing is a **missed learning opportunity**, not a neutral
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/SKILL.md:61 :: > **与强制式机制的分界**：外部参照的 `superpowers` 采用**无条件强制**（「只要有 1% 可能适用就必须调用」）。本技能**只取其机制，不取其强制**：「要不要走本流程」由 `USER.md` 硬规
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:162 :: - **v4.4.0 修订（2026-09-21）method 选用接进 decide 决策留痕流程**：① `meta.方法选用` 由**单映射改为列表**（每步一条，与 `meta.决策记录` 同构——修正 v4.4
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:25 :: - **验证（真跑，非声称）**：`kb_learn.py selftest` **41/41 → 84/84**（+43 项，含 **CLI 级端到端**与**阴性对照**）；`checks.py skill` **两
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:324 :: - **文档与版本同步（防「描述↔实现脱节」，v3.3.0 §九 立下的规矩）**：任何一处「无机器门禁」的声明在被机器化后**必须同步改写**，否则等于用文档再造一个脱节。本轮改了 **4 处**：`SKILL.md`
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:325 :: - **超出九项的额外订正（据实登记，不静默）**：`SKILL.md` 有**两处**仍写「要不要走本流程**由模型自行判断**（能否让结果更快更好）」——与用户 2026-09-17 硬规矩第 1 条「凡属「任务」一
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:349 :: - **缺陷二 —— `push_ontology.py` 的 `--dry-run` 会真写远端**（更严重，因为它违背的是**自称的安全设计**）：blob 的 `POST repos/.../git/blobs` 
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:480 :: - **新增 `assets/熔断报告模板.md`**；`assets/plan-template.yaml` 增可选 meta `熔断状态`；反模式 39 → **46 条**（新增熔断类 6 条 + 路径候选 1 条
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:487 :: - **R2 `tasks/` 口径三套并存（已被现场复现，红线③当场失守）**：修复：明确"**任务目录一律建在工作区根下的 `tasks/`**"（写入工作区边界段与阶段 3 第 1 条）；例外表把技能目录的"写 `
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:548 :: - `http_fetch.py` 新增 **`--check-links`** 批量探活：只取状态码不下载正文。实战量化——12 条链接串行探活 41.2s 且白下载 3.5MB；新工具并发 8 实测 1.9s（≈40
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:550 :: - 交付前置动作确立：**外部链接必须探活后才可写进交付物**（实战中拦下 1 条 404 死链并修正）。
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/assets__plan-template.yaml:17 :: 复盘沉淀: ""          # 【可选，v4.3.0 新增】本次的复盘沉淀：≥1 条，**或**显式写「无沉淀：<理由>」。
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/assets__plan-template.yaml:2 :: # 键名统一为中文，与 SKILL.md 阶段 3 第 1 条一致。
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/references__ops.md:182 :: **硬规则**：子代理产出的链接**必须全量探活后才可进交付物**。实战数据：140 条中查出 3 条 404，其中 1 条是**编造的日期型假链接**，且它正被用于支撑一条结论。
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/references__ops.md:43 :: | **verify_push.py**（v3.2.1 自研） | **推送结果的独立验收器**（与三条推送通道**零代码共享**）：`--rev <本地 rev> [--prev-remote <推送前远端 HEAD>
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/references__ops.md:50 :: | **check_aesthetics.py**（v1.6.0 自研；随技能发行） | **审美判据校验器**（`check_aesthetics.py --rubric <判据集>`）：对 CSS / spec / 
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/scripts__checks_judges.py:1049 :: warn("meta.检索判定 形态", "应为列表（每次检索一条），检测到单映射已按 1 条处理；"
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/scripts__checks_judges.py:941 :: warn("meta.方法选用 形态", "应为列表（每步一条），检测到单映射已按 1 条处理；"
+      tasks/技能增强-ai-workflow-v4.8.0-2026-09-25/tmp/acceptance-log.txt:223 :: [断言] meta.学习判定 行标注 = ['[FAIL]']（1 条）→ 期望 [FAIL] ⇒ OK
+      tasks/技能增强-ai-workflow-v4.8.0-2026-09-25/tmp/acceptance-log.txt:230 :: [断言] meta.学习判定 行标注 = ['[FAIL]']（1 条）→ 期望 [FAIL] ⇒ OK
+      tasks/技能增强-ai-workflow-v4.8.0-2026-09-25/tmp/acceptance-log.txt:237 :: [断言] meta.学习判定 行标注 = ['[FAIL]']（1 条）→ 期望 [FAIL] ⇒ OK
+      tasks/技能增强-ai-workflow-v4.8.0-2026-09-25/tmp/acceptance-log.txt:244 :: [断言] meta.学习判定 行标注 = ['[WARN]']（1 条）→ 期望 [WARN] ⇒ OK
+      tasks/模式选用模型-ai-workflow-v4.7.0-2026-09-23/自检报告.md:55 :: > 第 1 条是"自证脚本自己写错"的典型：**如果没重跑、只看行数（22 行看起来正常），就会得到一份全 MISSING 的假证据**。
+  【2 条】出现在 45 处：
+      Ledger.md:101 :: - **`meta.工作区根` 这类操作性绝对路径字段被判 FAIL**：它**必须是可解析的绝对路径**，否则 `checks.py --base` 与 P0-1 的越界判据一并失效 —— 即**无法靠「换成占位符」消
+      Ledger.md:114 :: 3. **⭐「发现缺陷」与「断言不存在」一样，都要先查证再下结论**。我在**技能根**下跑 `checks.py skill`，得 46/47、`gate.py` 4 项不符预期，据此写入验收报告 §4.1 判为"**
+      Ledger.md:15 :: | 2026-09-10 | 正式需求 | ai-workflow v2.5.0 用户体验评估（体验报告 + 可优化方向） | `tasks/体验评估-ai-workflow-v2.5.0-2026-09-10/` 下：
+      Ledger.md:41 :: | 2026-09-23 | code（self-judge） | **作业判定判据加固（v4.7.0 补 2）**：用户问「有没有需要优化的内容」→ 审查发现 **4 处实质问题**并逐条处置。① **检查项 18 漏
+      SKILL.md:455 :: | 阶段 6 | **留痕脱敏**（台账/trace/日志） | 阶段 6 第 2 条 |
+      assets/plan-template.yaml:44 :: #     confidence<0.95 的条目会被列出来提示"抽 2 条人工复核"——**机器只指路，
+      assets/plan-template.yaml:59 :: #     confidence<0.95 的条目会被列出来提示"抽 2 条人工复核"——**机器只指路，
+      references/adaptive-planning.md:29 :: 对应 `SKILL.md` 阶段 3 第 2 条。说不出可判定信号 → 先补一个最小验证物；补不了 → 显式登记**人审点**（不要假装有信号）。
+      references/adaptive-planning.md:39 :: 逐个问"谁必须先于谁"。**有依赖的严禁并行**（`orchestration.md` 并行规则第 2 条）。依赖关系要写进步骤的「输入」字段，让依赖**可被复核**而不是靠记忆。
+      references/homework-mode.md:169 :: | **验证闭环（阶段 3 第 2 条）** | **不放松**，并由 §4 的题型专属检查项具体化 | `references/quality-gates.md` §二 |
+      references/homework-mode.md:62 :: > ⚠️ **H5 是本模块与技能的接缝点，不是新增要求**：技能阶段 3 第 2 条的「验证闭环」在作业模式下**不放松** —— 数学要代回、编程要真跑、论述要引用可核。**H5 的"验证"若无证据，本模式视为未完成
+      references/method-judge.md:179 :: python checks.py decide plan.yaml --point "步骤3" --from-method-select 2   # 指定第 2 条（1-based）
+      references/ops.md:139 :: | `office_io.py excel-write` 直接喂 CSV 报 `JSONDecodeError: Expecting value: line 1 column 1` | `excel-write` **只
+      references/playbook.md:110 :: 7. **验收信号**：手册 §9 自检清单逐条 + 编程题／实验题的原始输出留档（`tasks/<任务>/tmp/`）；不得以"结构齐全"声称"答案正确"（手册 §8 诚实边界第 2 条）。
+      references/policy.md:44 :: > ⚠ **范围豁免 ≠ 风险确认**：`INFRA` 命中只豁免读取与工具用途；对写/删既有文件，USER.md 第 2 条明确"豁免的只是越界申请这一步、**不豁免**高风险前置确认"。第一版把 INFRA 一律判 
+      references/self-judge.md:24 :: > **仅提及主类名以指路是允许的**（如 `description` 的触发锚、索引表的"主类枚举见本文件"），否则 `description` 会失去可匹配性（见「技能库卫生」第 2 条：description 是唯
+      references/self-judge.md:322 :: - **夹具同步重做**：阴性对照由 1 条扩为 2 条（`self-judge.md` 内改 `code`→`codex`；`SKILL.md` 内插主类表行），并写入 `_check_parity` docstrin
+      scripts/gate.py:186 :: "（USER.md 第 2 条）→ 须先取得当次确认")
+      scripts/gate.py:63 :: # USER.md 第 2 条明确「豁免的只是越界申请这一步，**不豁免**高风险前置确认」。
+      scripts/gen_skill_index.py:13 :: `SKILL.md` 阶段 0 第 2 条写着「先读技能库索引（`.workbuddy/skills/README.md`）按簇定位候选，
+      tasks/修复-gitignore同路径撞车-2026-09-17/对账输出.txt:9 :: [ OK ] 决策记录 — 2 条
+      tasks/学习模型开源对标与优化-2026-09-25/K5真实池首次运行报告.md:31 :: | `commit`（dry-run） | **入库 7 条（`kb_action=将新增`）／观察 2 条** |
+      tasks/学习模型开源对标与优化-2026-09-25/K5真实池首次运行报告.md:32 :: | 观察 2 条的原因 | 置信不足：`0.83` 与 `0.80` < `AUTO_COMMIT 0.85` —— **门槛在反方向上也工作**（同一批里既有收也有拒） |
+      tasks/学习模型开源对标与优化-2026-09-25/tmp/k5_real_pool_log.txt:29 :: 入库桶 7 条 / 观察桶 2 条 / applied=False
+      tasks/学习模型开源对标与优化-2026-09-25/tmp/patch_changelog_k5.py:11 :: - **池已建成**：`~/.workbuddy/kb/learning/`（`pool.jsonl` / `decisions.jsonl` / `state.json` / `archive/2026-09.json
+      tasks/学习模型开源对标与优化-2026-09-25/tmp/probe_findings.txt:10 :: 入库   : 2 条  ['方案 A 可行', '方案 A 不可行']
+      tasks/学习模型开源对标与优化-2026-09-25/学习模型开源对标与优化建议.md:148 :: 入库 : 2 条  ['方案 A 可行', '方案 A 不可行']
+      tasks/学习模型开源对标与优化-2026-09-25/学习模型开源对标与优化建议.md:150 :: 冲突 : 0 条        ← 应为 2 条
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/返修复查-独立复核.md:140 :: 原验收标准的更正已按机制留痕——任务 `plan.yaml` 的 `meta.计划修订` 存在 R2 条目：
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/返修复查-独立复核.md:152 :: 且 `meta.验证信号` 已改为只对 `meta` 级字段提阴性对照（不再声称 steps 级"缺决策依据必 FAIL"）。该 R2 条目本身**通过门禁**（`plan` 对 v3.0 任务 plan 判 `10/1
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/返修复查-独立复核.md:343 :: - `tasks/技能增强-ai-workflow-v3.0-2026-09-15/plan.yaml` 的 step 5 / 6 / 7 文字仍提到 `steps[].决策依据`（"steps 增加可选「决策依据」"等
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/SKILL.md:454 :: | 阶段 6 | **留痕脱敏**（台账/trace/日志） | 阶段 6 第 2 条 |
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:120 :: - ⚠️ **一并登记的既有问题（非本轮引入，均未修）**：① `guard_constants.py` 的 `members` 仍指向 `scripts/checks.py`，而常量已随 v4.4.2 拆分搬到 `ch
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:160 :: - **v4.4.0 修订二（2026-09-21）方法选用接进 plan 的抽样人审信号**：`scripts/checks.py` 新增**检查项 15**（`_check_method_select_sample`
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:169 :: - **C-1 统一运行时闸门 `scripts/gate.py`（新建）**：红线③此前只在**事后对账**，而真正要防的动作（删改工作区外既有文件）发生在阶段 3，事后判据拦不住已发生的事。核心设计：**范围判定与风
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:175 :: - ⭐⭐ **本轮最重要的一条（已升级为通用纪律）**：**「外发清单」必须由「实际会推送的文件集合」反推，不能由「本次改过哪几个文件」正推** —— 实测把扫描面从「4 个文件」扩到「真实推送面」后，FAIL 从 0 
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:257 :: `meta.计划修订` 由 4 条降为 2 条。迁移经机器校验：四条原文片段改前后各保留 1 处、
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:324 :: - **文档与版本同步（防「描述↔实现脱节」，v3.3.0 §九 立下的规矩）**：任何一处「无机器门禁」的声明在被机器化后**必须同步改写**，否则等于用文档再造一个脱节。本轮改了 **4 处**：`SKILL.md`
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:340 :: - **批次 3 —— P6：把"索引优先"从一句愿望变成能生效的机制**：`SKILL.md` 写的"阶段 0 先读技能库索引"此前**永远无法命中**（两处索引路径均不存在）→ 每次任务必然退化为全量扫 25 份 f
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:447 :: - **连带调整**：阶段 5 门禁由「独立审核已通过」改为「**审核状态已闭合**（通过／抽查豁免）」；返修复查第 2 条区分送审／未送审两种复查主体；熔断 **F2** 取证不再要求"三次审核记录"，改为"三次可回溯
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:9 :: - **池已建成**：`~/.workbuddy/kb/learning/`（`pool.jsonl` / `decisions.jsonl` / `state.json` / `archive/2026-09.json
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/assets__plan-template.yaml:44 :: #     confidence<0.95 的条目会被列出来提示"抽 2 条人工复核"——**机器只指路，
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/assets__plan-template.yaml:59 :: #     confidence<0.95 的条目会被列出来提示"抽 2 条人工复核"——**机器只指路，
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/references__ops.md:138 :: | `office_io.py excel-write` 直接喂 CSV 报 `JSONDecodeError: Expecting value: line 1 column 1` | `excel-write` **只
+      tasks/技能增强-ai-workflow-v4.8.0-2026-09-25/plan.yaml:25 :: 复盘沉淀登记注: "见上「复盘沉淀」；本次新增 3 条可复用教训，其中 2 条已写进 kb_learn.py 的代码注释与 learning-judge.md §5.1 的返修史"
+  【3 条】出现在 60 处：
+      Ledger.md:101 :: - **`meta.工作区根` 这类操作性绝对路径字段被判 FAIL**：它**必须是可解析的绝对路径**，否则 `checks.py --base` 与 P0-1 的越界判据一并失效 —— 即**无法靠「换成占位符」消
+      Ledger.md:15 :: | 2026-09-10 | 正式需求 | ai-workflow v2.5.0 用户体验评估（体验报告 + 可优化方向） | `tasks/体验评估-ai-workflow-v2.5.0-2026-09-10/` 下：
+      Ledger.md:41 :: | 2026-09-23 | code（self-judge） | **作业判定判据加固（v4.7.0 补 2）**：用户问「有没有需要优化的内容」→ 审查发现 **4 处实质问题**并逐条处置。① **检查项 18 漏
+      Ledger.md:54 :: - 2026-09-11（v2.5.3）**本次改动的自查盲区（如实登记，不掩盖）**：本任务的「独立审核」列按**新口径**判「抽查豁免」，而**新口径本身就是本次改动的产物**——等于由改动者判定「本次改动无需送审」
+      SKILL.md:226 :: 3. **复发或触顶**：同一反模式在本任务内**第 2 次**被指出，或返修已达上限 → 按「返修复查」第 3 条转**对抗式互审**。
+      SKILL.md:537 :: | 阶段 3 返修复查 | 触顶即触发 **F1**（见上「返修复查」第 3 条） |
+      assets/plan-template.yaml:143 :: #   ⚠️ 最多 3 条；超过说明初始拆解有问题，应停下来与用户重新对齐目标
+      references/data-model.md:31 :: | 计划修订 | 列表（5 字段） | 否 | 每项：版本 / 触发 / 时间 / 变化 / 未变；**上限 3 条** | `checks.py revise` |
+      references/ops.md:183 :: **硬规则**：子代理产出的链接**必须全量探活后才可进交付物**。实战数据：140 条中查出 3 条 404，其中 1 条是**编造的日期型假链接**，且它正被用于支撑一条结论。
+      references/ops.md:29 :: | **checks.py** | `skill` 技能自检（frontmatter/引用完整性/模板 schema/py_compile）；`plan` 计划校验 + Anti-drop 对账 + **熔断门禁**（`
+      references/security-guide.md:76 :: | `plan.yaml` 的 `meta.越界授权` | `{路径, 操作, 依据, 时间}` | **有**（`checks.py plan` 检查项 9：交付物落到工作区根外且未登记即 FAIL；登记项作白名单。*
+      scripts/checks_judges.py:1295 :: # 判据已增至 8 条，只显示前 3 条会把真正的第一因截掉；显示前 4 并**报出总数**
+      tasks/作业模式-ai-workflow-v4.7.0-2026-09-23/tmp/_append_changelog_entries.py:4 :: - 纪律依据：技能库卫生第 3 条 —— 过时内容加时点注记、**不删原文**；改了内容就 bump version。
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/tmp/_commitmsg-v3.0.1-push.txt:5 :: · 备注区新增 3 条：core.quotePath 造成的「假缺失」、混合仓不适用「集合相等」、
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/tmp/autonomy-test/t1-template.yaml:31 :: #   ⚠️ 最多 3 条；超过说明初始拆解有问题，应停下来与用户重新对齐目标
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/tmp/autonomy-test/test-log.txt:15 :: check_plan：[ OK ] 决策记录 — 3 条
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/tmp/autonomy-test/test-log.txt:17 :: ## T3 revise 写入与『上限 3 条』门禁
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/tmp/autonomy-test/test-log.txt:18 :: 第1次：退出码=0 | [ OK ] 计划修订已追加 — 第 1/3 条；触发=R1
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/tmp/autonomy-test/test-log.txt:19 :: 第2次：退出码=0 | [ OK ] 计划修订已追加 — 第 2/3 条；触发=R2
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/tmp/autonomy-test/test-log.txt:20 :: 第3次：退出码=0 | [ OK ] 计划修订已追加 — 第 3/3 条；触发=R3
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/tmp/autonomy-test/test-log.txt:21 :: 第4次（**应被拒**）：退出码=1 | [FAIL] 计划修订上限 — 已有 3 条，上限 3：说明初始拆解方法有问题或该任务不适合线性计划，应停下与用户重新对齐目标（这是重新澄清，非熔断）
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/tmp/autonomy-test/test-log.txt:23 :: check_plan：[ OK ] 计划修订 — 3 条
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/tmp/autonomy-test/test-log.txt:45 :: T2 无键时插入 meta 末尾（3 条）          : True
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/tmp/test_autonomy.py:143 :: say(f"T2 无键时插入 meta 末尾（3 条）          : {d2ok}")
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/tmp/test_autonomy.py:51 :: # ---------- T2: meta 内无该键 → 插到 meta 末尾；连加 3 条 ----------
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/tmp/test_autonomy.py:65 :: say("\n## T3 revise 写入与『上限 3 条』门禁")
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/回归证据.txt:66 :: check_plan：[ OK ] 决策记录 — 3 条
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/回归证据.txt:68 :: ## T3 revise 写入与『上限 3 条』门禁
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/回归证据.txt:69 :: 第1次：退出码=0 | [ OK ] 计划修订已追加 — 第 1/3 条；触发=R1
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/回归证据.txt:70 :: 第2次：退出码=0 | [ OK ] 计划修订已追加 — 第 2/3 条；触发=R2
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/回归证据.txt:71 :: 第3次：退出码=0 | [ OK ] 计划修订已追加 — 第 3/3 条；触发=R3
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/回归证据.txt:72 :: 第4次（**应被拒**）：退出码=1 | [FAIL] 计划修订上限 — 已有 3 条，上限 3：说明初始拆解方法有问题或该任务不适合线性计划，应停下与用户重新对齐目标（这是重新澄清，非熔断）
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/回归证据.txt:74 :: check_plan：[ OK ] 计划修订 — 3 条
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/回归证据.txt:96 :: T2 无键时插入 meta 末尾（3 条）          : True
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/改动对照表-v3.0.md:30 :: | 阶段 3 第 3 条「逐步执行」 | 末尾追加指针，指向两份新手册（按需加载） |
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/改动对照表-v3.0.md:61 :: | `meta.计划修订` | **新增（可选）**，默认 `[]`；注释写明触发取值 R1–R6、上限 3 条 |
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/独立审核意见.md:115 :: 第1次: [ OK ] 计划修订已追加 — 第 1/3 条；触发=R1
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/独立审核意见.md:117 :: 第4次: [FAIL] 计划修订上限 — 已有 3 条，上限 3：…
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/独立审核意见.md:118 :: 回读后再跑 plan：[ OK ] 计划修订 — 3 条 → 10/10 通过，FAIL=0
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/独立审核意见.md:151 :: SKILL.md 全量 `diff -u` 仅 8 处：frontmatter `version`、`description`、标题、适用范围行**加注**「（v2.6.2 明确，v3.0.0 沿用）」、新增「自主决策层
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/返修复查-独立复核.md:201 :: 上限 3 条，超限即 FAIL） | `checks.py plan tasks/x/plan.yaml --base "E:/ChatGPT/工作流"`<br>
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/返修复查-独立复核.md:271 :: [ OK ] 计划修订已追加 — 第 1/3 条；触发=R2                     RC=0
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/plan.yaml:72 :: 做什么: "三处登记（ops.md 脚本表 / SKILL.md 核心命令块 / changelog 追加 v4.10.0）+ 顺带修 3 条既有缺陷 + 扫同类口径漂移"
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/plan.yaml:74 :: 预期产出: "三处登记齐备；3 条缺陷修复；同类漂移清单与处置"
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/tmp/apply_hooks.py:101 :: "用户级 `USER.md` 第 3 条（删改既有文件＝高风险，须先停下说清拿同意）都禁止真·无人干预删除。"
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/tmp/apply_hooks.py:132 :: "  - **顺带修掉的 3 条既有缺陷（均属「描述与实现不符」）**：① `SKILL.md` 标题与 frontmatter 停在 **v4.8.0**，"
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/tmp/apply_hooks.py:90 :: "- **v4.10.0（2026-09-27）新增「任务产物清理」机制 + 顺带修 3 条既有缺陷 —— `tmp/` 从此只进也出**："
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/SKILL.md:226 :: 3. **复发或触顶**：同一反模式在本任务内**第 2 次**被指出，或返修已达上限 → 按「返修复查」第 3 条转**对抗式互审**。
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/SKILL.md:536 :: | 阶段 3 返修复查 | 触顶即触发 **F1**（见上「返修复查」第 3 条） |
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:324 :: - **文档与版本同步（防「描述↔实现脱节」，v3.3.0 §九 立下的规矩）**：任何一处「无机器门禁」的声明在被机器化后**必须同步改写**，否则等于用文档再造一个脱节。本轮改了 **4 处**：`SKILL.md`
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:406 :: - **本轮撞出的第 2 个真问题（改 `ops.md` 时暴露，已修）**：本技能自检的「文档引用完整性」会把**日志里引用的工作区路径**也当成「技能内引用」做存在性校验 → 补一次变更日志就撞出 **3 条 FAI
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:506 :: - 新增 **`assets/ledger-template.md`** 与技能根 **`Ledger.md`**（已回填 3 条历史任务），确立「履历台账追加不删改」纪律。
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/assets__plan-template.yaml:133 :: #   ⚠️ 最多 3 条；超过说明初始拆解有问题，应停下来与用户重新对齐目标
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/references__ops.md:182 :: **硬规则**：子代理产出的链接**必须全量探活后才可进交付物**。实战数据：140 条中查出 3 条 404，其中 1 条是**编造的日期型假链接**，且它正被用于支撑一条结论。
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/references__ops.md:29 :: | **checks.py** | `skill` 技能自检（frontmatter/引用完整性/模板 schema/py_compile）；`plan` 计划校验 + Anti-drop 对账 + **熔断门禁**（`
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/scripts__checks_judges.py:1242 :: # 判据已增至 8 条，只显示前 3 条会把真正的第一因截掉；显示前 4 并**报出总数**
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/确认表.md:68 :: ## 五、顺带发现（3 条既有缺陷，本次修）
+      tasks/技能增强-ai-workflow-v4.8.0-2026-09-25/plan.yaml:25 :: 复盘沉淀登记注: "见上「复盘沉淀」；本次新增 3 条可复用教训，其中 2 条已写进 kb_learn.py 的代码注释与 learning-judge.md §5.1 的返修史"
+      tasks/模式选用模型-ai-workflow-v4.7.0-2026-09-23/plan.yaml:107 :: 预期产出: "ops.md / SKILL.md / laya-backend.md 三处登记，技能库卫生第 3 条（核心命令与 ops.md 两处都登记）满足"
+      tasks/模式选用模型-ai-workflow-v4.7.0-2026-09-23/tmp/_write_trace.py:22 :: "技能库卫生第 3 条：核心命令与 ops.md 两处都要登记"),
+  【4 条】出现在 81 处：
+      Ledger.md:41 :: | 2026-09-23 | code（self-judge） | **作业判定判据加固（v4.7.0 补 2）**：用户问「有没有需要优化的内容」→ 审查发现 **4 处实质问题**并逐条处置。① **检查项 18 漏
+      Ledger.md:61 :: - 2026-09-15（v3.1.0）**新增「自研工具与技能：标注与公开留痕」（用户指定）**：起因是任务中常自写脚本补能力缺口，这类产物**既非第三方依赖也非用户既有资产**，不声明来源、不公开留痕则事后无人知道它
+      SKILL.md:429 :: > **第 4 条已升为全流程适用**：同一任务内，同一物理量的判据（阈值/判向/口径/单位）**出现两处即为不符合** —— 须合并为单一事实源，或显式声明二者关系并配守卫测试。
+      assets/templates/README.md:22 :: ## 快速通道规则（SKILL.md 阶段 0 第 4 条 / 任务分层 L1）
+      references/aesthetic-rubric.yaml:462 :: note: "需渲染。无渲染色（未提供 --geom 产物）时判 SKIP，理由是「未检测」，不是通过；**空节点集同样判 SKIP**（没数据不得冒充没问题）。⚠️ v1.2.2 两处修正（真实 deck 页实测暴露）
+      references/git-conventions.md:6 :: > **与 `push-routing.md` 的分界**：本文件管**本地仓库的分支与提交**；`push-routing.md` 管**推送到 public 仓的通道机制**（自研工具/技能分流、blob sha 一
+      references/homework-judge.md:28 :: > ⚠️ **本表与主类枚举是两个物理量**：主类问"这次产出什么"（会话内回答／可运行产物／给人阅读的文件），本表问"要不要叠加作业模式"。**字形相近、语义无关**，不得合并、不得互相推导 —— 合并即造成同形异义的
+      references/homework-mode.md:126 :: > **规则**：借用时**显式声明**借了哪套骨架（一行），不要悄悄混用两套判据 —— 否则同一题内出现两套验收口径（违反「技能库卫生」第 4 条）。
+      references/learning-judge.md:143 :: > ⚠️ **上表只按「学习类型」（`kind`）给指引**；`冲突` / `待废止` / `已废止` **不是 `kind` 的取值**，而是**池条目状态**（`state`），由 `kb_learn.py` 的池侧
+      references/learning-judge.md:214 :: 落点 = **阶段 6 第 4 条（沉淀分流）之后、第 5 条（复盘结论）之前**：
+      references/learning-judge.md:328 :: - §10 第 4 条的"§4.2 五条"改为**六条**（原为与手册表行数不符的旧口径）。
+      references/learning-model.md:102 :: | 5 | 不与非本任务证据冲突 | 同 key 无相反结论 | **`note --contradicts` 登记 → `evaluate` 双向冻结**（§4.3 第 4 条） |
+      references/learning-model.md:186 :: | 用户**纠正**（"别这样"） | **当场**走第 6 路回写技能本体 | 已被既有纪律覆盖（阶段 6 第 4 条） |
+      references/method-judge.md:30 :: > 本模块的 **`gap_class` 取值域就是上表四类**（可组合，如 `事实+手脚`）；**不另造一套**。上表的判据（该用/不该用）由 `capability-routing.md` 独家持有，本模块只做"按该
+      references/ops.md:46 :: | **guard_constants.py**（v4.2.0 自研） | **跨模块同名常量的同源守卫**（技能库卫生第 4 条）：把 `scripts/` 下同名顶层常量的关系登记成 `GROUPS` 清单，机器校验
+      references/ops.md:51 :: | **check_aesthetics.py**（v1.7.0 自研；随技能发行） | **审美判据校验器**（`check_aesthetics.py --rubric <判据集>`）：对 CSS / spec / 
+      references/playbook.md:83 :: > **规范唯一事实源：`references/git-conventions.md`。** 本节只写差异化要求，**不重复规范正文**（技能硬约定第 4 条：同一物理量不写两处）。
+      references/playbook.md:98 :: > **结构规范唯一事实源：`references/homework-mode.md`。** 本节只写差异化要求，**不重复 H1–H5 与三类题型骨架**（技能硬约定第 4 条：同一物理量不写两处）。
+      references/retrieval-judge.md:179 :: retrieval-judge 嵌入阶段 3 执行期，**落点 = 第 5 条（精确检索）之前、第 4 条（进度汇报）之后**：
+      references/retrieval-judge.md:31 :: > 本模块的 **`source_class` 取值域就是上表五类**（可组合，如 `本地资产+联网`）；**不另造一套**。上表的工具清单由 `SKILL.md` 阶段 3 第 5 条与阶段 1 第 1 条持有，本模块
+      references/self-judge.md:61 :: > **命名规则（v4.2.0 起，防同名不同义）**：「**入口类型**」此后**专指认知轴**的 `category`；**来源轴**（消息 / 正式需求 / Bug）称「**来源分型**」——`assets/led
+      references/skill-hygiene.md:18 :: **⭐ 第 4 条自 v3.3.0 起**适用范围由"新增/修改技能时"**扩展为全流程**（对齐「质量」原则的**一致性**子目标）：**同一任务内，同一物理量的判据（阈值、判向、口径、单位）出现两处即为不符合**——
+      references/skill-hygiene.md:20 :: **⚠️ 第 4 条的可执行守卫（2026-09-21）**：第 4 条此前是**人审项**——"配一条守卫测试"靠执行者自觉，没有机器落地形式。
+      references/skill-hygiene.md:6 :: ## 技能库卫生（新增/修改技能时的四条硬约定，v3.1.1 新增；v3.3.0 起第 4 条升为全流程适用）
+      scripts/check_aesthetics.py:1507 :: 于是每个成员被凭空算出一个 ≤1px 的差。实测：同一容器内 4 条**本该完全重合**
+      scripts/check_aesthetics.py:94 :: 每个成员被凭空算出差 ≤1px（实测：4 条本该完全重合的右边报成「差 0.39px」×10 处）。
+      scripts/checks_cmds.py:361 :: 证明实际行为与文档不符。按「同一物理量两处即为不符合」（技能库卫生第 4 条）**改文档对齐
+      scripts/checks_judges.py:1609 :: ② **同源性**：`INFRA_EXCEPTIONS` 必须**从 checks.py 加载**（技能库卫生第 4 条：
+      scripts/checks_judges.py:1635 :: fail(NAME, "gate.py **自行定义**了 INFRA_EXCEPTIONS —— 违反技能库卫生第 4 条"
+      scripts/checks_parity.py:341 :: 本条把该声明变成可机器判定的断言（技能库卫生第 4 条"同一物理量的判据必须跨模块同源
+      scripts/gate.py:23 :: 范围口径与 `checks.py` 同源（技能库卫生第 4 条）
+      scripts/guard_constants.py:10 :: """guard_constants.py - 跨模块判据同源守卫（ai-workflow v4.2.0 / 技能库卫生第 4 条）。
+      scripts/guard_constants.py:18 :: "两个模块对同一物理量用两套判据"，这正是技能库卫生第 4 条要防的事。
+      scripts/guard_constants.py:277 :: print("=== 跨模块判据同源守卫（技能库卫生第 4 条）===")
+      scripts/guard_constants.py:32 :: 技能库卫生第 4 条给的处置是「**合并为单一事实源，或显式声明二者关系并配守卫测试**」。
+      scripts/laya_client.py:313 :: #   避免"组合串"与"secondary"两个字段描述同一状态（同「技能库卫生」第 4 条）。
+      scripts/verify_push.py:570 :: # 手册侧补查关键词，净判据数由 4 条升到 9 条 —— 验收器不得比门禁松。
+      tasks/作业模式-ai-workflow-v4.7.0-2026-09-23/plan.yaml:65 :: 依据: "两者字形相近但语义无关（结构级「模式选用」vs 入口级「产出什么」）；合并会造成同形异义的两套口径，正是「技能库卫生」第 4 条要防的漂移"
+      tasks/作业模式-ai-workflow-v4.7.0-2026-09-23/tmp/门禁输出.txt:94 :: === 跨模块判据同源守卫（技能库卫生第 4 条）===
+      tasks/修复-gitignore同路径撞车-2026-09-17/口径更新待办.md:83 :: **建议动作**：把这条写进 `references/quality-gates.md` 的反模式清单（SKILL.md 阶段 6 第 4 条的「坑 → 反模式清单」分流）。
+      tasks/学习模型开源对标与优化-2026-09-25/K5真实池首次运行报告.md:98 :: - 若想先收紧门槛再放行（例如把 `AUTO_COMMIT` 提到 0.90，则只有 4 条入），属于**参数决策**，请示下。
+      tasks/学习模型开源对标与优化-2026-09-25/P0落地验收报告.md:89 :: | `plan.yaml` **于收尾补录**（本任务由研究型任务衍生，开工时无计划产物） | `plan.yaml` 的 `meta.溯源` 已写明；`meta.入口判定 / 方法选用 / 检索判定 / 作业判定` *
+      tasks/学习模型开源对标与优化-2026-09-25/tmp/patch_memory.py:33 :: "  - ⚠️ **三个「声称有、实际不可达」的失效**（2026-09-25 沙箱探针实测；`tasks/学习模型开源对标与优化-2026-09-25/tmp/probe_findings.txt`）：① **`sta
+      tasks/学习模型开源对标与优化-2026-09-25/tmp/probe_hidden_failures.py:5 :: A. `state="冲突"` 是否可达（手册 §4.2 门槛 5 / §4.3 第 4 条）
+      tasks/学习模型开源对标与优化-2026-09-25/学习模型开源对标与优化建议.md:157 :: **后果**：手册 §4.2 门槛 5「不与非本任务证据冲突」与 §4.3 第 4 条「冲突检测」**是死代码**。更糟的是方向 —— 不是"漏判冲突"，而是**两条自相矛盾的知识被同时判为「入库」**（如上：可行 / 
+      tasks/学习模型开源对标与优化-2026-09-25/学习模型开源对标与优化建议.md:199 :: **影响面**：`kb_learn.py` + `references/learning-model.md` §4.3 第 4 条（把"声称"改成"可达的实现口径"）+ `learning-judge.md` 的 `ro
+      tasks/学习模型开源对标与优化-2026-09-25/确认表.md:26 :: | 契约 | `references/learning-judge.md` | §5 表末注解、§10 +第 8 条、§10 第 4 条订正、变更记录 v2 |
+      tasks/学习模型开源对标与优化-2026-09-25/确认表.md:29 :: | 主文件 | `SKILL.md` | 阶段 6 条目、引擎子命令列、+「知识生命周期」段、核心命令、硬边界 3→4 条 |
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/tmp/autonomy-test/test-log.txt:25 :: ## T4 阴性对照：故意造坏（缺『决策点』/ 能力类非法 / 触发 R9 / 修订 4 条）
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/tmp/test_autonomy.py:78 :: say("\n## T4 阴性对照：故意造坏（缺『决策点』/ 能力类非法 / 触发 R9 / 修订 4 条）")
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/回归证据.txt:76 :: ## T4 阴性对照：故意造坏（缺『决策点』/ 能力类非法 / 触发 R9 / 修订 4 条）
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/改动对照表-v3.0.md:108 :: | writing-plans 的「右尺寸 / 咬合粒度」 | ✅ 取并适配 | 落为拆解四规则第 1、4 条 |
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/独立审核意见.md:106 :: CASE neg4-修订4条.yaml         rc=1  [FAIL] 计划修订 — 修订 4 次 > 上限 3（应停下与用户重新对齐目标）
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/tmp/apply_hooks.py:135 :: "「**29 条**」，而 `SKILL.md` 与判据集写「**30 条**」（同一物理量两处口径，违反技能自身第 4 条硬约定）。\n"
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/SKILL.md:428 :: > **第 4 条已升为全流程适用**：同一任务内，同一物理量的判据（阈值/判向/口径/单位）**出现两处即为不符合** —— 须合并为单一事实源，或显式声明二者关系并配守卫测试。
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:17 :: ① **`state="冲突"` 不可达（最严重）** —— `evaluate()` 的冲突分支要求 `state == "冲突"`，而全程序**零处**能把它置为「冲突」（**唯一途径就是走进那个分支本身 ⇒ 循环依
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:170 :: - **C-1 的常驻判据（本轮接入 `scripts/checks.py`）**：新增 `_check_gate`，三级判据 —— ① 存在性/语法 ② **同源性**（**不得自建 `INFRA_EXCEPTIONS
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:24 :: - **机器侧配套（全部为「新增」，无一处改动既有判据）**：`kb_learn.py` **+13 函数 / +8 常量**（AST 比对证明**原有 30 个函数、既有常量一个未丢**）；`ops.md` 速查表 `
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:257 :: `meta.计划修订` 由 4 条降为 2 条。迁移经机器校验：四条原文片段改前后各保留 1 处、
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:404 :: - **⭐ 同一轮抓出的真缺陷（本约定第 4 条的直接证据，非假想）**：批量取数通道 `历史数据集/scripts/tencent_batch.py::_resolve_volume_lots` 用「绝对误差择近」，其
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:411 :: - **规则本体（SKILL.md 新增独立小节，唯一事实源）**：先给**判定口径**——同时满足「① 本任务自行编写（非复用第三方、非用户既有资产）② 以文件形式落地」才算自研；**不算**的三种：未落盘的一次性内联
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:446 :: - **未放松的部分**：「执行者不得自审」只在命中三类时生效，但**禁令未取消**；送审者仍只拿产出物 + 验收标准、须亲手复现至少一项硬证据；新增第 4 条**只报影响正确性的问题**（防"审查者为找问题而过度工程"
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:61 :: - **v4.7.0 补 2（2026-09-23）审查与加固：检查项 18 补 4 条判据 + 修「派生字段取错源」**：用户问「**有没有需要优化的内容**」—— 审查结论是**有**，且不是偏好问题。
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/references__ops.md:45 :: | **guard_constants.py**（v4.2.0 自研） | **跨模块同名常量的同源守卫**（技能库卫生第 4 条）：把 `scripts/` 下同名顶层常量的关系登记成 `GROUPS` 清单，机器校验
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/references__ops.md:50 :: | **check_aesthetics.py**（v1.6.0 自研；随技能发行） | **审美判据校验器**（`check_aesthetics.py --rubric <判据集>`）：对 CSS / spec / 
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/scripts__checks_judges.py:1556 :: ② **同源性**：`INFRA_EXCEPTIONS` 必须**从 checks.py 加载**（技能库卫生第 4 条：
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/scripts__checks_judges.py:1582 :: fail(NAME, "gate.py **自行定义**了 INFRA_EXCEPTIONS —— 违反技能库卫生第 4 条"
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/确认表.md:72 :: 3. `plan-template.yaml` 写审美判据「**29 条**」，`SKILL.md` 写「**30 条**」—— 同一物理量两处口径，违反技能自身第 4 条硬约定。
+      tasks/技能增强-ai-workflow-v4.6.0-2026-09-22/plan.yaml:34 :: 依据: "技能硬约定第 4 条——同一物理量的判据出现两处即为不符合。commit 类型必然同时出现在手册与 git_check.py 代码常量中，不建守卫即留下已知漂移点"
+      tasks/技能增强-ai-workflow-v4.6.0-2026-09-22/plan.yaml:72 :: 输入: "用户第 4 条禁止提交清单 + 技能本体现有 .gitignore"
+      tasks/模式选用模型-ai-workflow-v4.7.0-2026-09-23/tmp/_audit_gate18.py:120 :: print("\n-- ② 影响面：补上 4 条判据后会拦住多少既有档案 --")
+      tasks/模式选用模型-ai-workflow-v4.7.0-2026-09-23/tmp/_audit_gate18.py:36 :: """拟新增的 4 条判据，返回违反项清单（空 = 合规）。"""
+      tasks/模式选用模型-ai-workflow-v4.7.0-2026-09-23/tmp/_update_memory2.py:15 :: 1. **检查项 18 漏网 4 条**（实测复现）：负概率可配平通过（`{作业题:0.9, 讲解题:0.15, 非作业:-0.05}`
+      tasks/模式选用模型-ai-workflow-v4.7.0-2026-09-23/tmp/_verify_gate18.py:107 :: print("\n-- 旧判据复刻：**改前**这 4 条是否被覆盖（决定新判据是「新增覆盖」还是「空转」）--")
+      tasks/模式选用模型-ai-workflow-v4.7.0-2026-09-23/tmp/_verify_gate18.py:168 :: check(old_leak == len(NEG), "旧判据对 4 条违规**全部放行**（新判据是新增覆盖，非空转）",
+      tasks/模式选用模型-ai-workflow-v4.7.0-2026-09-23/tmp/_verify_gate18.py:3 :: """验证：检查项 18 新增 4 条判据**有牙**（改后必须拦），且**不误伤**（合规块仍 OK）。
+      tasks/模式选用模型-ai-workflow-v4.7.0-2026-09-23/tmp/审计输出-判据加固.txt:11 :: -- ② 影响面：补上 4 条判据后会拦住多少既有档案 --
+      tasks/模式选用模型-ai-workflow-v4.7.0-2026-09-23/tmp/自证输出-判据加固.txt:16 :: -- 旧判据复刻：**改前**这 4 条是否被覆盖（决定新判据是「新增覆盖」还是「空转」）--
+      tasks/模式选用模型-ai-workflow-v4.7.0-2026-09-23/tmp/自证输出-判据加固.txt:21 :: [ OK ] 旧判据对 4 条违规**全部放行**（新判据是新增覆盖，非空转）  — 旧版漏 4/4（复刻推演，非实测：v4.7.0 未 commit，无改动前快照）
+      tasks/模式选用模型-ai-workflow-v4.7.0-2026-09-23/判据加固记录.md:16 :: ### 1. 补的 4 条判据（均在 `checks_judges._check_homework_verdict`）
+      tasks/模式选用模型-ai-workflow-v4.7.0-2026-09-23/判据加固记录.md:79 :: 1. **4 条新判据只证"填得自洽"，不证"判得对"** —— 模式选错依然全绿。
+  【5 条】出现在 51 处：
+      Ledger.md:33 :: | 2026-09-22 | content（self-judge） | **检索快判（retrieval-judge）落地：Jev 式 System 1 快判的第三块拼图**（用户：「请建立一个合理的模型来帮助 ai 
+      Ledger.md:35 :: | 2026-09-22 | content（self-judge） | **项目 Git 开发规范落地（v4.6.0）**：把用户给定的 5 条 Git 规则（`main` 稳定／`dev` 开发／`exp-xxx` 
+      SKILL.md:450 :: | 阶段 1 | 识别输入敏感级别 → 在确认表注明处理范围与去向 | 阶段 1 第 5 条 |
+      SKILL.md:451 :: | 阶段 2 | 引入外部依赖的**供应链检查**（锁版本/校验来源/禁混淆产物） | 阶段 2 第 5 条 |
+      SKILL.md:563 :: | `references/retrieval-judge.md` | 检索快判（判「该不该查、查哪类源、能否断言『不存在』」）｜阶段 3 第 5 条用 |
+      assets/plan-template.yaml:46 :: 检索判定: []           # 【可选，v4.5.0 新增】阶段 3 第 5 条之前 retrieval-judge（检索·快判）的产出，每次检索一条，追加不覆盖；契约见 references/retrieva
+      references/aesthetic-rubric.yaml:28 :: #   E. 新增 5 条判据：G11 调色板可辨识性 / G12 字号刻度一致性 / G13 时长刻度一致性 /
+      references/capability-routing.md:87 :: 5. 引用的外部资源须**实测**取指标（禁二手数据），并做许可证与基础安全检查——沿用 `SKILL.md` 阶段 2 第 2、5 条。
+      references/git-conventions.md:16 :: > **来源与改写边界**：本规范由 Garvin 于 2026-09-22 给出 **5 条规则**（原话见 `tasks/技能增强-ai-workflow-v4.6.0-2026-09-22/确认表.md`）。**本
+      references/git-conventions.md:201 :: | v1 | 2026-09-22 | 建立。由 Garvin 的 5 条规则（分支模型 / exp-xxx 并行实验 / 4 类 commit / 5 类禁提交 / 开发流程五步）落地；配 `scripts/git_c
+      references/laya-backend.md:108 :: 阶段 3 第 5 条前 retrieval-judge ── 同上
+      references/learning-judge.md:214 :: 落点 = **阶段 6 第 4 条（沉淀分流）之后、第 5 条（复盘结论）之前**：
+      references/method-judge.md:236 :: > 作用：把"该选什么工具"的边界锚成**可复用判例**，而不是每次临场发挥。列 5 条种子判例，首次使用后可继续追加。
+      references/method-judge.md:268 :: > ⚠️ **检查项 15 是"指路"不是"门禁"**：它把"该抽样看哪里"标出来，**不判定"选得对不对"**（机器做不到），故**永不计入 FAIL、不改退出码**。它把 §10 第 4/5 条（类型合法 ≠ 判断正
+      references/retrieval-judge.md:17 :: | **形态** | ai-workflow 的**内部子模块**（非独立顶层 skill）；本文件即其完整契约，由阶段 3 第 5 条（精确检索）之前加载 |
+      references/retrieval-judge.md:179 :: retrieval-judge 嵌入阶段 3 执行期，**落点 = 第 5 条（精确检索）之前、第 4 条（进度汇报）之后**：
+      references/retrieval-judge.md:197 :: | **阶段 3 第 5 条「精确检索」** | **判据源 + 正交并存** | 它给工具清单（哪个源用什么工具）；本模块给"查哪类、查多深、能否断言"（见 §1.1） |
+      references/retrieval-judge.md:227 :: - **不是新模型**，而是主代理 LLM 的**自我约束协议**：把 §3 的四步判据写进阶段 3 第 5 条之前，强制其产出 §4 的结构化判定。
+      references/retrieval-judge.md:257 :: > 作用：把"该查哪类源、查多深"的边界锚成**可复用判例**，而不是每次临场发挥。列 5 条种子判例，首次使用后可继续追加。
+      references/retrieval-judge.md:31 :: > 本模块的 **`source_class` 取值域就是上表五类**（可组合，如 `本地资产+联网`）；**不另造一套**。上表的工具清单由 `SKILL.md` 阶段 3 第 5 条与阶段 1 第 1 条持有，本模块
+      references/retrieval-judge.md:310 :: | 三者共同的 §9 判定样例锚（5 条种子） | §9 |
+      references/retrieval-judge.md:55 :: > 即：`SKILL.md` 阶段 3 第 5 条告诉你"网页用 `http_fetch`、本地目录用 `Grep`、结构用 `ast-grep`"；`retrieval-judge` 在每次检索前把"我这次判为**本地
+      references/self-judge.md:247 :: > 作用：把"chat/code/content 的边界在哪"锚成**可复用的判例**，而不是每次临场发挥。列 5 条种子判例，首次使用后可继续追加。
+      scripts/checks_judges.py:1096 :: "未记录 —— 阶段 3 第 5 条之前（retrieval-judge）本应每次检索产出一条，追加到列表。"
+      scripts/laya_client.py:6 :: #           （method-judge）、阶段 3 第 5 条前（retrieval-judge）。
+      tasks/作业模式-ai-workflow-v4.7.0-2026-09-23/tmp/门禁输出.txt:78 :: [WARN] meta.检索判定 — 未记录 —— 阶段 3 第 5 条之前（retrieval-judge）本应每次检索产出一条，追加到列表。**只提示不阻断**：向后兼容旧 plan，不追认历史计划；本项**不是门禁
+      tasks/学习模型开源对标与优化-2026-09-25/tmp/p0_acceptance_log.txt:158 :: [WARN] meta.检索判定 — 未记录 —— 阶段 3 第 5 条之前（retrieval-judge）本应每次检索产出一条，追加到列表。**只提示不阻断**：向后兼容旧 plan，不追认历史计划；本项**不是门禁
+      tasks/学习模型开源对标与优化-2026-09-25/确认表.md:68 :: - 手册与 `SKILL.md`：本轮全部改动均为**新增段落/行**或**同义订正**，逐处已在变更记录可定位；如需回滚，按各文件"变更记录"的 v2/v5 条目逆序处理。
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/改动对照表-v3.0.md:44 :: | 六 | 硬规则 5 条 |
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/SKILL.md:449 :: | 阶段 1 | 识别输入敏感级别 → 在确认表注明处理范围与去向 | 阶段 1 第 5 条 |
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/SKILL.md:450 :: | 阶段 2 | 引入外部依赖的**供应链检查**（锁版本/校验来源/禁混淆产物） | 阶段 2 第 5 条 |
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/SKILL.md:562 :: | `references/retrieval-judge.md` | 检索快判（判「该不该查、查哪类源、能否断言『不存在』」）｜阶段 3 第 5 条用 |
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:102 :: - **v4.6.0（2026-09-22）新增「项目 Git 开发规范」—— 把用户给定的 5 条 Git 规则落成手册 + 机器校验 + 口径守卫**：由用户指派「在 ai-workflow 工作流中添加项目 Git
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:104 :: - **核心产出**：`references/git-conventions.md`（新建，**唯一事实源**）—— 分支模型（`main` 稳定 / `dev` 开发 / `exp-xxx` 并行实验）、commit 
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:175 :: - ⭐⭐ **本轮最重要的一条（已升级为通用纪律）**：**「外发清单」必须由「实际会推送的文件集合」反推，不能由「本次改过哪几个文件」正推** —— 实测把扫描面从「4 个文件」扩到「真实推送面」后，FAIL 从 0 
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:315 :: - **P0-3 口径守卫**（`checks.py` 新增 `_check_parity`，skill 自检新增 5 条判据）：断言「**手册/模板里解析出的值 == 代码内常量**」—— 模型档位（`routing-
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:324 :: - **文档与版本同步（防「描述↔实现脱节」，v3.3.0 §九 立下的规矩）**：任何一处「无机器门禁」的声明在被机器化后**必须同步改写**，否则等于用文档再造一个脱节。本轮改了 **4 处**：`SKILL.md`
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:405 :: - **验证**：`tests/test_optim_20260916.py` **23 → 34 用例**（新增跨模块守卫 + 真实异常样本回归 + 9 个参数化 ratio 边界）；**阴性对照**把旧实现内联回放跑
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:542 :: - **P2｜跨行/结构检索** → SKILL.md 阶段 3 第 5 条改为「**先选对工具再搜**」决策清单：`Grep`/`Glob` → `--github-search` → `sg`(ast-grep) →
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/assets__plan-template.yaml:46 :: 检索判定: []           # 【可选，v4.5.0 新增】阶段 3 第 5 条之前 retrieval-judge（检索·快判）的产出，每次检索一条，追加不覆盖；契约见 references/retrieva
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/scripts__checks_judges.py:1043 :: "未记录 —— 阶段 3 第 5 条之前（retrieval-judge）本应每次检索产出一条，追加到列表。"
+      tasks/技能增强-ai-workflow-v4.6.0-2026-09-22/plan.yaml:56 :: 输入: "用户原话（5 条规则）+ 技能本体结构（SKILL.md / references / scripts / assets）"
+      tasks/技能增强-ai-workflow-v4.6.0-2026-09-22/plan.yaml:64 :: 输入: "用户 5 条规则原文 + 既有 .gitignore + push-routing.md 的推送口径"
+      tasks/技能增强-ai-workflow-v4.6.0-2026-09-22/plan.yaml:66 :: 验证方式: "5 条规则逐条可对应到小节；提交类型表格式与 checks_parity 解析器一致；无本机绝对路径"
+      tasks/技能增强-ai-workflow-v4.6.0-2026-09-22/plan.yaml:8 :: 复盘沉淀: "【做成了什么】用户 5 条 Git 规则落成三层 —— 手册（references/git-conventions.md 唯一事实源）+ 只读校验器（scripts/git_check.py 四子命令）+ 
+      tasks/技能增强-ai-workflow-v4.6.0-2026-09-22/确认表.md:33 :: ## 落地口径（用户 5 条 → 技能内落点）
+      tasks/技能增强-ai-workflow-v4.6.0-2026-09-22/确认表.md:55 :: 5. 用户 5 条规则逐条可在规范文件中定位到对应小节。
+      tasks/技能增强-ai-workflow-v4.8.0-2026-09-25/tmp/acceptance-log.txt:157 :: [WARN] meta.检索判定 — 未记录 —— 阶段 3 第 5 条之前（retrieval-judge）本应每次检索产出一条，追加到列表。**只提示不阻断**：向后兼容旧 plan，不追认历史计划；本项**不是门禁
+      tasks/技能增强-ai-workflow-v4.8.0-2026-09-25/tmp/acceptance-log.txt:187 :: [WARN] meta.检索判定 — 未记录 —— 阶段 3 第 5 条之前（retrieval-judge）本应每次检索产出一条，追加到列表。**只提示不阻断**：向后兼容旧 plan，不追认历史计划；本项**不是门禁
+      tasks/模式选用模型-ai-workflow-v4.7.0-2026-09-23/tmp/门禁输出.txt:14 :: [WARN] meta.检索判定 — 未记录 —— 阶段 3 第 5 条之前（retrieval-judge）本应每次检索产出一条，追加到列表。**只提示不阻断**：向后兼容旧 plan，不追认历史计划；本项**不是门禁
+      tasks/模式选用模型-ai-workflow-v4.7.0-2026-09-23/tmp/门禁输出.txt:17 :: [ OK ] 决策记录 — 5 条
+  【6 条】出现在 13 处：
+      Ledger.md:15 :: | 2026-09-10 | 正式需求 | ai-workflow v2.5.0 用户体验评估（体验报告 + 可优化方向） | `tasks/体验评估-ai-workflow-v2.5.0-2026-09-10/` 下：
+      Ledger.md:57 :: - 2026-09-15（收尾）**任务目录归档首次执行**（阶段 6 第 6 条）：`checks.py status` 报 14 个 > 阈值 10，把 2026-09-10 的 6 个任务移入 `tasks/_ar
+      references/learning-judge.md:297 :: 8. **本判定不负责"这条知识现在能不能动"** —— `kind` 只回答"属于哪类知识"；**冲突/废止属池条目状态**（由 `kb_learn.py` 的 `--contradicts` / `--superse
+      references/learning-model.md:88 :: > ⚠️ **新增的三个文件/字段都属 P0（2026-09-25 开源对标后补）**，共同原则是「**按危险度分级，而非只按置信度**」：新增/更新可自动（按置信度），**冻结与废止只提案**（不可逆动作，按危险度）。
+      tasks/作业模式-ai-workflow-v4.7.0-2026-09-23/tmp/门禁输出.txt:81 :: [ OK ] 决策记录 — 6 条
+      tasks/学习模型开源对标与优化-2026-09-25/tmp/patch_skill_unreach.py:31 :: assert txt.count(anchor5) == 1, "§五 第 6 条锚点不唯一"
+      tasks/学习模型开源对标与优化-2026-09-25/确认表.md:29 :: | 主文件 | `SKILL.md` | 阶段 6 条目、引擎子命令列、+「知识生命周期」段、核心命令、硬边界 3→4 条 |
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/tmp/_commitmsg-v3.0.1.txt:17 :: - SKILL.md 阶段 6 第 6 条接入 archive_tasks.py；版本号三处对齐 3.0.1。
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:122 :: - **实测出的三类问题**（均来自脚本量测，非印象）：① **性能** —— `SKILL.md` 41,848 字符／514 行**每次调用全文注入**，而它自己在阶段 3 第 6 条写着「项目上下文文件保持 30-
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:24 :: - **机器侧配套（全部为「新增」，无一处改动既有判据）**：`kb_learn.py` **+13 函数 / +8 常量**（AST 比对证明**原有 30 个函数、既有常量一个未丢**）；`ops.md` 速查表 `
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:367 :: - **信息安全新增独立章节 + 手册**：SKILL.md 新增 §信息安全与数据保护（**四条底线**：凭据永不落盘／敏感信息先分级再处理／对外动作必须先有内容清单／访问控制具体到路径禁泛授权；另附各阶段落点索引表与
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:480 :: - **新增 `assets/熔断报告模板.md`**；`assets/plan-template.yaml` 增可选 meta `熔断状态`；反模式 39 → **46 条**（新增熔断类 6 条 + 路径候选 1 条
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:481 :: - **清 v2.5.1 记录类遗留（对抗互审裁决 §5 必改项 2/3/4/5/6）**：`回归证据.txt` **整份重写**（原版 `回归 8/9` 各重复 6 次、2 处安全策略拦截回执被当成命令输出、算式 `7
+  【7 条】出现在 45 处：
+      Ledger.md:107 :: - **登记但未施工**：把第 7 条经验（核验脚本自证取数形状）写入 `references/quality-gates.md` —— 属改既有技能文档、超出本轮九项授权，**登记为候选，不擅自实施**。
+      SKILL.md:453 :: | 阶段 4 | 产出物**脱敏** | 阶段 4 第 7 条 |
+      references/data-model.md:185 :: **清理状态**（`scripts/cleanup_task.py` 的任务产物清理登记；产出与判据见 `SKILL.md` 阶段 6 第 7 条与 `checks.py plan` 检查项 23。
+      references/decision-tables.md:186 :: | **与主类不可互推** | `mode` 与 `self-judge` 的 `category` 是**两个物理量**；**不得用 `category` 反推 `mode`**（见 §九第 7 条） |
+      references/decision-tables.md:240 :: > ⚠️ **dry-run 不改池状态**：`commit` 不加 `--apply` 时池状态**原地不动**（仍为 `观察`）、也**不发 `kb_id`** —— 报告用 `state_before` / `st
+      references/decision-tables.md:287 :: - **v3（2026-09-23，v4.7.0）**：新增第七张表「模式选用决策表」（结构级：要不要叠加作业模式），对应新子模块 `references/homework-judge.md`；原 §七「决策表索引」顺延
+      references/learning-model.md:158 :: > ⚠️ **dry-run 同样地不改池状态**：不加 `--apply` 时池条目**原地不动**（仍为 `观察`），也**不发 `kb_id`** —— 报告用 `state_before` / `state_af
+      references/learning-model.md:253 :: - **v3（2026-09-25，K5 真实池首次运行后的两处修正）**：① `commit` 报告字段含糊 —— 旧写法只给一个 `state`（且取的是**改动前**的值），「入库」桶里显示「观察」，读者会把「已入
+      references/ops.md:44 :: | **verify_push.py**（v3.2.1 自研） | **推送结果的独立验收器**（与三条推送通道**零代码共享**）：`--rev <本地 rev> [--prev-remote <推送前远端 HEAD>
+      references/push-routing.md:50 :: - ⚠️ **创建仓库与首次推送属不可逆对外动作**，须按阶段 2 第 7 条**单独取得用户确认**后再执行，并按阶段 5 第 8 条**附内容清单与可见性**（public 判定须在确认时显式写明）。
+      scripts/checks_judges.py:741 :: """v4.10.0：meta.清理 —— 任务产物清理登记（阶段 6 第 7 条 / 检查项 23）。
+      scripts/checks_judges.py:756 :: "未记录 —— 阶段 6 第 7 条（任务产物清理）本应产出。**只提示不阻断**："
+      scripts/kb_learn.py:897 :: #    `--apply` 把关（实测踩中：一次 dry-run 就把 7 条标成已入库并发了假 `learn-*` id）。
+      tasks/学习模型开源对标与优化-2026-09-25/K5真实池首次运行报告.md:31 :: | `commit`（dry-run） | **入库 7 条（`kb_action=将新增`）／观察 2 条** |
+      tasks/学习模型开源对标与优化-2026-09-25/K5真实池首次运行报告.md:35 :: > ⚠️ **一条必须点出的观察**：首批 9 条里 **7 条达门槛**（`min_evidence=1` + `conf≥0.85` 门槛很浅）。
+      tasks/学习模型开源对标与优化-2026-09-25/K5真实池首次运行报告.md:45 :: | **2** ⭐⭐ | 池状态与 `kb_id` **无条件**写入 ⇒ 一次**不加 `--apply`** 的 commit 就把 7 条标成 `已入库` 并发假 `learn-*` id，**池声称已入库而 KB
+      tasks/学习模型开源对标与优化-2026-09-25/K5真实池首次运行报告.md:75 :: - `tmp/learning-polluted-2nd-20260925-111413/` —— 二轮前，池被**一次 dry-run 谎报**成 7 条 `已入库`。
+      tasks/学习模型开源对标与优化-2026-09-25/K5真实池首次运行报告.md:81 :: 1. **门槛仍是未拟合先验**（`fitted: false`）—— 首批 9 条即 7 条达门槛 ⇒ **门槛偏松**。**不得**据此声称准确率，也**不得**说「门槛设计得当」。
+      tasks/学习模型开源对标与优化-2026-09-25/K5真实池首次运行报告.md:96 :: - 会把上表 **7 条**写入 KB（`id = learn-<key>`，`category = 学习-流程坑`，`tags` 含 `ai-workflow` / `学习沉淀`）。
+      tasks/学习模型开源对标与优化-2026-09-25/tmp/k5_real_pool_log.txt:29 :: 入库桶 7 条 / 观察桶 2 条 / applied=False
+      tasks/学习模型开源对标与优化-2026-09-25/tmp/patch_changelog_k5.py:11 :: - **池已建成**：`~/.workbuddy/kb/learning/`（`pool.jsonl` / `decisions.jsonl` / `state.json` / `archive/2026-09.json
+      tasks/学习模型开源对标与优化-2026-09-25/tmp/patch_changelog_k5.py:13 :: - ⭐⭐ **dry-run 谎报「已入库」（已修，更严重）**：池状态与 `kb_id` 原先**无条件**写入 ⇒ 一次**不加 `--apply`** 的 commit 就把 7 条标成 `已入库` 并发假 `le
+      tasks/学习模型开源对标与优化-2026-09-25/tmp/patch_changelog_k5.py:16 :: - ⚠️ **照实登记（不得读成绿）**：门槛仍是**未拟合先验**（`--stats` 自报 `"fitted": false`），首批 9 条即 **7 条达门槛 ⇒ 门槛偏松**，这是**暂缓 `--apply`*
+      tasks/学习模型开源对标与优化-2026-09-25/tmp/patch_manuals_k5.py:48 :: "**没做的事不得记成做了**：曾实测一次 dry-run 就把 7 条标成 `已入库` 并发了假 `learn-*` id，"
+      tasks/学习模型开源对标与优化-2026-09-25/tmp/patch_manuals_k5.py:55 :: "于是不加 `--apply` 的一次 commit 就把 7 条标成 `已入库` 并发假 id ⇒ 改由 `--apply` 把关，"
+      tasks/学习模型开源对标与优化-2026-09-25/tmp/patch_manuals_k5.py:73 :: "**没做的事不得记成做了**（曾实测：一次 dry-run 就把 7 条标成 `已入库` 并发了假 `learn-*` id）。"]),
+      tasks/学习模型开源对标与优化-2026-09-25/tmp/patch_skill_unreach.py:29 :: # ③ §五 常见坑 加第 7 条
+      tasks/学习模型开源对标与优化-2026-09-25/tmp/patch_skill_unreach.py:51 :: 于是**一次 dry-run**（不加 `--apply`）就把 7 条标成「已入库」并发了 `learn-*` 假 id，
+      tasks/学习模型开源对标与优化-2026-09-25/tmp/patch_skill_unreach.py:83 :: assert back.count("7. **\"刚写入就自证\"时对象拿错") == 1, "§五 第 7 条未落"
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/改动对照表-v3.0.md:54 :: | 五 | 反模式清单 7 条 |
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/plan.yaml:58 :: 预期产出: "两文件更新（阶段 6 第 7 条 + 字段登记）"
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/tmp/apply_gate.py:126 :: "**清理状态**（`scripts/cleanup_task.py` 的任务产物清理登记；产出与判据见 `SKILL.md` 阶段 6 第 7 条"
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/tmp/apply_gate.py:44 :: """v4.10.0：meta.清理 —— 任务产物清理登记（阶段 6 第 7 条 / 检查项 23）。
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/tmp/apply_gate.py:59 :: "未记录 —— 阶段 6 第 7 条（任务产物清理）本应产出。**只提示不阻断**："
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/tmp/apply_hooks.py:126 :: "`SKILL.md`（版本 4.8.0→**4.10.0**；description +触发锚；**阶段 6 新增第 7 条**；核心命令 +`cleanup_task.py`）。\n"
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/tmp/apply_hooks.py:34 :: (SK, "阶段 6 新增第 7 条",
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/tmp/门禁夹具输出.txt:5 :: [WARN] meta.清理 — 未记录 —— 阶段 6 第 7 条（任务产物清理）本应产出。**只提示不阻断**：向后兼容旧 plan，不追认历史计划；本项**不是门禁**
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/SKILL.md:452 :: | 阶段 4 | 产出物**脱敏** | 阶段 4 第 7 条 |
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:11 :: - ⭐⭐ **dry-run 谎报「已入库」（已修，更严重）**：池状态与 `kb_id` 原先**无条件**写入 ⇒ 一次**不加 `--apply`** 的 commit 就把 7 条标成 `已入库` 并发假 `le
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:14 :: - ⚠️ **照实登记（不得读成绿）**：门槛仍是**未拟合先验**（`--stats` 自报 `"fitted": false`），首批 9 条即 **7 条达门槛 ⇒ 门槛偏松**，这是**暂缓 `--apply`*
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:339 :: - **批次 3 —— P5：推送路由细则下沉出常驻上下文**：`SKILL.md` 的「自研工具与技能：标注与公开留痕」整节（含两仓分流表、5 列冲突矩阵、7 条验收判据）**只在阶段 6 沉淀时才需要**，却按"每次
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:489 :: - **R4 独立审核缺粒度规则**：新增第 7 条**优先级**（豁免仅在未命中四类关键产出时适用）与第 8 条**批次规则**（同任务多交付物可合并为一次送审，单批 ≤5 文件，审核者须拿到全部产出物 + 统一验收标
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:75 :: - ⭐ **两套三态枚举不得合并**：`mode`（结构级·模式选用）与 `self-judge` 的 `category`（入口级·产出什么）**字形相近、语义无关**。已写进 `homework-judge.md` 
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:9 :: - **池已建成**：`~/.workbuddy/kb/learning/`（`pool.jsonl` / `decisions.jsonl` / `state.json` / `archive/2026-09.json
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/references__ops.md:43 :: | **verify_push.py**（v3.2.1 自研） | **推送结果的独立验收器**（与三条推送通道**零代码共享**）：`--rev <本地 rev> [--prev-remote <推送前远端 HEAD>
+  【8 条】出现在 34 处：
+      Ledger.md:61 :: - 2026-09-15（v3.1.0）**新增「自研工具与技能：标注与公开留痕」（用户指定）**：起因是任务中常自写脚本补能力缺口，这类产物**既非第三方依赖也非用户既有资产**，不声明来源、不公开留痕则事后无人知道它
+      SKILL.md:419 :: **开发流程（五步，不跳步）**：`dev` 编码 → 本地测试 → commit → 推远程 `dev` → 验证稳定后合并 `main`。其中**推送远端与合并 `main` 属不可逆动作**，按阶段 5 第 8 条
+      SKILL.md:454 :: | 阶段 5 | **出站前扫描** + 对外动作**内容清单与可见性** | 阶段 5 第 5、8 条 |
+      references/decision-tables.md:184 :: | **边界判例锚** | `references/homework-judge.md` §9（8 条判例，供抽样人审对照） |
+      references/git-conventions.md:126 :: | **已推送（非密钥）** | 按阶段 5 第 8 条出**内容清单 + 可见性 + 回滚方式**取得确认 → `git filter-repo` / BFG 重写历史 → 强推 | **高**：重写历史影响所有协作者
+      references/git-conventions.md:147 :: > ⚠️ **第 ④⑤ 步不是"顺手做"的动作**：推远端与合并到 `main` 都改变他人可见的状态，按 SKILL.md 阶段 5 第 8 条**先出内容清单 + 可见性 + 回滚方式**再执行，执行后登记 `met
+      references/git-conventions.md:52 :: 5. **分支迁移是结构变更**：把既有 main-only 仓库改造成 `main` + `dev` 双线，属**对外可见且影响协作**的动作，须先按 SKILL.md 阶段 5 第 8 条出内容清单与回滚方式并取得确
+      references/learning-judge.md:293 :: 4. **V3 不松动门槛**：用户明示纠正只**提高候选的证据权重**，自动入库仍须过 `learning-model.md` §4.2 **六条**（且**状态未冻结** —— 见第 8 条）—— 门槛不在本判定里改
+      references/learning-judge.md:327 :: - §10 新增第 8 条：本判定不负责"这条知识现在能不能动"，并**照实登记 K4 冲突分支曾不可达**这一历史缺陷及其修复；
+      references/playbook.md:92 :: 5. **推送与合并前先出清单**：推远程 `dev`、合并 `main` 都改变他人可见状态 → 按 SKILL.md 阶段 5 第 8 条给内容清单 + 可见性 + 回滚方式（规范 §5 末注）。
+      references/push-routing.md:50 :: - ⚠️ **创建仓库与首次推送属不可逆对外动作**，须按阶段 2 第 7 条**单独取得用户确认**后再执行，并按阶段 5 第 8 条**附内容清单与可见性**（public 判定须在确认时显式写明）。
+      scripts/checks_judges.py:1295 :: # 判据已增至 8 条，只显示前 3 条会把真正的第一因截掉；显示前 4 并**报出总数**
+      scripts/homework_model.py:354 :: # 锚例：取自 references/homework-judge.md §9「判定样例锚」的 8 条边界判例（维度分为本模型推定）
+      scripts/homework_model.py:398 :: # ③ 锚例正向：8 条边界判例的 mode 必须与手册 §9 期望一致
+      tasks/作业模式-ai-workflow-v4.7.0-2026-09-23/plan.yaml:112 :: 预期产出: "契约：mode 三态 Choice + W1–W5 维度 + 阈值路由（0.95/0.70/fail-closed）+ IO 七字段 + 双 Realization + 8 条边界判例"
+      tasks/学习模型开源对标与优化-2026-09-25/K5真实池首次运行报告.md:74 :: - `tmp/learning-polluted-doublerun-20260925-110924/` —— 首轮因**外层误接管道**（`tail` 不存在）中断在第 8 条，但引擎写入**已落盘**，重跑使 `ev
+      tasks/学习模型开源对标与优化-2026-09-25/plan.yaml:66 :: 做什么: "手册与契约同步：learning-model.md（§4.1/4.2/4.3/5/6.1/7/9 + v2）、learning-judge.md（§5 注解/§10 第 8 条/订正五条→六条 + v2）、d
+      tasks/学习模型开源对标与优化-2026-09-25/tmp/k5_real_pool.py:4 :: ⚠️ 本次纠错：上一版脚本因外层误接管道（`tail` 不存在）在第 8 条后中断，
+      tasks/学习模型开源对标与优化-2026-09-25/学习模型开源对标与优化建议.md:320 :: - 检索覆盖 16 个仓库 + 2 篇论文 + 1 综述；拆解出 8 条设计原理、15 项差距对照。
+      tasks/学习模型开源对标与优化-2026-09-25/学习模型开源对标与优化建议.md:322 :: - ⚠️ **诚实边界**：本报告的 8 条原理是**跨项目归纳**，不是经过对照实验验证的因果结论；§5 的各项优化**均未实施、未测**，其收益预期来自同类项目报告与论文 Finding，**不构成"改了一定更好"的
+      tasks/学习模型开源对标与优化-2026-09-25/确认表.md:26 :: | 契约 | `references/learning-judge.md` | §5 表末注解、§10 +第 8 条、§10 第 4 条订正、变更记录 v2 |
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/tmp/_commitmsg.txt:4 :: - references/capability-routing.md：四类能力（知识/算力/事实/手脚）双向判据、决策三步、反合理化红线表 8 条、声明制
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/改动对照表-v3.0.md:103 :: | 反合理化红线表（12 条） | ✅ **取其形、改其义** | 改造为「拦『没想清楚』」而非「拦『没调用』」；8 条 |
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/改动对照表-v3.0.md:43 :: | 五 | **反合理化红线表** 8 条（借其形、改其义：拦的是「没想清楚」，不是「没调用」） |
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/改动对照表-v3.0.md:91 :: | 4 | 工具调用的**时机与选择需有明确判断依据** | `capability-routing.md` 第二、四、五节（决策三步 + 声明制 + 反合理化红线表） | 声明制格式样例；红线表 8 条 |
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/SKILL.md:418 :: **开发流程（五步，不跳步）**：`dev` 编码 → 本地测试 → commit → 推远程 `dev` → 验证稳定后合并 `main`。其中**推送远端与合并 `main` 属不可逆动作**，按阶段 5 第 8 条
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/SKILL.md:453 :: | 阶段 5 | **出站前扫描** + 对外动作**内容清单与可见性** | 阶段 5 第 5、8 条 |
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:129 :: - **验证**：`checks.py skill` 从**工作区根**调用 FAIL 数不增加（⚠️ 从技能根调用会因 `gate.py` 用 `Path.cwd()` 而产生 4 项**假红** —— 这是 v4.4
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:24 :: - **机器侧配套（全部为「新增」，无一处改动既有判据）**：`kb_learn.py` **+13 函数 / +8 常量**（AST 比对证明**原有 30 个函数、既有常量一个未丢**）；`ops.md` 速查表 `
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:402 :: - **盘点的反直觉结论**：问题**不是内容重复**，而是**导航缺失 + 元数据不全 + 跨模块口径分叉**。段落级（≥60 字符）比对**零重复**；32 个技能中 24 个是孤岛（全库仅 8 条互引）。故**没有
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:411 :: - **规则本体（SKILL.md 新增独立小节，唯一事实源）**：先给**判定口径**——同时满足「① 本任务自行编写（非复用第三方、非用户既有资产）② 以文件形式落地」才算自研；**不算**的三种：未落盘的一次性内联
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:434 :: - **新增 `references/capability-routing.md`（能力路由）**：把"外部辅助"拆为**四类能力**（知识＝skill／算力＝子代理／事实＝联网／手脚＝脚本与 MCP），每类给出**该用
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:489 :: - **R4 独立审核缺粒度规则**：新增第 7 条**优先级**（豁免仅在未命中四类关键产出时适用）与第 8 条**批次规则**（同任务多交付物可合并为一次送审，单批 ≤5 文件，审核者须拿到全部产出物 + 统一验收标
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/scripts__checks_judges.py:1242 :: # 判据已增至 8 条，只显示前 3 条会把真正的第一因截掉；显示前 4 并**报出总数**
+  【9 条】出现在 15 处：
+      Ledger.md:15 :: | 2026-09-10 | 正式需求 | ai-workflow v2.5.0 用户体验评估（体验报告 + 可优化方向） | `tasks/体验评估-ai-workflow-v2.5.0-2026-09-10/` 下：
+      references/aesthetic-rubric.yaml:36 :: #   而是判据文本与实现不一致**（本文件第 8-9 条原则「applies_to 必须与 source 语义一致」
+      references/decision-tables.md:284 :: - **v4（2026-09-25，v4.8.0）**：新增第八张表「学习信号判定决策表」（经验级：这次有什么值得学），对应新子模块 `references/learning-judge.md`；原 §八「决策表索引」顺
+      scripts/verify_push.py:570 :: # 手册侧补查关键词，净判据数由 4 条升到 9 条 —— 验收器不得比门禁松。
+      tasks/学习模型开源对标与优化-2026-09-25/K5真实池首次运行报告.md:20 :: **首个批次的选材是关键一手**：9 条全部取自当日**已人工核验**的结论（项目记忆、验收报告、实测输出）⇒ **内容正确性由构造保证**。这样 dry-run 报告里任何异常都能干净归因到**门槛**，而不是「内容对
+      tasks/学习模型开源对标与优化-2026-09-25/K5真实池首次运行报告.md:33 :: | KB 是否被改 | **零改动**：`docs.json` sha256 与基线**完全一致**；池内 9 条状态**全为 `观察`、无 `kb_id`** |
+      tasks/学习模型开源对标与优化-2026-09-25/K5真实池首次运行报告.md:35 :: > ⚠️ **一条必须点出的观察**：首批 9 条里 **7 条达门槛**（`min_evidence=1` + `conf≥0.85` 门槛很浅）。
+      tasks/学习模型开源对标与优化-2026-09-25/K5真实池首次运行报告.md:81 :: 1. **门槛仍是未拟合先验**（`fitted: false`）—— 首批 9 条即 7 条达门槛 ⇒ **门槛偏松**。**不得**据此声称准确率，也**不得**说「门槛设计得当」。
+      tasks/学习模型开源对标与优化-2026-09-25/tmp/k5_real_pool_log.txt:40 :: ✅ 池内 9 条状态全为『观察』、无 kb_id；报告 state_after 未前进
+      tasks/学习模型开源对标与优化-2026-09-25/tmp/k5_real_pool_round2.py:135 :: say("✅ 池内 9 条状态全为『观察』、无 kb_id；报告 state_after 未前进")
+      tasks/学习模型开源对标与优化-2026-09-25/tmp/k5_real_pool_round2.py:4 :: B 重建真实池（移出受污染池 → 9 条 note → 断言每条 新增/evid=1）
+      tasks/学习模型开源对标与优化-2026-09-25/tmp/patch_changelog_k5.py:11 :: - **池已建成**：`~/.workbuddy/kb/learning/`（`pool.jsonl` / `decisions.jsonl` / `state.json` / `archive/2026-09.json
+      tasks/学习模型开源对标与优化-2026-09-25/tmp/patch_changelog_k5.py:16 :: - ⚠️ **照实登记（不得读成绿）**：门槛仍是**未拟合先验**（`--stats` 自报 `"fitted": false`），首批 9 条即 **7 条达门槛 ⇒ 门槛偏松**，这是**暂缓 `--apply`*
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:14 :: - ⚠️ **照实登记（不得读成绿）**：门槛仍是**未拟合先验**（`--stats` 自报 `"fitted": false`），首批 9 条即 **7 条达门槛 ⇒ 门槛偏松**，这是**暂缓 `--apply`*
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:9 :: - **池已建成**：`~/.workbuddy/kb/learning/`（`pool.jsonl` / `decisions.jsonl` / `state.json` / `archive/2026-09.json
+  【10 条】出现在 8 处：
+      assets/templates/选品分析.yaml:15 :: - "跨源聚合前抽样对账 ≥10 条，结论可解释（权重与阈值来源明确）"
+      references/decision-tables.md:281 :: - **v5（2026-09-25，P0 修复）**：§八新增 **8.3 「知识生命周期状态路由」** —— 明确 `state`（`观察`／`冲突`／`待废止`／`已废止`）**是另一个物理量，不是 `kind` 的
+      references/learning-model.md:178 :: > ⚠️ **读侧约定（P0-2 的一部分，**靠人/模型遵守，无机器强制**）**：KB-First 命中一条文档时，若其正文**首行**为 `⚠️ 已废止`，应视为**已被替代**、**不得作为当前口径引用**，并以
+      references/learning-model.md:251 :: - **本版新增的三条诚实边界**（§7 第 8–10 条）：冲突判定仍归模型（登记≠判对）；**池内去重仍是字面级**（同义改写稀释证据计数，属 P1 未做）；**废止不阻止检索命中**（读侧只靠"文档自我标识 + 约
+      references/playbook.md:30 :: 2. **口径一致性校验**：跨源聚合前先抽样对账（抽 10 条人工核验），否则"融合"只是数字堆叠。
+      tasks/学习模型开源对标与优化-2026-09-25/确认表.md:27 :: | 决策表 | `references/decision-tables.md` | +§8.3、§8.2 末行、诚实边界 +第 10 条、变更记录 v5 |
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:24 :: - **机器侧配套（全部为「新增」，无一处改动既有判据）**：`kb_learn.py` **+13 函数 / +8 常量**（AST 比对证明**原有 30 个函数、既有常量一个未丢**）；`ops.md` 速查表 `
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:26 :: - ⚠️ **本次照实登记的三条新边界（§7 第 8–10 条）**：① **冲突判定仍归模型** —— `--contradicts` 只登记不判断，「标了冲突」**不等于**「冲突判定正确」（漏标/误标均无机器判据）
+  【12 条】出现在 6 处：
+      Ledger.md:27 :: | 2026-09-17 | 正式需求 | 修复 `.gitignore` 同路径撞车（v3.4.0 遗留的**结构性开放缺陷**，修法 2：工作区侧弃权）。用户裁决「修法**你定**」+ 越界授权「仅选定修法所需路径」
+      Ledger.md:56 :: - 2026-09-15（v3.0.0）：与外部参照 `obra/superpowers`（286,871 star，MIT）的**口径分界**已写入 SKILL.md「自主决策层」与 `references/ops.m
+      references/capability-routing.md:41 :: > ⚠️ **与 superpowers 的口径差异（有意为之）**：`obra/superpowers` 的 `using-superpowers` 采用**无条件强制**——"只要有 1% 可能某技能适用，你就必须调
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/改动对照表-v3.0.md:103 :: | 反合理化红线表（12 条） | ✅ **取其形、改其义** | 改造为「拦『没想清楚』」而非「拦『没调用』」；8 条 |
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:439 :: - **与强制式机制的分界（重要，防口径漂移）**：外部参照 `obra/superpowers`（286,871 star，MIT，2026-09-14 更新）的 `using-superpowers` 采用**无条件
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:548 :: - `http_fetch.py` 新增 **`--check-links`** 批量探活：只取状态码不下载正文。实战量化——12 条链接串行探活 41.2s 且白下载 3.5MB；新工具并发 8 实测 1.9s（≈40
+  【16 条】出现在 2 处：
+      Ledger.md:51 :: - 2026-09-10：体验评估任务成为「独立审核」的**最强证据**——它拦下了 4 处错误，其中一处是**主代理自己的错误降级**（用不对口的命令反驳体验官指控），以及**16 条被静默丢弃的子代理发现**。结论：
+      references/aesthetic-rubric.yaml:145 :: #   · plumb（aram-devdocs/plumb）16 条设计系统规则，核心形态是 *-conformance
+  【20 条】出现在 4 处：
+      assets/templates/技术调研.yaml:22 :: - "候选方案 ≥20 条且每条含可访问链接；GitHub 指标全部实测（禁二手 star）"
+      references/self-judge.md:278 :: | 抽样 **20 条**历史请求，分类与人工复核一致率 | **人审**（未证实前只报"**一致率**"，**不声称"准确率"**；一致率的合格阈值本身仍标"约定阈值"，本版**未定值**） |
+      references/self-judge.md:318 :: - **同版返修（首轮独立复核 6 项不通过后补齐；返修过程中另发现「同一消息多 Edit 只部分落盘」的坑，改用按行锚点脚本）**：① 声明 §3 不采用自我一致性（M1）② §1.1 修正"既有字段"事实错误、补全来
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:479 :: - **`checks.py` 交付物路径候选收敛为仅 `base/<p>`**：移除 `~/.workbuddy/<p>`（固定前缀兜底，使工作区内不存在的交付物被同名文件"救活"）与 `base.parent/<p>
+  【21 条】出现在 3 处：
+      Ledger.md:112 :: 1. **⭐ 对照实验必须回退「全部」相关改动，否则 import 链断裂会制造假象**。为证明 `gate.py` 的 FAIL 与本次改动无关，我只回退了 `checks_core.py` 一处改动，而 `check
+      Ledger.md:29 :: | 2026-09-17 | 正式需求 | **ai-workflow v3.5.0 落地《5.12 改进建议优先级》六项**（P0-1 红线③机器化／P0-2 出站扫描第 4 项提升为推送前判据／P0-3 口径守卫／P
+      Ledger.md:98 :: 7. **核验脚本必须自证取数形状 —— 取错形状不会报错，只会安静地全绿**。收尾做「写盘后定点复核」时，**首跑报「13 个文件 FAIL=0」**，因与 §⑤ 记录的 `FAIL=5` **互相矛盾**才被察觉。根
+  【29 条】出现在 8 处：
+      scripts/checks_core.py:281 :: 判据集：`references/aesthetic-rubric.yaml`（29 条）；校验器：`scripts/check_aesthetics.py`。
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/基线固证.txt:21 :: [ OK ] 文档引用完整性 — 检查 29 条引用
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/tmp/apply_hooks.py:135 :: "「**29 条**」，而 `SKILL.md` 与判据集写「**30 条**」（同一物理量两处口径，违反技能自身第 4 条硬约定）。\n"
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/tmp/apply_hooks.py:61 :: "judge集 references/aesthetic-rubric.yaml（29 条）".replace("judge集", "判据集"),
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:474 :: - **验证**：`checks.py skill` **19/19 FAIL=0**（修好上述回归后；文档引用完整性检查 29 条）；标题／frontmatter／本条目三处版本号均为 **2.6.2**；`grep 
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/assets__plan-template.yaml:93 :: #   校验器 scripts/check_aesthetics.py ＋ 判据集 references/aesthetic-rubric.yaml（29 条）
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/scripts__checks_core.py:272 :: 判据集：`references/aesthetic-rubric.yaml`（29 条）；校验器：`scripts/check_aesthetics.py`。
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/确认表.md:72 :: 3. `plan-template.yaml` 写审美判据「**29 条**」，`SKILL.md` 写「**30 条**」—— 同一物理量两处口径，违反技能自身第 4 条硬约定。
+  【30 条】出现在 16 处：
+      SKILL.md:286 :: - **设计类产物（交付物含 `.css`）另须跑 `check_aesthetics.py`**（v4.9.0）：判据集 `references/aesthetic-rubric.yaml`（30 条），逐产物或 `-
+      SKILL.md:573 :: | `references/aesthetic-rubric.yaml` | **审美判据集**（30 条，v4.9.0 建 / **判据集 v1.6**）：由 `scripts/check_aesthetics.py`
+      SKILL.md:608 :: check_aesthetics.py --rubric <判据集> --css <产物> [--spec <文档>] [--product ui|ppt|chart|image] [--geom <渲染色.json>]
+      assets/plan-template.yaml:93 :: #   校验器 scripts/check_aesthetics.py ＋ 判据集 references/aesthetic-rubric.yaml（30 条）
+      references/ops.md:29 :: | **checks.py** | `skill` 技能自检（frontmatter/引用完整性/模板 schema/py_compile）；`plan` 计划校验 + Anti-drop 对账 + **熔断门禁**（`
+      references/ops.md:51 :: | **check_aesthetics.py**（v1.7.0 自研；随技能发行） | **审美判据校验器**（`check_aesthetics.py --rubric <判据集>`）：对 CSS / spec / 
+      scripts/check_aesthetics.py:265 :: ⚠️ 本版**未改判据集**：`aesthetic-rubric.yaml` 条文与阈值一字未动（判据仍 30 条）。
+      tasks/学习模型开源对标与优化-2026-09-25/学习模型开源对标与优化建议.md:243 :: 建一个**不用于拟合、只用于防退化**的验收集（如 20–30 条已标注的历史信号：`text` → 期望 `kind` / 期望去向），跑 `kb_learn.py` 得**对照表**并**配对比较**；报告里**必须
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/tmp/apply_hooks.py:135 :: "「**29 条**」，而 `SKILL.md` 与判据集写「**30 条**」（同一物理量两处口径，违反技能自身第 4 条硬约定）。\n"
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/tmp/apply_hooks.py:62 :: "判据集 references/aesthetic-rubric.yaml（30 条）"),
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/SKILL.md:286 :: - **设计类产物（交付物含 `.css`）另须跑 `check_aesthetics.py`**（v4.9.0）：判据集 `references/aesthetic-rubric.yaml`（30 条），逐产物或 `-
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/SKILL.md:572 :: | `references/aesthetic-rubric.yaml` | **审美判据集**（30 条，v4.9.0 建 / **判据集 v1.6**）：由 `scripts/check_aesthetics.py`
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/SKILL.md:606 :: check_aesthetics.py --rubric <判据集> --css <产物> [--spec <文档>] [--product ui|ppt|chart|image] [--geom <渲染色.json>]
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/references__ops.md:29 :: | **checks.py** | `skill` 技能自检（frontmatter/引用完整性/模板 schema/py_compile）；`plan` 计划校验 + Anti-drop 对账 + **熔断门禁**（`
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/references__ops.md:50 :: | **check_aesthetics.py**（v1.6.0 自研；随技能发行） | **审美判据校验器**（`check_aesthetics.py --rubric <判据集>`）：对 CSS / spec / 
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/确认表.md:72 :: 3. `plan-template.yaml` 写审美判据「**29 条**」，`SKILL.md` 写「**30 条**」—— 同一物理量两处口径，违反技能自身第 4 条硬约定。
+  【35 条】出现在 3 处：
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/回归证据.txt:21 :: [ OK ] 文档引用完整性 — 检查 35 条引用
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/返修复查-独立复核.md:21 :: | 7 | `checks.py skill` | **19/19 通过，FAIL=0**（引用 35 条） |
+      tasks/技能增强-ai-workflow-v3.0-2026-09-15/返修复查-独立复核.md:229 :: [ OK ] 文档引用完整性 — 检查 35 条引用
+  【50 条】出现在 17 处：
+      SKILL.md:349 :: **聚合与一致率（v4.7.0 补，2026-09-23）**：`scripts/homework_model.py` 把「W1–W5 → 三态分布」这一段落成**确定性聚合**（`aggregate`，公式即契约 §5
+      references/homework-judge.md:192 :: §7.3 原写：「切换 B 为主判据需**温度拟合 + ≥50 条 A/B 一致率达标**，阈值未定值」。
+      references/homework-judge.md:209 :: | ≥50 条**真机** B 侧输出（服务须先常驻） | 服务可用后跑；本轮服务未运行，**真机样本 0 条** |
+      references/homework-judge.md:339 :: 「≥50 条 A/B 一致率」**结构上永远无法满足** —— 写了一条不可能被满足的验收条款。
+      references/laya-backend.md:117 :: 2. N ≥ 50 条历史请求上 A/B **一致率**达标（阈值本身**未定值**；口径同 `self-judge.md` §10：只报"一致率"，**不声称"准确率"**）。
+      references/self-judge.md:231 :: > **时点注记（2026-09-23，v4.6.1）**：上述 **2026-09-22 的口径保持不变**（**只上 A**，B 不启用为判定主判据）。本机另已把 Realization B 的**本地落地实测打通*
+      tasks/作业模式-ai-workflow-v4.7.0-2026-09-23/自检报告.md:76 :: 2. 若要正式启用 Realization B 为主判据，前提（温度拟合 + ≥50 条 A/B 一致率阈值）**仍未闭环**。
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/SKILL.md:348 :: **聚合与一致率（v4.7.0 补，2026-09-23）**：`scripts/homework_model.py` 把「W1–W5 → 三态分布」这一段落成**确定性聚合**（`aggregate`，公式即契约 §5
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:100 :: - ⚠️ **未验证（不含糊）**：温度拟合（P1 前提**未闭环**）、一致率合格阈值（**未定值**，需 ≥50 条历史请求对拍）、`transformers 5.17.0` 跨大版本（laya 声明 `>=4.48
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:43 :: - **为什么需要（这是本次唯一的立论）**：上一版契约把 §5 的阈值挂在 `confidence` 上，却**没有定义它从哪来** —— 「维度分 → 分布」这一段是黑箱（藏在 Laya 内部，或每次现场即兴）。后果
+      tasks/模式选用模型-ai-workflow-v4.7.0-2026-09-23/plan.yaml:45 :: 依据: "客观缺口在 v4.7.0 契约 §7.3 已登记：「B 升为主判据」需 ≥50 条 A/B 一致率，但 A 侧（脑内协议）**没有可复现实现** → 一致率测的是噪声、出口条件结构上无法闭环。凡「要求测量 X」
+      tasks/模式选用模型-ai-workflow-v4.7.0-2026-09-23/plan.yaml:8 :: 复盘沉淀: "【做成了什么】补齐 v4.7.0 契约中被漏掉的一段：聚合。此前 homework-judge 只定义到「给 W1–W5 打分」，而「维度分 → 三态分布 → mode → 档位」是黑箱（藏在 Laya 内
+      tasks/模式选用模型-ai-workflow-v4.7.0-2026-09-23/tmp/_update_memory.py:16 :: 「≥50 条 A/B 一致率」因 **A 侧没有可复现实现**（脑内协议每次现场给分布）而**结构上永远无法被满足**。
+      tasks/模式选用模型-ai-workflow-v4.7.0-2026-09-23/tmp/_update_memory.py:32 :: LESSONS = """- **「要求测量 X」的条款，先问 X 由谁、以什么可复现的方式算出来**：v4.7.0 契约写了「≥50 条 A/B 一致率达标」，
+      tasks/模式选用模型-ai-workflow-v4.7.0-2026-09-23/确认表.md:18 :: 2. 后果是 A 侧判定**不可复现** ⇒ §7.3 的出口条件「≥50 条 A/B 一致率」**结构上无法被满足**（该「未闭环」是上一版契约自己登记在案的）。
+      tasks/模式选用模型-ai-workflow-v4.7.0-2026-09-23/自检报告.md:26 :: 2. §7.3 的出口条件「**N ≥ 50 条 A/B 一致率达标**」**结构上永远无法被满足** —— 这是一条不可能被满足的验收条款。
+      tasks/模式选用模型-ai-workflow-v4.7.0-2026-09-23/自检报告.md:70 :: | ≥50 条真机 B 侧输出（服务须先常驻） | 服务可用后跑 |
+  【100 条】出现在 2 处：
+      tasks/作业模式-ai-workflow-v4.7.0-2026-09-23/tmp/门禁输出.txt:14 :: [ OK ] 文档引用完整性 — 检查 100 条引用
+      tasks/学习模型开源对标与优化-2026-09-25/tmp/readmes/IAAR-Shanghai__Awesome-AI-Memory.md:4852 :: • 论文报告该设计在直接召回上匹配每用户LoRA，间接推理准确率平均提高5.6倍，记忆占用约缩小33000倍，并在约100条事实后超过使用更大模型的检索流水线；其适用性则依赖底层模型具备可编辑的Engram记忆结构。
+  【110 条】出现在 7 处：
+      tasks/学习模型开源对标与优化-2026-09-25/P0落地验收报告.md:30 :: | 5 | 文档引用 | 文档引用完整性 | **110 条引用全解析**（无断链） |
+      tasks/学习模型开源对标与优化-2026-09-25/plan.yaml:67 :: 验证方式: "checks.py skill 口径守卫「学习类型」仍三源一致（**枚举零改动**）；文档引用完整性 110 条无断链；FAIL=0 WARN=0"
+      tasks/学习模型开源对标与优化-2026-09-25/tmp/p0_acceptance_log.txt:11 :: [ OK ] 文档引用完整性 — 检查 110 条引用
+      tasks/学习模型开源对标与优化-2026-09-25/tmp/p0_acceptance_log.txt:81 :: [ OK ] 文档引用完整性 — 检查 110 条引用
+      tasks/技能增强-ai-workflow-v4.8.0-2026-09-25/tmp/acceptance-log.txt:11 :: [ OK ] 文档引用完整性 — 检查 110 条引用
+      tasks/技能增强-ai-workflow-v4.8.0-2026-09-25/tmp/acceptance-log.txt:74 :: [ OK ] 文档引用完整性 — 检查 110 条引用
+      tasks/技能增强-ai-workflow-v4.8.0-2026-09-25/验收报告.md:55 :: | 12 | 文档引用完整性 | `checks.py skill` 内 | 检查 **110 条引用**，无断链 |
+  【140 条】出现在 2 处：
+      references/ops.md:183 :: **硬规则**：子代理产出的链接**必须全量探活后才可进交付物**。实战数据：140 条中查出 3 条 404，其中 1 条是**编造的日期型假链接**，且它正被用于支撑一条结论。
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/references__ops.md:182 :: **硬规则**：子代理产出的链接**必须全量探活后才可进交付物**。实战数据：140 条中查出 3 条 404，其中 1 条是**编造的日期型假链接**，且它正被用于支撑一条结论。
+  【1000 条】出现在 4 处：
+      scripts/http_fetch.py:143 :: SEARCH_RESULT_CAP = 1000       # 每次搜索最多返回 1000 条（=10 页 x 100）
+      scripts/http_fetch.py:485 :: 官方硬限制：每次搜索最多 1000 条结果、最多扫 4000 个匹配仓库；q ≤256 字符；
+      scripts/http_fetch.py:577 :: - 认证后限流 10 次/分钟，匿名不可用；结果同样受 1000 条上限约束。
+      tasks/技能增强-ai-workflow-v4.10.0-2026-09-27/基线/_archive__changelog.md:540 :: - **补 P0｜GitHub 只能取不能搜** → `http_fetch.py` 新增 **`--github-search "<query>"`** + `--search-sort` + `--search-li
+
+==============================================================================
+扫描面：257 个文件（已排除 _archive / _backup / __pycache__ / .git）

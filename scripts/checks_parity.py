@@ -30,6 +30,8 @@ from checks_core import (  # noqa: F401
     VALID_COMMIT_TYPES,
     VALID_TRIGGER,
     HOMEWORK_MODES,
+    CLEANUP_STATES,
+    LEARNING_KINDS,
     _BARE_CELL,
     _DECL_BEGIN,
     _DECL_END,
@@ -148,6 +150,45 @@ def _p_homework_modes(text: str) -> set:
         return vals
     if isinstance(data, dict) and isinstance(data.get("homework_judge"), dict):
         crit = (data["homework_judge"].get("mode") or {}).get("criteria") or {}
+        vals |= set(crit)
+    return vals
+
+def _p_learning_kinds(text: str) -> set:
+    """学习类型（v4.8.0）—— **一个物理量、三种载体**：
+
+      · **手册表格**（`references/learning-judge.md` §1 与 `references/data-model.md` §2.2 镜像）：
+        `| **偏好** | …` —— 首格是**加粗中文词**。
+      · **模板 json**（`scripts/judges.json` 的 `learning_judge.kind.criteria`）：走 json 解析。
+
+    ⚠️ **表头锚点刻意取 `| 学习类型 | 含义 |` 而非 `| 类型 | 含义 |`**：后者是「提交类型」
+    守卫（`_p_commit_types`）的锚点，而两者同处 `data-model.md` —— 撞锚会让
+    `_p_commit_types` 的 `re.search` 命中本表，把 `偏好/领域知识/…` 并进**提交类型**集合
+    → 假 FAIL。这与 v4.6.0「提交类型」首版并进分支名、v4.7.0「作业模式」首版并进档位表
+    **同型**，修法同取**结构性锚定**（起一个别处不用的表头），而不是"约定别处别用加粗"。
+
+    ⚠️ 与「模型档位」守卫同处 `data-model.md`，而 `_p_tiers` 只认 `| **小写英文词** |` ——
+    本表用**中文**加粗，与之**正交**，故不会互相污染。
+
+    ⚠️ 并集模型固有边界（与既有 9 项共有，如实登记）：**"多写"会 FAIL，"少写"不会**。
+    """
+    vals: set = set()
+    m = re.search(r"^\|\s*学习类型\s*\|\s*含义\s*\|\s*$", text, re.M)
+    if m:
+        block: list[str] = []
+        for ln in text[m.end():].splitlines():
+            if ln.strip().startswith("|"):
+                block.append(ln)
+            elif block:
+                break
+        vals |= {x.strip() for x in re.findall(r"^\|\s*\*\*([^*|]+?)\*\*\s*\|", "\n".join(block), re.M)}
+    # judges.json 分支：json 解析成功且含 learning_judge 才取值；md 文件解析失败 → 静默跳过
+    # （源文件读不到由 _check_parity 的主循环兜，不在这里造第二个 FAIL 源）
+    try:
+        data = json.loads(text)
+    except (ValueError, TypeError):
+        return vals
+    if isinstance(data, dict) and isinstance(data.get("learning_judge"), dict):
+        crit = (data["learning_judge"].get("kind") or {}).get("criteria") or {}
         vals |= set(crit)
     return vals
 
@@ -344,6 +385,36 @@ def _check_parity(skill_dir: Path) -> None:
             scope = f"{label_src}（读得 {len(paths) - len(missing)} 个文件，取并集）" if len(paths) > 1 else label_src
             ok(f"口径守卫：{label}", f"{scope} ↔ {want_s}（{len(want)} 项一致）")
 
+
+def _p_cleanup_states(text: str) -> set:
+    """清理状态（v4.10.0）—— **一个物理量、两种载体**：
+
+      · **模板注释行**（`assets/plan-template.yaml`）：`· 状态(必填)：已清理 / 无待清理项 / 未完成 / 已拒绝`
+        —— 这是**可执行副本**（执行者照着它填）；
+      · **受守卫镜像**（`references/data-model.md` §2.2）：`| 清理状态 | 含义 |` 表。
+
+    ⚠️ 刻意**不复用** `_p_status`：后者锚定 `# status 取值:` 那一行（待办/进行中/完成/受阻/熔断）。
+      「清理状态」与「步骤状态」字形相近但语义无关（同「学习类型 vs 主类」的分界），
+      共用解析路径会让两者互相污染。
+    """
+    vals: set = set()
+    m = re.search(r"状态\(必填\)\s*[:：]\s*(.+)$", text, re.M)
+    if m:
+        vals |= {x.strip() for x in re.split(r"[/／]", m.group(1)) if x.strip()}
+    m2 = re.search(r"^\|\s*清理状态\s*\|\s*含义\s*\|\s*$", text, re.M)
+    if m2:
+        block: list[str] = []
+        for ln in text[m2.end():].splitlines():
+            if ln.strip().startswith("|"):
+                block.append(ln)
+            elif block:
+                break
+        for cell in re.findall(r"^\|\s*([^|]+?)\s*\|", "\n".join(block), re.M):
+            c = cell.strip().strip("`*")
+            if c and not re.fullmatch(r"[-:\s]+", c):
+                vals.add(c)
+    return vals
+
 PARITY_ITEMS = (
     # v4.4.0+（P0-1，2026-09-21）：每项源规格**追加 `references/data-model.md`** ——
     # 把该文件作为各枚举的**受守卫镜像**（中心注册表）。多源取并集比对，故 data-model.md
@@ -367,6 +438,16 @@ PARITY_ITEMS = (
     #   不纳入源，则"改手册忘改模板"不会报错（而模板错了会让 Laya 判出枚举外取值）。
     ("作业模式", ("references/homework-judge.md", "references/data-model.md", "scripts/judges.json"),
      _p_homework_modes, HOMEWORK_MODES),
+    # v4.8.0 新增「学习类型」：**三源**（手册 + 受守卫镜像 + 模板 json）—— 与「作业模式」同型。
+    #   ⚠️ 解析器锚定表头 `| 学习类型 | 含义 |`（**刻意不用** `| 类型 | 含义 |`，
+    #   后者是「提交类型」的表头锚点；同处 data-model.md 会撞锚 → 假 FAIL）。
+    ("学习类型", ("references/learning-judge.md", "references/data-model.md", "scripts/judges.json"),
+     _p_learning_kinds, LEARNING_KINDS),
+    # v4.10.0 新增「清理状态」：**两源**（模板注释行 + 受守卫镜像）—— 与「步骤状态」同型但**刻意分家**。
+    #   ⚠️ 模板侧才是**可执行副本**（执行者照着填），故解析器锚 `· 状态(必填)：A / B / C / D`；
+    #      镜像侧锚表头 `| 清理状态 | 含义 |`（避开 `| 类型 |` 与 `| 学习类型 |` 两处已占用锚点）。
+    ("清理状态", ("assets/plan-template.yaml", "references/data-model.md"),
+     _p_cleanup_states, CLEANUP_STATES),
     # ⚠️「入口判定主类」**不在本表内**（v4.2.0 第五轮换口径后由 `_check_category_decl` 单独判）：
     # 本表的模型是「若干源 → 一个解析器 → 一个集合」，多源时取并集比对；而主类那项需要
     # **跨文件的唯一性判定（源规格面内）**（声明块须恰一处），并集模型表达不了它 ——

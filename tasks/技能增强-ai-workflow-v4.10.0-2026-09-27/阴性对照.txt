@@ -1,0 +1,30 @@
+=== cleanup_task.py selftest（含阴性对照）原始输出 ===
+命令: python scripts/cleanup_task.py selftest
+时间: 2026-09-27
+
+  [ OK ] S1 dry-run 退出码 0  —— exit=0
+  [ OK ] S1 未删除任何文件
+  [ OK ] S1 保护名单项不出现在待删清单
+  [ OK ] S1 交付物不出现在待删清单
+  [ OK ] S1 保护项被显式列出并说明理由
+  [ OK ] S2 --apply 退出码 0  —— exit=0
+  [ OK ] S2 tmp/ 中间产物已清除
+  [ OK ] S2 tmp/ 子目录一并清除
+  [ OK ] S2 交付物仍在
+  [ OK ] S2 tmp 内的交付物仍在（交付物优先于容器约定）
+  [ OK ] S2 tmp 内的保护名单项仍在
+  [ OK ] S2 生成了清理清单
+  [ OK ] S2 幂等：重跑报无待清理项  —— exit=0
+  [ OK ] S3 阴性对照（撤掉 PROTECT_NAMES）→ 保护名单项被删除  —— 撤掉后仍删不掉 ⇒ 该保护不是它实现的（假绿）
+  [ OK ] S4 阴性对照（撤掉交付物保护）→ tmp 内的交付物被删除  —— 撤掉后仍删不掉 ⇒ 该保护不是它实现的（假绿）
+  [ OK ] S5 阴性对照（有步骤未完成）→ 拒绝 exit 2  —— exit=2
+  [ OK ] S5 拒绝时未删除任何文件
+  [ OK ] S6 阴性对照（熔断状态=已熔断）→ 拒绝 exit 2  —— exit=2
+  [ OK ] S6 拒绝时未删除任何文件
+  [ OK ] S7 T3：对账未清零即拒绝
+  [ OK ] S7 T3：对账清零才放行
+  [ OK ] S8 tmp 不存在时 --apply 幂等 exit 0  —— exit=0
+
+==== selftest：22/22 通过，FAIL=0 ====
+
+[exit] 0

@@ -27,8 +27,10 @@ from checks_parity import (  # noqa: F401
     _check_parity,
 )
 from checks_judges import (  # noqa: F401
+    _check_aesthetic,
     _check_autonomy,
     _check_category_decl,
+    _check_cleanup,
     _check_closure,
     _check_entry_verdict,
     _check_fuse,
@@ -36,6 +38,8 @@ from checks_judges import (  # noqa: F401
     _check_homework_sample,
     _check_homework_verdict,
     _check_irreversible,
+    _check_learning_sample,
+    _check_learning_verdict,
     _check_method_select,
     _check_method_select_sample,
     _check_model_tiers,
@@ -244,8 +248,17 @@ def check_plan(plan_path: Path, base: Path) -> int:
     # v4.7.0：检查项 18 = 作业判定结构合法（+ 派生字段自洽）；19 = 抽样人审指路（只 WARN）
     _check_homework_verdict(meta)
     _check_homework_sample(meta)
+    # v4.8.0：检查项 20 = 学习判定结构合法（+ needs_learning 派生自洽 + 『无』组合非法）；21 = 抽样人审指路（只 WARN）
+    _check_learning_verdict(meta)
+    _check_learning_sample(meta)
     _check_autonomy(meta)
     _check_selftools(meta, steps, base)
+    # v4.9.0：检查项 22 = 审美判据门禁（设计类产物：交付物含 .css）。与上面几条**不同族** ——
+    # 它不做识别，也不信 plan 里自报的数字：登记了产物，就把校验器**实跑一遍**，跑出 FAIL 即 FAIL。
+    _check_aesthetic(meta, steps, base)
+    # v4.10.0：检查项 23 = 任务产物清理登记（可选字段；缺省 WARN、填写须合法；
+    #   登记了 `清单` 却解析不到文件即 FAIL）。与检查项 22 同源口径：可选、填了就不能糊弄。
+    _check_cleanup(meta, plan_path)
     _check_stage_gates(steps)
     _check_model_tiers(steps)
     _check_reflection_retry(meta, steps)

@@ -1,0 +1,482 @@
+# 审美判据集（Aesthetic Rubric）
+# 任务：AI 审美提升方案 · 2026-09-26
+# 用途：把「好看」拆成可枚举、可机器校验的判据。校验器 scripts/check_aesthetics.py 直接消费本文件。
+#
+# 设计原则
+#   1. 每条判据的阈值必须有来源（source 字段），不得凭空设定
+#   2. 判据必须标注「可判定性」，把「通过 / 未检测 / 无法判定」分开报
+#   3. 判据的**适用范围**（applies_to）必须与 source 的语义一致 —— 源讲「画面内」的，
+#      不得声明适用于 token 表
+#   4. 阈值可被具体产物覆盖（见 override 用法），但覆盖必须留痕
+#
+# 可判定性三档（对应 SOUL.md「绿有三种」）
+#   machine — 可从产物（CSS/HTML）直接量出，校验器自动判
+#   spec    — 需从 spec 文档解析声明值，校验器半自动判
+#   manual  — 机器判不了，显式登记为人审点（不是「通过」，是「未检测」）
+#   external— 由外部工具判定，本校验器不重复实现
+#
+# ⭐ v1.1（2026-09-26）变更摘要（逐条可复核，旧判定值一个未改）
+#   A. 修一处**真 bug**：G7 原先把 caption/body/h/display 的**全部**字号混在一个序列里
+#      算相邻阶比 ⇒ 21/21 套全 FAIL，其中 **15/21 是跨体系相邻造成的假阳性**。
+#      本版新增 group_by，按令牌角色前缀**分组**后只在组内算阶比；无令牌命名时
+#      降级为整体序列并在 detail 显式标注（不假装分过组）。
+#   B. 收窄 G7 的 applies_to：[ui, ppt] → [ppt]。依据是其 source 讲的是**投影阅读距离**
+#      （「经典模数 1.25 在投影上看不清」），对屏幕场景不成立。
+#   C. G3/G4/G5 的 source 改引**可外部复核的契约原文**（WCAG 2.1 + ui 库
+#      schema.json#contrast），阈值一字未改。G4 补注说明它与 fg-muted 的区别。
+#   D. G1/G6 补 note，显式声明它们计量的是「**单页画面内**」的量，并指向 token 层的对应判据。
+#   E. 新增 5 条判据：G11 调色板可辨识性 / G12 字号刻度一致性 / G13 时长刻度一致性 /
+#      G14 中等次要文字对比度 / G15 强调色可用性。其中 G14 补的是**真实覆盖缺口**
+#      （契约里 fg-muted 门槛 4.5，v1.0 无判据）。
+#   F. 新增 override 用法（v1.0 表头承诺但无实现，属悬空承诺 —— 本版落地）。
+#
+# ⭐ v1.2（2026-09-26）变更摘要 —— **首次在「真实 deck 渲染页」上实测**后回头改判据
+#   起因：v1.1 的 R 组只在自造夹具页上跑过。把 ui库 dist-demo 真实渲染页（真 Chrome+CDP）
+#   的几何喂进来后，G1/G6/R1/R2/R3 **全 FAIL**；逐条取证发现**都不是产物的毛病，
+#   而是判据文本与实现不一致**（本文件第 8-9 条原则「applies_to 必须与 source 语义一致」
+#   被自己的实现违反了）：
+#   G. G1/G6 的**输入**改为渲染结果（`--geom`）：本条 note 早就写明「token 表不适用」，
+#      实现却拿令牌清单顶「画面内」口径 ⇒ 21 套主题 21/21 假 FAIL。缺渲染色判 SKIP。
+#   H. R1 修 `_flush_miss` 的 `int()` 簇心截断（凭空造出 ≤1px 假差，实测 10 处），
+#      并新增**噪声地板** `noise_px: 0.5`（亚像素差眼睛看不出，而规则要的是 the eye notices）。
+#   I. R2 改为先判「**并排同行**」再比高度（原按 parent 分组会把竖排的标题/副标题当一行，
+#      实测报出「高 528%」）；无可比并排行 ⇒ SKIP，不是 PASS。
+#   J. R3 **必须声明韵律网格**（去掉默认 8px）：ui库 schema.json#spacing 明确「不强行归并」，
+#      该设计系统根本没有 baseline 网格，硬套 8px 是判据凭空发明契约。
+#   K. R1/R2 的**空节点集**不再判 PASS（没数据不得冒充没问题）。
+#   ⚠️ 本轮**没有**为了让 FAIL 消失而放宽容差/删判据：G1/G6 换成真实渲染输入后照样能 FAIL；
+#      R1 的 1.2px 真错位、R2 的 30% 真漂移、R3 声明网格后的 4px 离格，全部仍判 FAIL（均有对照）。
+#
+# ⭐ v1.3（2026-09-27）变更摘要 —— 「请闭环」四项待拍板的落地：**一处阈值都没动**
+#   起因：v1.2 跑完 21 套真实 deck 页后仍留 49 处 FAIL（G6 21 / G7 21 / G11 7）。
+#   逐条追证据后：**49 处全部是判据自己的口径问题，产物排版是对的**。
+#   L. G6 把**容器继承的字号**当成了「层级」（假 FAIL 的第二真因）。真实封面
+#      `.ui-deck__slide` 根容器继承 14px、装饰 span 继承 26px，**都没有一个字**，
+#      却把真值 4 档抬成 6 档 ⇒ 改为**只统计承载文字的节点**。max 仍 4。
+#   M. G7 把**引号字形**并进了引文的刻度（假 FAIL 的第二真因）。原按「第一段词」分组，
+#      于是 `size-quote`(42px) 与 `size-quote-mark`(150px，自带 font/weight/leading/
+#      tracking/color 五个独立令牌) 同组，阶比 3.571 ⇒ 改为按**完整角色段**分组。
+#   N. G11 把**层级底色**当成了「该合并的重复色」（7 套假 FAIL 的真因）。7 处**全部**是
+#      bg ↔ bg-alt ↔ card-bg（ΔE00 0.61–1.96），**无一涉及 accent/fg** ⇒ 作用域**收窄到语义色**，
+#      被排除的令牌**逐条打印**（可审计）。新增可选 `params.layer_name_re`。
+#   O. **G4/G5 决定不动**（保持 3.0）：WCAG 2.1 AA 为现行有效标准，WCAG 3 未定稿、
+#      APCA 未成为标准。此条写明理由，避免下一轮又被当成"待办"重复提出。
+#   ⚠️ 三条修复**一条阈值都没改**（max:4 / [1.2,1.8] / ΔE00 2.0 / 3.0 全部原样），
+#      改的只是「这条判据该吃哪个输入」；每条都配**阴性对照**证明判据仍有牙齿。
+#
+# ⭐ v1.4（2026-09-27）变更摘要 —— G12/G13/R3 的**可达性审计**（**一条阈值都没动**）
+#   起因：v1.3 收尾留下「G12/G13/R3 在真实产物上仍是 no-op」。本版做的是**判定可达性**，
+#   而**不是**「想办法让它们跑起来」——「跑起来」有两条路，其中一条会**制造绿灯**：
+#   P. G12/G13 **自证式刻度护栏**。实测取证：ui库 21 套主题的生成 CSS 里 raw `font-size:`
+#      数 = **0**，`sizes` 与 `--deck-size-*` 令牌集**逐值相同**（时长同理）。若把
+#      「产物自己的令牌集」填进 `params.scale`，则 `被检值 ⊆ 刻度` **恒成立** ⇒ 恒 PASS。
+#      那不是启用，是**制造绿灯**（比 no-op 更坏，no-op 至少诚实报「未检测」）。
+#      ⇒ 检出「刻度集 ≡ 被检 CSS 自身导出的刻度集」即判 SKIP；正确形态是**两侧分离**。
+#   Q. G13 的 **0ms 不参与判定**：`animation-delay: 0s` 被 DUR_RE 收进 durations 后
+#      被当成「不在刻度内」。0 是「无延迟」，**不是刻度上的一档**；排除数量在 detail 显式报出。
+#      ⚠️ 与 P 不同，这条**不是放宽**：非 0 的离格值照样 FAIL（有阴性对照）。
+#   R. R3 **三种 SKIP 分开措辞**：缺渲染色（未检测）／未声明网格（**结构性不适用**）／
+#      有网格才真判。ui库 未声明任何 baseline 网格 ⇒ 该 SKIP 是**正确终态**，不是待办。
+#   S. G12/G13 的**正确启用形态**写入 note：声明侧（独立规范/令牌文件）与被检侧（使用侧
+#      CSS：布局/组件层会有不出现在令牌里的硬编码值）必须**分离**，不得同源。
+#   ⚠️ 阈值原样：`tolerance_px 0.5` / `tolerance_ms 1.0` / 无默认 `baseline_px`。
+#
+# ⭐ v1.5（2026-09-27）变更摘要 —— **delay/stagger 与 duration 分家 + `--scale-from` 挂进常规跑批**
+#   （**一条阈值都没动**：`tolerance_px 0.5` / `tolerance_ms 1.0` 原样）
+#   T. ⚠️ **复测推翻了 v1.4 的一句读数**：v1.4 写「G13 离格值集合恰好 `[200.0]`」——
+#      该句是从 detail **字符串反解**的（`split("：")[1].split("（")[0]`），而 detail 只打印
+#      `off[:6]`，于是「前 6 个」被读成了「全部」。按「**上一轮的结论 = 待复测假设**」重测：
+#      真实离格值 **6 个**（`180 / 200 / 300 / 440 / 600 / 780` ms）。
+#      ⇒ **读数必须由原始数据统计，不得从被截断的展示字符串反解。**
+#   U. **取数口径：`delay` 不是 `duration`**。原实现按**行**扫 `(animation|transition)`，
+#      于是 `animation-delay: 0.08s` 这类**错峰阶梯**也被当成「时长」（ui库 `Deck.css`
+#      L386-393 一整条 stagger 序列因此被判离格）。而本判据的契约是「**时长**是否来自
+#      同一刻度」——delay 是「推迟多久开始」，与「持续多久」量纲不同。
+#      改为**按声明级**解析；`*-delay` 归 delay 门，简写 `transition`/`animation` 取
+#      **首个**时间值为 duration、第二个为 delay；被排除值**登记并报出**（不静默）。
+#   V. **令牌层同病**：原 `TOK_DUR_RE` 把 `duration|delay|stagger` 一锅端。实测 21 套主题
+#      **各有一条** `--deck-motion-stagger`，与 `Deck.css` 的 delay 阶梯**同值同源** ⇒
+#      声明侧与被检侧同源，该维度上 `被检值 ⊆ 刻度` **恒真**。这是**「假绿」的第二形态**
+#      （第一形态见 v1.4 的 P：用产物自身的令牌集当刻度）。⇒ 刻度集只吃 `--*duration*`。
+#      ⚠️ **韵律层（错峰序列）当前判据集未覆盖** —— 如实记为未覆盖，不假装覆盖。
+#   W. **`--scale-from`（启用通道）**：此前门禁调校验器不带 scale ⇒ G12/G13 在常规跑批里
+#      **永远 SKIP**（= 挂不上去）。新增 `--scale-from <声明源 .css>`：从**令牌声明**取刻度
+#      并集作为 G12/G13 的默认刻度；**显式 `--override` 优先**；**同源剔除并报出**；
+#      剔除后为空 ⇒ **不合成** override（保持 SKIP），绝不因启用开关而变恒真 PASS。
+#      门禁侧用 `meta.审美判据.声明刻度源` 登记（项级优先于块级），并新增**刻度层暴露率注记**
+#      （与渲染层注记同构：0 个登记 ⇒ 明说「未检测，不是通过」）。
+#   X. 修产物（**属产物侧决策，本轮唯一的产品改动**）：`Deck.css` L105 `width 200ms` →
+#      `var(--ui-duration-normal, 220ms)`；L124 `opacity 180ms` → `var(--ui-duration-fast, 140ms)`。
+#      修后 G13 对 `Deck.css` **PASS**；修前它精确指认的正是这两行。
+#
+# ⭐ v1.6（2026-09-27）变更摘要 —— **补韵律层判据 + 两处既存 FAIL 定性**（**一条阈值都没动**）
+#   Y. 新增 **G16 错峰阶梯非递减**（`rhythm_ladder`）—— 补 v1.5 第 V 条自认的覆盖缺口。
+#      ⭐ 它是**结构性不变量**，**不引入任何数值阈值**：错峰的意义是「越靠后的元素越晚入场」，
+#      阶梯回退就意味着后面的元素反而先动。两侧输入 = 声明侧 `--*stagger*`/`--*delay*`
+#      令牌序列 ＋ 应用侧 `nth-child` 序列（**带索引取** —— 取成集合就丢了顺序，而顺序才是其语义）。
+#      ⚠️ **刻意不要求步长均匀**：真实语料是**加速步长** 80/100/120/140/160/180ms，
+#      要求等步长会把它判成缺陷 —— 那才是「凭空发明契约」（同 R3 默认 8px 的教训）。
+#      允许**末尾饱和封顶**（`nth-child(n+8)` 复用末值）⇒ 判「非递减」而非「严格递增」。
+#      无 ≥`min_points` 点序列 ⇒ **SKIP**（无对象，不是通过）。
+#   Z. 修 **M1 的「空集冒充问题」**（真缺陷）：原实现下「该文件根本没有动效」与「有动效但
+#      没写秒数」**输出完全相同**（都 FAIL）。实测 `layouts.css` 零动效声明（`transition`
+#      / `animation` / `*duration` 一个都没有）却被判 FAIL ⇒ **判据在造信号**。
+#      现两态分开：无动效声明 ⇒ **SKIP（无对象）**；有声明却无时长 ⇒ **FAIL**。
+#      `transition: none` 属**显式无动效**，不计入（该文件有 4 处，否则会造出假 FAIL）。
+#   AA. 修 **W2 的悬空参数**（真缺陷）：`params.allowed_in_layers` 自 v1.0 声明至今
+#      **一个字符都没被读** ⇒ 判据比文档更严（文档说氛围层可用，实现是「任何 radial 即 FAIL」）。
+#      现按块内**显式声明** `--ui-layer: <层名>` 放行；**缺声明一律 FAIL（fail-closed）** ——
+#      CSS 没有可机器识别的「层」概念，默认放行会让本判据退化成 no-op（同 R3 的
+#      `baseline_px` 处置：**要声明，不猜**）。
+#   BB. 产物改动（经用户指令授权）：`Deck.css` L55 `opacity 220ms` / L146 `background 140ms`
+#      两处剩余硬编码时长改走 `--ui-duration-*` 令牌。
+#   CC. ⚠️ **新发现（登记，不在本轮范围）**：用 AST 探针（`tmp/v160/audit_params.py`）查出
+#      还有 **7 个检查器完全不读 `params`** —— 它们声明的参数同样是**悬空承诺**（与 W2 同族，
+#      即「文档写着有、代码里没有」）：`chk_accent_unique`(G2/expected) ·
+#      `chk_memory_point_count`(G8·V2/expected,field) · `chk_primary_cta_count`(G9/expected) ·
+#      `chk_motion_minimal_set`(M3/elements) · `chk_interactive_feedback_coverage`(W1/coverage) ·
+#      `chk_shot_spec_present`(V1/elements) · `chk_series_count_max`(C1/max)。
+#      它们都是 **spec 族的存在性检查**（判 `has_*` 布尔，不计数），把 `expected`/`max`/`elements`
+#      真正落地需要先定义 spec 的计数口径（属设计决策）⇒ **本轮只登记、不擅自实现**。
+#      M1 的 `coverage` 同属一族，因本轮正在改 M1，已一并接上。
+#
+# 外部依据（2026-09-26 GitHub 调研，报告见 tasks/AI审美提升方案-2026-09-26/
+#   设计系统lint开源调研与优化方案-2026-09-26.md）
+#   · plumb（aram-devdocs/plumb）16 条设计系统规则，核心形态是 *-conformance
+#   · projectwallace/css-analyzer + css-design-tokens（CSS→DTCG 反推，含 duration/easing）
+#   · A11yReadTech/ARC + antiflasher/apcach（APCA Lc 阶梯，候选 WCAG 3）
+#   · Material Design 3（15 样式 / 11 档）与 Tailwind v4 默认 theme（13 档字号 / 288 色令牌）
+
+version: "1.6"
+updated: "2026-09-27"
+
+judgeability:
+  machine: "从产物直接量出，校验器自动判定"
+  spec: "从 spec 文档解析声明值，校验器半自动判定"
+  manual: "机器无法判定，登记为人审点"
+  external: "由外部工具判定，本校验器不重复实现"
+
+# ============ 产物级覆盖（override）============
+# 判据集提供**默认阈值**。具体产物若确有理由偏离默认，可在 plan 的
+# meta.审美判据.覆盖 里逐条覆盖 —— 覆盖是「有理由的例外」，不是「换个数字」。
+#
+#   覆盖:
+#     - id: G7
+#       applies_to: [ppt]                # 覆盖适用范围（整键替换）
+#       params: { min: 1.15 }            # 覆盖参数（**浅合并**，未提到的键保留默认）
+#       reason: "本产物为投影演示；下限按 M3 实测最低阶比 1.091 放宽"
+#
+# 规则（三条，与检查项 22 的判定一一对应）
+#   1. 覆盖条目必须写 reason；空、占位（待定/无/TBD/N/A/？）一律 FAIL
+#   2. 覆盖了、但当次运行**未产生任何影响**（该判据没 FAIL、或根本没参与判定）⇒ WARN
+#      —— 闲置的覆盖会从「有理由的例外」退化成橡皮图章
+#   3. 覆盖不得引入未知键（判据本身没有的 params 键、未知的 applies_to 取值）⇒ audit FAIL
+#   4. 覆盖**只改参数与适用范围，不改判定语义** —— 不得用它把 FAIL 洗成 PASS
+
+# ============ 通用层 G：所有视觉产物 ============
+criteria:
+
+  - id: G1
+    dimension: "色彩纪律"
+    name: "画面内颜色数量上限"
+    judgeability: machine
+    check: color_count_max
+    params: { max: 6 }
+    source: "ppt-dissect-and-retheme.md §三-B（画面内总共只有 8 个 srgb 值）/ 视频拆解 §5.4-1（颜色收敛到「背景 + 1 个强调色」）"
+    applies_to: [ui, ppt, chart, image]
+    note: "本判据计量的是**单页画面内**的去重色值数。source 原文记 8、params 有意取 6（更严，收敛优先）—— 这是刻意的收紧，不是笔误。token 表的调色板规模**不适用**本判据（见 G11）。⚠️ v1.2.2：**输入必须是渲染结果**（`--geom` 产出的画面色值）—— 此前实现拿 CSS 令牌清单去顶「画面内」口径，21 套主题 21/21 假 FAIL；现缺渲染色即判 SKIP（未检测），有渲染色则数画面里真实出现过的颜色。"
+
+  - id: G2
+    dimension: "色彩纪律"
+    name: "强调色唯一"
+    judgeability: spec
+    check: accent_unique
+    params: { expected: 1 }
+    source: "视频拆解 §5.4-1（「只用 X，颜色留给 Y」的减法句式）"
+    applies_to: [ui, ppt, chart, image]
+
+  - id: G3
+    dimension: "可读性"
+    name: "正文对比度"
+    judgeability: machine
+    check: contrast_min
+    params: { role: body, min: 4.5 }
+    source: "WCAG 2.1 AA 正常文字 4.5:1；ui 库 schema.json#contrast.thresholds.fg = 4.5（与 verify-deck-themes.py 的 THRESHOLDS 为两处独立实现，取值一致）"
+    applies_to: [ui, ppt, chart]
+
+  - id: G4
+    dimension: "可读性"
+    name: "次要文字对比度"
+    judgeability: machine
+    check: contrast_min
+    params: { role: subtle, min: 3.0 }
+    source: "ui 库 schema.json#contrast.rule 原话：fg/fg-muted 按正文标准 4.5:1；fg-subtle 与 accent-strong 按大字/图形标准 3.0:1（WCAG 2.1 原文，不做四舍五入，4.499 即不合格）"
+    applies_to: [ui, ppt, chart]
+    note: "本判据只管 fg-subtle 档 —— 它在契约里按「大字/图形」标准取 3.0。中间档 fg-muted 的门槛是 4.5，见 G14。两档不可混用，命名相近但不等价。⚠️ **2026-09-27 决定：阈值不动（保持 3.0）** —— 3.0 出自 WCAG 2.1 AA，是**现行有效**标准；WCAG 3 尚未定稿、APCA 也未成为标准，没有可依据的新阈值。此条已决策，下一轮不再作为待办重复提出。"
+
+  - id: G5
+    dimension: "可读性"
+    name: "强调色承载对比度"
+    judgeability: machine
+    check: contrast_min
+    params: { role: accent, min: 3.0 }
+    source: "ui 库 schema.json#contrast.thresholds.accent-strong = 3.0（大字/图形标准）；同文件 accentPolicy 规定：accent 本身原色保留、承载文字必须改用 accent-strong"
+    applies_to: [ui, ppt]
+    note: "取的是 accent-strong 槽位（不是 accent）。accent 是否可用作文字色另见 G15。⚠️ **2026-09-27 决定：阈值不动（保持 3.0）** —— 同 G4：WCAG 2.1 AA 现行有效，WCAG 3 / APCA 未成标准。此条已决策，不再重复提出。"
+
+  - id: G6
+    dimension: "层级"
+    name: "画面内字号层级数上限"
+    judgeability: machine
+    check: font_scale_count_max
+    params: { max: 4 }
+    source: "视频拆解（H1 / H2 / Body 三级）/ ppt-dissect-and-retheme.md §二-4（大阶比的代价是需要更少的层级数）"
+    applies_to: [ui, ppt, chart]
+    note: "本判据计量的是**单页画面内**出现的层级数（源明确为 H1/H2/Body 三级）。token 表的档位数**不是**本判据的对象 —— 业界实测 M3 为 11 档、Tailwind v4 为 13 档，若拿 max:4 去量 token 表必然全 FAIL，那是口径错配。token 层请用 G12。⚠️ v1.2.2：**输入必须是渲染结果**（`--geom` 产出的实际字号档数）—— 与 G1 同批修正（此前同样误拿令牌清单顶口径）；缺渲染色即判 SKIP（未检测）。⚠️ v1.3：**只统计承载文字（text 非空）的节点** —— 吃渲染结果之后又数多了：原实现取 fontSize 非空的**全部可见节点**，于是把「**容器继承的字号**」也当成一个层级。真实 deck 封面上 `.ui-deck__slide` 根容器继承 14px、装饰 span 继承 26px，二者**都没有一个字**，却把真值 4 档抬成 6 档（21 套主题**无例外**地回到 4 档）。max 仍是 4 —— 页面若真用 5 档**文字**字号，照样 FAIL（有阴性对照）。取数器未提供 text 字段时退回全部节点并在 detail 显式标注，不静默改口径。"
+
+  - id: G7
+    dimension: "层级"
+    name: "同体系字号阶比区间"
+    judgeability: machine
+    check: font_scale_ratio_range
+    params: { min: 1.2, max: 1.8, group_by: role-prefix, min_group_size: 2 }
+    source: "ppt-dissect-and-retheme.md §二-4（×1.6 是值得记住的选择：经典模数 1.25 在投影上看不清）—— 依据是**投影阅读距离**，故只适用于 ppt"
+    applies_to: [ppt]
+    note: "v1.1 修复两处：① 算法 —— v1.0 把 caption/body/h/display 的全部字号混在一个序列里排序算相邻阶比，而不同体系之间本无可比性，实测 21 套主题全 FAIL、其中 15 套是假阳性；本版按令牌角色前缀分组，只在组内算阶比。② 范围 —— applies_to 收窄为 ppt（source 讲的是投影可读性）。无令牌命名时降级为整体序列，并在 detail 里标注「未分组」。⚠️ v1.3 **分组修正（第三处假 FAIL 的真因）**：原按「**第一段词**」取词根 ⇒ 凡「同词根 + 不同角色后缀」的令牌都被并进一组。实测：`--deck-size-quote`（42px，引文正文）与 `--deck-size-quote-mark`（150px，**引号字形** —— 它自带 font / weight / leading / tracking / color 五个独立令牌，在 `ui库/deck/layouts/layouts.css` 里是独立角色）被并成 `quote` 组，组内阶比 150/42 = 3.571 ⇒ **21 套主题 21/21** 报越界。现按**完整角色段**分组（`quote` / `quote-mark` 分家）；尺寸修饰词（sm/lg/2xl…）与数字仍被剥离，故 `body` + `body-sm`、`h2` + `h3` 仍同组。单成员体系按 min_group_size 自动 no-op（no-op ≠ 通过）。区间 [1.2, 1.8] **一字未改**。"
+
+  - id: G8
+    dimension: "焦点"
+    name: "记忆点唯一"
+    judgeability: spec
+    check: memory_point_count
+    params: { expected: 1 }
+    source: "视频拆解 §5.4-4（记忆点只能有一个）/ 成品网页拆解 §6.5（记忆点要落到结构而非特效）"
+    applies_to: [ui, ppt, image]
+
+  - id: G9
+    dimension: "焦点"
+    name: "主操作唯一"
+    judgeability: spec
+    check: primary_cta_count
+    params: { expected: 1 }
+    source: "视频拆解 §5.4-2（主按钮超过一个，视觉重心就散了）"
+    applies_to: [ui]
+
+  - id: G10
+    dimension: "统一性"
+    name: "贯穿元素的复用"
+    judgeability: manual
+    check: null
+    params: { min_reuse: 3 }
+    source: "ppt-dissect-and-retheme.md §二-6（4 KB 印章出现在 13 页上——统一性来自复用）"
+    applies_to: [ui, ppt]
+    note: "人审点：检查是否存在一个元素贯穿全套（水印/落款/装饰母题）。注：同族缺陷「近乎对齐」已被证明可机器判定（plumb edge/near-alignment），但需渲染后的几何信息，见 R1/R2/R3。"
+
+# ---- v1.1 新增：token 层一致性（形态取自 plumb 的 *-conformance 家族）----
+
+  - id: G11
+    dimension: "色彩纪律"
+    name: "调色板可辨识性"
+    judgeability: machine
+    check: palette_separation
+    params: { min_separation_de: 2.0 }
+    source: "plumb color/palette-conformance 的 CIEDE2000 ΔE00 容差 2.0 —— 原义是「离最近 token 的距离不得超过 2.0」；本判据反向使用同一常数：**两个不同色值的距离若小于 2.0，人眼已无法区分，就该合并**"
+    applies_to: [ui, ppt, chart, image]
+    note: "本判据不需要外部白名单（纯自证）。plumb 的原义需要 color.tokens 白名单，本库的令牌 CSS 里「声明」与「使用」是同一集合，无法照搬 —— 这里做的是同源改造，不是原样移植。⚠️ v1.3 **作用域收窄到「语义色」**：层级/表面色（bg / bg-alt / card-bg / surface / paper / overlay …）是**同一语义下的明度阶梯**，其微差正是「分层」这一设计意图本身，不该按「不可辨即合并」去判。实测取证：21 套主题里 7 套 FAIL **全部**是 bg ↔ bg-alt ↔ card-bg（ΔE00 0.61–1.96），**无一涉及 accent / fg** —— 属作用域错配（同 G1/G6 一族）。被排除的令牌**逐条打印在 detail 里**（可审计、不静默）；需要改模式时用 override 提供 layer_name_re（正则字符串）。"
+
+  - id: G12
+    dimension: "层级"
+    name: "字号刻度一致性"
+    judgeability: machine
+    check: scale_conformance
+    params: { kind: font-size, tolerance_px: 0.5, scale: [] }
+    source: "plumb type/scale-conformance（font-size 必须落在 type.scale，容差 0.5px 以容纳 getComputedStyle 的次像素舍入）；声明集缺失时规则 **no-op** 而非判全部违规（同文件原话：rather than flagging every value as out-of-scale）"
+    applies_to: [ui, ppt, chart]
+    note: "刻度集（params.scale）默认空 ⇒ 本判据判 SKIP 并说明「未声明刻度集」。要启用，请用 override 提供 scale，或在产物侧声明。空声明集**不是**通过。⚠️ v1.4 **正确启用形态（务必两侧分离）**：① **声明侧** = 独立的规范/令牌文件（不得是被检的那份 CSS）；② **被检侧** = **使用侧** CSS —— 布局层与组件层会出现**不出现在令牌里**的硬编码值（实测 ui库 `Deck.css` 有 13px/14px、`layouts.css` 有 34px）。⚠️ **自证式刻度护栏**：实测 21 套主题生成 CSS 的 raw `font-size:` 数 = 0，`sizes` 与 `--deck-size-*` 令牌集逐值相同 ⇒ 若用「产物自身的令牌集」当 scale，`被检值 ⊆ 刻度` **恒成立**、判据退化为**恒 PASS**。检出即判 **SKIP**（理由「刻度集与被检值同源 ⇒ 恒真，不算通过」）。⚠️ v1.4 起取数层另修一处：`em` 是上下文相关的相对单位，**不折成像素**（原实现 `1em`→16px、`0.94em`→15.04px，实测在 `layouts.css` 上凭空造出 4 个「离格字号」），改为登记进 `unresolved_sizes` 并在 detail 报出。⚠️ v1.4 **声明侧还必须是「同一体系」**：实测教训 —— 第一版实验只拿 deck 主题的排版刻度去量 `Deck.css`（组件壳），13/14px 与 140/220ms 全被判离格（**37/42 假 FAIL**）；追下去发现它们**在 ui kit 自己的刻度上**（`src/styles/tokens.css`：`--ui-font-size-sm/md` = 13/14px、`--ui-duration-fast/normal` = 140/220ms）。⇒ 一个文件混用多套体系时，刻度集应取**该产物已声明刻度的并集**（实测：ui kit 7 档 ∪ deck 主题 10–12 档 ⇒ G12 **42/42 PASS**）。否则就是 G1/G6/G11 一族的**作用域错配**再次上演。⚠️ v1.5 **启用通道**：`--scale-from <声明源 .css>`（可重复，逗号分隔亦可）—— 门禁侧登记 `meta.审美判据.声明刻度源`（项级优先于块级）后，检查项 22 自动透传，G12 才在**常规跑批**里真跑；**未登记**由「刻度层注记」明说「未检测，不是通过」（与渲染层注记同构）。同源声明源被剔除并报出；剔除后为空即保持 SKIP，**不合成** override。"
+
+  - id: G13
+    dimension: "动效完备性"
+    name: "时长刻度一致性"
+    judgeability: machine
+    check: duration_scale_conformance
+    params: { tolerance_ms: 1.0, scale: [] }
+    source: "plumb 的 *-scale-conformance 家族（radius/shadow/opacity/z-index 同构）；Tailwind v4 默认 --default-transition-duration: 150ms —— 时长应来自声明的刻度集，而非每处随手写"
+    applies_to: [ui, ppt]
+    note: "与 M1 的分工：M1 管「有没有写时长」（完备性），本判据管「时长是否来自同一刻度」（一致性）。刻度集默认空 ⇒ SKIP。⚠️ v1.4 两处收紧（同 G12 一族）：① **自证式刻度护栏** —— 刻度集不得由被检 CSS 自身的时长令牌导出（21 套主题的 durations 与 `--deck-motion-*` 令牌**逐值相同**，用它当 scale 则恒真）；② **0ms 不参与判定** —— 实测 `animation-delay: 0s` 被收进 durations 后遭误报：「无延迟」不是刻度上的一档，其数量在 detail 显式报出。⚠️ 阈值 `tolerance_ms 1.0` 原样，非 0 离格值照样 FAIL。⚠️ v1.4 **首次真实读数**（21 主题 × Deck.css / layouts.css，声明侧=ui kit `--ui-duration-*` ∪ 主题 `--deck-motion-*`）：layouts.css 无时长 ⇒ SKIP 21/21；Deck.css 判 FAIL。⚠️ **v1.5 复测修正**：v1.4 此处原文写「离格值集合恰好是 `[200.0]`」，**不准确** —— 那是从被截断的 detail 字符串（只打印 `off[:6]`）反解出来的，把「前 6 个之一」读成了「全部」；真实离格值是 **6 个**（`180 / 200 / 300 / 440 / 600 / 780` ms）。⚠️ v1.5 另修**取数口径**：`delay` 不是 `duration` —— `*-delay` 与简写 `transition`/`animation` 的**第二个**时间值归 delay 门（登记进 `delay_excluded` 并在 detail 报出，不静默），`--*stagger*` 令牌同理不进刻度集（否则与被检侧 delay 阶梯**同源** ⇒ `被检值 ⊆ 刻度` 恒真，是「假绿」的第二形态）。分家后 G13 精确指认 `Deck.css` 的**两行**：`transition: width 200ms`（L105）与 `transition: opacity 180ms`（L124）。⚠️ v1.5 **启用通道**：`--scale-from <声明源 .css>`（可重复，逗号分隔亦可）／门禁侧登记 `meta.审美判据.声明刻度源`（项级优先于块级）——此前门禁不带 scale，本判据在常规跑批里**永远 SKIP**；同源声明源会被剔除并报出，剔除后为空则保持 SKIP（不合成 override）。⚠️ **韵律层（错峰序列）当前判据集未覆盖**，如实记为未覆盖。修产物后（两行改走 ui kit 的 `--ui-duration-*` 令牌）G13 对 `Deck.css` **PASS**。"
+
+  - id: G14
+    dimension: "可读性"
+    name: "中等次要文字对比度"
+    judgeability: machine
+    check: contrast_min
+    params: { role: muted, min: 4.5 }
+    source: "ui 库 schema.json#contrast.thresholds.fg-muted = 4.5（按正文标准）；该值与 verify-deck-themes.py:THRESHOLDS 独立实现一致"
+    applies_to: [ui, ppt, chart]
+    note: "补 v1.0 的**真实覆盖缺口**：契约里文字色共四档（fg / fg-muted / fg-subtle / accent-strong），v1.0 只覆盖了其中三档，漏掉 fg-muted。门槛 4.5 比 G4 的 subtle 更严，二者不可互相替代。"
+
+  - id: G15
+    dimension: "色彩纪律"
+    name: "强调色可用性"
+    judgeability: machine
+    check: accent_availability
+    params: { min_ratio: 3.0 }
+    source: "ui 库 schema.json#contrast.accentPolicy：accent 本身不做对比度修正、原色原样保留（实测 biennale-yellow 的 accent=sun #F1EE2E 在米色纸上对比度仅 1.02，但它是「黄块 + 深蓝字」的色块色，提亮到 3.1 会得到暗黄/橄榄色、等于毁掉原设计）；同时规定 accent 对 bg 低于 3:1 的模板在报告中记为 **NOTE（非 WARN）**"
+    applies_to: [ui, ppt]
+    note: "本判据**不判 FAIL**：accent 低于 3:1 是合法设计，只是不可直接用作文字色。低于阈值记 PASS 并在 detail 前置 NOTE 前缀（保留三态，不新增第四态）。"
+
+  - id: G16
+    dimension: "动效节奏"
+    name: "错峰阶梯非递减"
+    judgeability: machine
+    check: rhythm_ladder
+    params: { min_points: 2 }
+    source: "结构性不变量（**不是阈值**）：错峰序列须单调不回退 —— 越靠后的元素越晚入场；阶梯回退意味着后面的元素反而先动，与「错峰」这一设计意图直接矛盾"
+    applies_to: [ui, ppt]
+    note: "补 v1.5 自认的覆盖缺口（v1.5 的 G13 note 写着「韵律层（错峰序列）当前判据集未覆盖」）。两侧输入：① **声明侧** = `--*stagger*`/`--*delay*` 令牌的斜杠序列（实测 21 套主题各一条 `--deck-motion-stagger`）；② **应用侧** = 同一选择器前缀下按 `nth-child` 索引排序的 `animation-delay` 序列（实测 ui库 `Deck.css` L386-393）。⭐ **刻意不要求步长均匀** —— 真实语料是**加速步长** 80/100/120/140/160/180ms，要求等步长会把合规产物判成缺陷（「凭空发明契约」，同 R3 默认 8px 的教训）。允许**末尾饱和封顶**（`nth-child(n+8)` 复用末值 0.78s，防止无限推迟）⇒ 判「**非递减**」而非「严格递增」。⚠️ 本判据**无阈值可调**：`min_points` 只决定「几点才算一条序列」，不改变判定方向。无 ≥`min_points` 点的序列 ⇒ **SKIP**（本判据无对象，不是通过）。"
+
+# ============ 动效层 M：含动态的产物 ============
+  - id: M1
+    dimension: "动效完备性"
+    name: "时间刻度必填"
+    judgeability: machine
+    check: motion_has_duration
+    params: { coverage: 1.0 }
+    source: "视频拆解 §5.1 元规律 3（时间刻度是动效的灵魂；没写秒数 AI 一定会自己猜）"
+    applies_to: [ui, ppt]
+    note: "⚠️ v1.6 **三态分开**（原实现把「该文件根本没有动效」与「有动效却没写秒数」**判成一样**，属**判据造信号** —— 实测 `layouts.css` 零动效声明却被判 FAIL）：① 有动效声明但缺时长 ⇒ FAIL；② 有动效声明且都带时长 ⇒ PASS；③ 无动效声明但声明了**时长令牌** ⇒ PASS（纯令牌产物如 21 套主题：秒数确实写下来了 —— 早期版本这一态靠 `durations` 非空蒙对，属**作用域错配**，同 G1/G6/G11 一族）；④ 既无动效声明、也无时长令牌 ⇒ **SKIP（无对象，不是通过）**。`transition: none` / `none !important` 属**显式**无动效，一律不计入。⚠️ `coverage` 此前**只声明未消费**（与 W2 的 `allowed_in_layers` 同族的悬空参数，由 AST 探针 `tmp/v160/audit_params.py` 查出），v1.6 起真正生效（默认 1.0 ⇒ 与旧行为一致）。"
+
+  - id: M2
+    dimension: "动效完备性"
+    name: "动效四型齐备"
+    judgeability: spec
+    check: motion_types_present
+    params: { required: [进场, 交互] }
+    source: "视频拆解 §5.4-5（区分进场/常态/交互/退场四型；漏掉常态会让页面静止时死气沉沉）"
+    applies_to: [ui]
+
+  - id: M3
+    dimension: "动效完备性"
+    name: "动效描述最小完备集"
+    judgeability: spec
+    check: motion_minimal_set
+    params: { elements: [元素, 情况, 方式, 时长] }
+    source: "视频拆解 §5.1 元规律 2（什么元素·什么情况·怎么动，缺一项就只能得到默认淡入）"
+    applies_to: [ui]
+
+# ============ 产物特有层 ============
+  - id: W1
+    dimension: "交互反馈"
+    name: "可点元素有反馈"
+    judgeability: spec
+    check: interactive_feedback_coverage
+    params: { coverage: 1.0 }
+    source: "视频拆解 §5.4-6（每一次点击都有回应）"
+    applies_to: [ui]
+
+  - id: W2
+    dimension: "导出保真"
+    name: "骨架层不得依赖 radial-gradient"
+    judgeability: machine
+    check: skeleton_no_radial
+    params: { allowed_in_layers: [氛围层] }
+    source: "ppt-dissect-and-retheme.md §8.3（radial-gradient 无 OOXML 对应物，导出会整层丢失）"
+    applies_to: [ui, ppt]
+
+  - id: P1
+    dimension: "版式结构"
+    name: "版心线成组"
+    judgeability: manual
+    check: null
+    params: { min_group_members: 2 }
+    source: "ppt-dissect-and-retheme.md §二-5（孤零零的峰值不算版心线）"
+    applies_to: [ppt]
+
+  - id: P2
+    dimension: "导出保真"
+    name: "形状包围盒落在画布内"
+    judgeability: external
+    check: null
+    params: { tolerance_px: 16 }
+    source: "ppt-dissect-and-retheme.md §8.4（结构校验全绿 ≠ 画面对）"
+    applies_to: [ppt]
+    note: "已有实现：ui 库 scripts/export-all-pptx.mjs 内含该几何校验，本方案不重复实现"
+
+  - id: C1
+    dimension: "图表纪律"
+    name: "单图系列数上限"
+    judgeability: spec
+    check: series_count_max
+    params: { max: 7 }
+    source: "色觉可辨性通行上限（分类色 7±2）；本项目实践观点，非实测"
+    applies_to: [chart]
+
+  - id: C2
+    dimension: "图表纪律"
+    name: "同色同义"
+    judgeability: manual
+    check: null
+    params: {}
+    source: "数据可视化通行规范；本项目实践观点"
+    applies_to: [chart]
+    note: "人审点：同一颜色不得在不同图表里表示不同含义"
+
+  - id: V1
+    dimension: "镜头与构图"
+    name: "构图与光比显式声明"
+    judgeability: spec
+    check: shot_spec_present
+    params: { elements: [构图, 光比或色温] }
+    source: "视频拆解 §5.2 规范骨架（把「怎么动/怎么看」写成确定性取值）"
+    applies_to: [image]
+
+  - id: V2
+    dimension: "镜头与构图"
+    name: "单一视觉焦点"
+    judgeability: spec
+    check: memory_point_count
+    params: { expected: 1, field: 视觉焦点 }
+    source: "同 G8；图像产物的等价约束"
+    applies_to: [image]
+
+# ============ 渲染层 R：需真实渲染的几何判据（v1.1 新增，judgeability 由实现决定）============
+# 这三个判据的输入不是 CSS 文本，而是「渲染后的可见几何」—— 依据 plumb 的核心判断：
+#   for **rendered** websites, **not the code behind it**。
+# 渲染色取数器：`scripts/geom-probe.js`（页面侧提取器，**只读 DOM**），由任一 CDP 驱动注入执行。
+# 校验器**不**内建 CDP —— 不在校验器里重复实现浏览器驱动，只消费 geom.json（契约见 extract_geom）。
+# 取数示例（以 ui库 `scripts/shoot-page.mjs` 为例，它先跑 --prep 再跑 --eval）：
+#   node scripts/shoot-page.mjs --file=<page.html> \
+#        --prep="$(cat <skill>/scripts/geom-probe.js)" \
+#        --eval="return window.__geomProbe();" > geom.json
+#   python <skill>/scripts/check_aesthetics.py --rubric <判据集> --css a.css --geom geom.json
+# ⚠️ 2026-09-26 更正：本段此前写作「--render 模式」——**该模式从未存在**（悬空承诺），
+#    实际接口是 `--geom`（消费已产出的渲染色）。文档与实现不一致与「声称有、实际不可达」同源，已改。
+
+  - id: R1
+    dimension: "版式结构"
+    name: "近乎对齐的兄弟元素"
+    judgeability: machine
+    check: near_alignment
+    params: { tolerance_px: 2, min_cluster: 2, noise_px: 0.5 }
+    source: "plumb edge/near-alignment（兄弟元素四条边聚类；簇内成员到簇心 delta **超过噪声地板、且不超过容差**即报告）。原话：Near-aligned edges are the visual signature of the design system losing focus…the eye notices, even when nobody can name what is off —— 关键在 **the eye notices**：亚像素差眼睛看不出来，故设噪声地板。"
+    applies_to: [ui, ppt]
+    note: "需渲染。无渲染色（未提供 --geom 产物）时判 SKIP，理由是「未检测」，不是通过；**空节点集同样判 SKIP**（没数据不得冒充没问题）。⚠️ v1.2.2 两处修正（真实 deck 页实测暴露）：① 簇心原用 `int()` 截断 ⇒ 每个成员被凭空算出差 ≤1px（实测把 4 条完全重合的右边报成「差 0.39px」×10 处，**是判据在造信号**），已改浮点均值；② 新增噪声地板 `noise_px`（默认 0.5，与容差同单位）——缩放画布 `transform:scale` 会把浏览器 0.1px 级舍入放大到设计像素的零点几 px。地板 ≥ 容差 ⇒ SKIP（配置自相矛盾不许静默变成永不报警）。"
+
+  - id: R2
+    dimension: "统一性"
+    name: "兄弟元素尺寸一致"
+    judgeability: machine
+    check: sibling_consistency
+    params: { kind: height, max_drift_ratio: 0.02, min_group: 3, row_overlap: 0.8 }
+    source: "plumb sibling/height-consistency 与 sibling/padding-consistency（**同一视觉行内**，兄弟元素偏离**组中位数**即报告）"
+    applies_to: [ui, ppt]
+    note: "需渲染。无渲染色时 SKIP。⚠️ v1.2.2 **分组修正**：原实现只按 `parent` 分组 ⇒ 真实封面里 eyebrow/title/subtitle/rule/meta 这 5 个**竖排**兄弟被当成一行互比高度（实测报出「title 比中位数高 528%」——那不是缺陷，那是把标题和分割线当成了同一行的卡片）。现先判「**并排同行**」再比：水平区间不相交（中间可有沟槽）∧ 垂直重叠 ≥ `row_overlap`×min(两高)。**找不到可比的并排行 ⇒ SKIP**，不是 PASS（「没得比」≠「比过且没问题」）。"
+
+  - id: R3
+    dimension: "版式结构"
+    name: "垂直韵律落格"
+    judgeability: machine
+    check: baseline_rhythm
+    params: { tolerance_px: 1 }
+    source: "plumb baseline/rhythm（文字基线必须落在**配置的**垂直韵律网格上 —— 网格间距是设计系统的声明量，不是通用常数）"
+    applies_to: [ui, ppt]
+    note: "需渲染。⚠️ v1.4 **三种 SKIP 分开措辞**（原先混在一句里，读不出「有没有救」）：① 缺渲染色 ⇒ SKIP「未检测」；② 渲染色里无可测文本节点 ⇒ SKIP「无数据」；③ **未声明韵律网格 ⇒ SKIP「结构性不适用」**。⚠️ 第 ③ 种在本产物上是**正确终态，不是待办**：ui库 `src/deck/themes/schema.json#spacing` 明确写着「34 套子键自由命名且数量庞大……本层不强行归并」—— 该设计系统**没有** baseline 网格，所以 R3 对它**永久不适用**，而不是「等哪天声明了再开」。取证：硬套 8px 会把整页判成「7/7 文本全部离格」，那是**判据凭空发明契约**。本条的可达性已由 v1.2.2 的阴性对照证明（声明 8px 且干净 ⇒ PASS；声明 8px 且离格 4px ⇒ FAIL），即**判据有牙齿，只是本产物不是它的适用对象**。要启用请在产物侧声明或用 override 提供该产物实际采用的行距网格。"

@@ -26,6 +26,23 @@ from checks_parity import (  # noqa: F401
     _scan_category_tables,
 )
 from checks_core import (  # noqa: F401
+    AESTHETIC_DESIGN_EXT,
+    AESTHETIC_EXEMPT_PLACEHOLDER,
+    AESTHETIC_GEOM_EXT,
+    AESTHETIC_GEOM_KEY,
+    AESTHETIC_KEY,
+    AESTHETIC_PRODUCTS,
+    AESTHETIC_PROBE,
+    AESTHETIC_REQUIRED,
+    AESTHETIC_RUBRIC_DEFAULT,
+    AESTHETIC_SCALE_IDS,
+    AESTHETIC_SCALE_KEY,
+    AESTHETIC_TOOL,
+    CLEANUP_COUNT_KEYS,
+    CLEANUP_KEY,
+    CLEANUP_MANIFEST_KEY,
+    CLEANUP_REQUIRED,
+    CLEANUP_STATES,
     CATEGORY_SOURCES,
     DECISION_KEYS,
     ENTRY_DIMS,
@@ -40,6 +57,11 @@ from checks_core import (  # noqa: F401
     HOMEWORK_SAMPLE_BAND,
     INFRA_EXCEPTIONS,
     IRREVERSIBLE_HINT,
+    LEARNING_DIMS,
+    LEARNING_KEY,
+    LEARNING_KINDS,
+    LEARNING_REQUIRED,
+    LEARNING_SAMPLE_BAND,
     MAX_REVISIONS,
     METHOD_GAP_CLASSES,
     METHOD_KEY,
@@ -310,6 +332,347 @@ def _check_scope(meta: dict, steps: list, base: Path) -> None:
         return
     fail("交付物越界检查", f"{len(outside)} 项越界且未获授权：{detail}{SCOPE_HINT}")
 
+def _aesthetic_css_deliverables(steps: list, base: Path) -> list[Path]:
+    """设计类产物的**机器可判信号** = 本 plan 交付物里的 `.css`（v4.9.0 检查项 22）。
+
+    范围口径与 `_selftool_scan_candidates` 一致并**同样显式声明**：不递归、不扫 `tasks/*/tmp/`
+    （中间产物不入库、不外发，纳入只会让门禁被探针夹具误触）；**不要求文件已存在** ——
+    「声明了 .css 却还没生成」由检查项 4（Anti-drop）负责，本判据只回答
+    「这个任务是不是设计类任务」。后缀匹配走 `AESTHETIC_DESIGN_EXT`，不看 category。
+    """
+    seen: set[str] = set()
+    out: list[Path] = []
+    for s in steps:
+        if not isinstance(s, dict):
+            continue
+        for tok in _step_tokens(s):
+            if not _is_file_like(tok):
+                continue
+            for cand in _candidate_paths(tok, base):
+                rel = str(cand).replace("\\", "/").lower()
+                if "/tmp/" in rel or rel in seen:
+                    continue
+                if cand.suffix.lower() not in AESTHETIC_DESIGN_EXT:
+                    continue
+                seen.add(rel)
+                out.append(cand)
+    return out
+
+
+def _aesthetic_invoke(tool: Path, rubric: Path, css: Path, product: str, geom: Path | None = None,
+                      scale_from: list | None = None):
+    """实跑校验器，返回 `(exit, payload_or_None, raw)`。**fail-closed**：任何异常都不当作通过。
+
+    `geom`（v1.2.1 / P3）为可选的渲染色 JSON；不带时 R1-R3 一律 SKIP —— 那是「未检测」，
+    不是「通过」。调用方须把这一层**如实报出来**（见 `_check_aesthetic` 的渲染层注记）。
+
+    `scale_from`（v1.5.0）为**声明刻度源** CSS 列表；不带时 G12/G13 一律 SKIP ——
+    同样是「未检测」，由「刻度层注记」如实报出（与渲染层注记同构）。
+    """
+    cmd = [sys.executable, str(tool), "--rubric", str(rubric), "--css", str(css),
+           "--product", product, "--json"]
+    if geom is not None:
+        cmd += ["--geom", str(geom)]
+    for _s in scale_from or []:
+        cmd += ["--scale-from", str(_s)]
+    try:
+        p = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8",
+                           errors="replace", timeout=120)
+    except (OSError, subprocess.SubprocessError) as exc:
+        return 127, None, f"{type(exc).__name__}: {exc}"
+    raw = (p.stdout or "") + (p.stderr or "")
+    try:
+        return p.returncode, json.loads(p.stdout), raw
+    except (ValueError, TypeError):
+        return p.returncode, None, raw
+
+
+def _check_aesthetic(meta: dict, steps: list | None = None, base: Path | None = None) -> None:
+    """审美判据门禁（v4.9.0 / 检查项 22）：**设计类产物的验收，不是识别**。
+
+    与四块快判的**分界**（一句话）：快判让模型自报置信度、机器只能校结构；
+    本项**没有任何模型自填量** —— 判据是「登记了哪些产物 → 我把校验器跑一遍 → 跑出几个 FAIL」。
+    故本条可以实现技能一直想要的那件事：**登记里的数字一概不采信**。
+
+    ⚠️ 三条刻意的不对称，都在注释里说明理由而不是默默实现：
+      · **缺省只 WARN**：技能既有口径 —— 新判据首版不上 FAIL（避免造出随机 FAIL 源），
+        且向后兼容旧 plan（拿新规则追认历史计划 = 为新判据篡改证据）。
+        但 WARN **只在真有 `.css` 交付物时**才出：非设计类任务判 SKIP，而不是把它也喊一遍。
+      · **`豁免` 必须写理由**：口径不适用（例如判据的计量单位是「画面内」而产物是调色板）
+        确实需要一个出口，但出口一旦无声就会变成橡皮图章 —— 故逐条打印、理由必填、
+        并且「豁免了却本次没 FAIL」会 WARN（豁免项被长期闲置 = 该收回了）。
+      · **渲染层单独报暴露率**（v1.2.1 / P3）：R1-R3 要渲染色才跑得起来。0 个产物带渲染色时
+        不能只说「FAIL 已清零」—— 那会把「渲染层没测」读成「渲染层没问题」。故另出一条
+        渲染层注记，明说 SKIP = **未检测**。（"an enabled setting does not show that the
+        intervention was used" —— 开关存在 ≠ 干预生效。）
+    """
+    blk = meta.get(AESTHETIC_KEY)
+    css_deliv = _aesthetic_css_deliverables(steps or [], base) if (steps and base) else []
+
+    if blk is None:
+        if css_deliv:
+            warn("审美判据", f"交付物里有 {len(css_deliv)} 个 `.css`（设计类产物信号），"
+                             f"但 `meta.{AESTHETIC_KEY}` 未登记 → **本次没跑过审美判据**"
+                             f"（这不是「没问题」，是「未检测」）。登记后本项升级为 FAIL 级门禁；"
+                             f"缺省只 WARN（不追认历史计划）。示例：\n"
+                             f"    {AESTHETIC_KEY}:\n      产物类型: ppt\n      产物: [\n"
+                             f"        - <交付物路径>.css\n      ]")
+        else:
+            skip("审美判据", "未登记，且交付物无 `.css` —— 非设计类任务（是「未涉及」，不是「已通过」）")
+        return
+
+    if not isinstance(blk, dict):
+        fail("审美判据", f"应为映射（含 {'/'.join(AESTHETIC_REQUIRED)}）")
+        return
+
+    bad: list[str] = []
+    for k in AESTHETIC_REQUIRED:
+        if not blk.get(k):
+            bad.append(f"缺 `{k}`")
+    if bad:
+        fail("审美判据", "；".join(bad))
+        return
+
+    product = str(blk.get("产物类型", "") or "").strip()
+    if product not in AESTHETIC_PRODUCTS:
+        fail("审美判据", f"`产物类型`『{product}』非法：须在 {'/'.join(AESTHETIC_PRODUCTS)} 内"
+                         f"（与校验器 `--product` 同源；用于消费判据集的 `applies_to`）")
+        return
+
+    raw_targets = blk.get("产物")
+    if not isinstance(raw_targets, list) or not raw_targets:
+        fail("审美判据", "`产物` 须为非空列表（每项为一个 `.css` 产物路径）")
+        return
+
+    skill_root = Path(__file__).resolve().parent.parent
+    tool = Path(__file__).resolve().parent / AESTHETIC_TOOL
+    if not tool.is_file():
+        fail("审美判据", f"校验器缺失：{tool} —— fail-closed（工具不在即判 FAIL，不降级为跳过）")
+        return
+
+    rubric_txt = str(blk.get("判据集", "") or "").strip() or AESTHETIC_RUBRIC_DEFAULT
+    rp_cands = _candidate_paths(rubric_txt, base) if base else [Path(rubric_txt)]
+    rubric = next((c for c in rp_cands if c.is_file()), None)
+    if rubric is None:
+        # 只在「用的是缺省值」时才回落到技能自带副本；自定义路径解析不到就是不存在，
+        # 必须走 FAIL。⚠️ 此处曾写成 `rubric = skill_root / ...` 后直接 `rubric.is_file()`
+        # —— 自定义路径分支下 `rubric` 仍是 None，会抛 AttributeError 把整个 checks.py 打崩
+        # （既不是 FAIL 也不是 SKIP，且前面的检查项输出一起丢）。fail-closed 的反面教材，
+        # 由 c6 夹具实测暴露并修掉（v4.9.0）。
+        if rubric_txt == AESTHETIC_RUBRIC_DEFAULT:
+            fallback = skill_root / AESTHETIC_RUBRIC_DEFAULT
+            rubric = fallback if fallback.is_file() else None
+    if rubric is None:
+        fail("审美判据", f"判据集不存在：{rubric_txt}（相对路径以 --base 为基准解析；"
+                         f"省略该键时取技能自带 `{AESTHETIC_RUBRIC_DEFAULT}`）")
+        return
+
+    # v1.5.0：**声明刻度源** —— G12/G13 的声明侧令牌 CSS。
+    #   支持**两级登记**：`产物` 项里写 `声明刻度源: [...]`（该项专用），或在本块级写一份
+    #   （块内所有产物共用）；**项级优先**。解析失败**不得**静默退回「未检测」——
+    #   声明了就必须到位，否则 R 组的同类坑（`渲染色` 解析不到即 FAIL）会原样复现。
+    def _resolve_scale(raw, where: str) -> tuple:
+        out, bad = [], []
+        for _j, _st in enumerate(raw or [], 1):
+            _stxt = str(_st or "").strip()
+            if not _stxt:
+                bad.append(f"{where}第{_j}项为空")
+                continue
+            _cands = _candidate_paths(_stxt, base) if base else [Path(_stxt)]
+            _sh = next((c for c in _cands if c.is_file()), None)
+            if _sh is None:
+                bad.append(f"{where}『{_stxt}』不存在（声明了就必须解析到位："
+                           f"解析不到即 FAIL，不静默退回「未检测」）")
+                continue
+            out.append(_sh)
+        return out, bad
+
+    targets: list = []
+    miss_t = []
+    raw_scale = blk.get(AESTHETIC_SCALE_KEY)
+    base_scale: list = []
+    if raw_scale is not None:
+        if not isinstance(raw_scale, list):
+            fail("审美判据", f"`{AESTHETIC_SCALE_KEY}` 须为列表（每项为一个声明源 `.css` 路径）")
+            return
+        base_scale, _bad_bs = _resolve_scale(raw_scale, f"`{AESTHETIC_SCALE_KEY}` ")
+        miss_t.extend(_bad_bs)
+    for i, it in enumerate(raw_targets, 1):
+        if isinstance(it, dict):
+            txt = str(it.get("路径", "") or "").strip()
+            gtxt = str(it.get(AESTHETIC_GEOM_KEY, "") or "").strip()
+        else:
+            txt, gtxt = str(it or "").strip(), ""
+        if not txt:
+            miss_t.append(f"第{i}项为空")
+            continue
+        cands = _candidate_paths(txt, base) if base else [Path(txt)]
+        hit = next((c for c in cands if c.is_file()), None)
+        if hit is None:
+            miss_t.append(f"第{i}项『{txt}』不存在")
+            continue
+        if hit.suffix.lower() not in AESTHETIC_DESIGN_EXT:
+            miss_t.append(f"第{i}项『{txt}』后缀非 {'/'.join(AESTHETIC_DESIGN_EXT)}"
+                          f"（校验器以 CSS 为输入）")
+            continue
+        geom = None
+        if gtxt:
+            # 声明了渲染色就必须能解析到：解析不到**不得**静默退回「未检测」，
+            # 否则 R 组会从「我登记了」悄悄变成「没测」，而调用方看不出差别。
+            gc = _candidate_paths(gtxt, base) if base else [Path(gtxt)]
+            gh = next((c for c in gc if c.is_file()), None)
+            if gh is None:
+                miss_t.append(f"第{i}项声明的 `{AESTHETIC_GEOM_KEY}`『{gtxt}』不存在"
+                              f"（用 `{AESTHETIC_PROBE}` 取数后登记其输出路径）")
+                continue
+            if gh.suffix.lower() not in AESTHETIC_GEOM_EXT:
+                miss_t.append(f"第{i}项 `{AESTHETIC_GEOM_KEY}`『{gtxt}』后缀非 "
+                              f"{'/'.join(AESTHETIC_GEOM_EXT)}（校验器以 JSON 消费渲染色）")
+                continue
+            geom = gh
+        # v1.5.0：项级 `声明刻度源` 覆盖块级；未写则继承块级（可为空 = 该产物不跑刻度层）
+        s_scale = base_scale
+        _raw_i = it.get(AESTHETIC_SCALE_KEY) if isinstance(it, dict) else None
+        if _raw_i is not None:
+            if not isinstance(_raw_i, list):
+                miss_t.append(f"第{i}项 `{AESTHETIC_SCALE_KEY}` 须为列表")
+                continue
+            s_scale, _bad_i = _resolve_scale(_raw_i, f"第{i}项 `{AESTHETIC_SCALE_KEY}` ")
+            miss_t.extend(_bad_i)
+        targets.append((hit, geom, s_scale))
+    if miss_t:
+        fail("审美判据", "；".join(miss_t) + "（相对路径以 `--base` 为基准；工作区根之外须写绝对路径）")
+        return
+
+    # 豁免：{id, 理由} —— 出口唯一，且必须留痕
+    exempt: dict[str, str] = {}
+    raw_ex = blk.get("豁免") or []
+    if not isinstance(raw_ex, list):
+        fail("审美判据", "`豁免` 须为列表（每项 `{id, 理由}`）")
+        return
+    for i, it in enumerate(raw_ex, 1):
+        if not isinstance(it, dict):
+            fail("审美判据", f"豁免第{i}项非映射（应为 `{{id, 理由}}`）")
+            return
+        eid = str(it.get("id", "") or "").strip()
+        why = str(it.get("理由", "") or "").strip()
+        if not eid:
+            fail("审美判据", f"豁免第{i}项缺 `id`")
+            return
+        if not why or why.lower() in AESTHETIC_EXEMPT_PLACEHOLDER:
+            fail("审美判据", f"豁免 `{eid}` 的理由为空或为占位符（『{why}』）—— "
+                             f"覆盖必须留痕：写清「为什么不适用」，否则不得豁免")
+            return
+        exempt[eid] = why
+
+    all_fails: dict[str, list[str]] = {}
+    tool_err: list[str] = []
+    r_stat = {"PASS": 0, "FAIL": 0, "SKIP": 0}
+    s_stat = {"PASS": 0, "FAIL": 0, "SKIP": 0}   # v1.5.0：G12/G13 的**实测**状态
+    for t, geom, s_scale in targets:
+        rc, payload, raw = _aesthetic_invoke(tool, rubric, t, product, geom, s_scale)
+        if payload is None:
+            tool_err.append(f"{t.name} → 校验器未产出可解析 JSON（exit={rc}）：{raw.strip()[:120]}")
+            continue
+        # v1.5.0 修一处真缺陷（由门禁夹具 c4 暴露）：**`override_problems` 原先被丢掉**。
+        #   校验器对「刻度源与被检文件同源 / 覆盖键非法」等情形会把问题写进
+        #   `override_problems` 并**以非零码退出**，但这里只看 results 里有没有 FAIL
+        #   ⇒ 那些问题被静默吞掉，门禁报「FAIL 已清零」。这正是 fail-closed 的反面：
+        #   **进程已经说「有问题」，调用方却读成绿色**。改为与 FAIL 同级的阻断项。
+        _ovp = payload.get("override_problems") or []
+        if _ovp:
+            tool_err.append(f"{t.name} → 覆盖/刻度源问题："
+                            + "；".join(str(x) for x in _ovp[:2]))
+            continue
+        if rc not in (0, None) and not any(r.get("status") == "FAIL"
+                                           for r in payload.get("results") or []):
+            # 退出码非零却既无 FAIL 也无 problems：说明校验器自己认为有问题而无处可读，
+            # 按 fail-closed 处理，不得当作通过。
+            tool_err.append(f"{t.name} → 校验器 exit={rc}，但输出既无 FAIL 也无 problems"
+                            f"（fail-closed：不当作通过）")
+            continue
+        for r in payload.get("results") or []:
+            if str(r.get("id", "")).startswith("R") and r.get("status") in r_stat:
+                r_stat[r["status"]] += 1
+            if str(r.get("id", "")) in AESTHETIC_SCALE_IDS and r.get("status") in s_stat:
+                s_stat[r["status"]] += 1
+            if r.get("status") == "FAIL":
+                all_fails.setdefault(str(r.get("id")), []).append(f"{t.name}: {r.get('detail', '')}")
+
+    if tool_err:
+        fail("审美判据", "；".join(tool_err))
+        return
+
+    blocked = {k: v for k, v in all_fails.items() if k not in exempt}
+    stale = [k for k in exempt if k not in all_fails]
+
+    if blocked:
+        items = "；".join(f"{k}（{len(v)} 个产物）" for k, v in sorted(blocked.items()))
+        detail = "；".join(v[0] for _, v in sorted(blocked.items()))
+        fail("审美判据", f"实跑 FAIL={sum(len(v) for v in blocked.values())} 处，未清零不得交付：{items}。"
+                         f"样例：{detail[:200]}")
+    else:
+        note = (f"实跑 {len(targets)} 个产物 / 判据集 {rubric.name} / 产物类型 {product}；FAIL 已清零"
+                + (f"；豁免 {len(exempt)} 条已放行" if exempt else ""))
+        ok("审美判据", note)
+
+    # 渲染层暴露率（v1.2.1 / P3）——「没测」必须与「通过」可区分，不许并进同一个绿。
+    # v1.2.2：**再进一步** —— 「登记了渲染色」也不等于「R 组真跑起来了」。
+    #   实测暴露的形态：geom 文件存在但作用域选择器没命中 / nodes 为空 ⇒ R1-R3 全 SKIP，
+    #   若只看「带没带 geom」，注记会写「已实跑」——那是**开关存在冒充干预生效**。
+    #   故改为按**校验器实际产出的 R 组状态**计数，并单独报 PAL。
+    n_geom = sum(1 for _, g, _ in targets if g is not None)
+    r_ran = r_stat["PASS"] + r_stat["FAIL"]
+    if n_geom == 0:
+        warn("审美判据渲染层", f"0/{len(targets)} 个产物登记 `{AESTHETIC_GEOM_KEY}` —— "
+                                f"R1-R3（近乎对齐 / 兄弟尺寸 / 垂直韵律）本次判 SKIP，**渲染层未检测**，"
+                                f"不是通过。要覆盖该层：按 references/aesthetic-rubric.yaml 渲染层段用 "
+                                f"`scripts/{AESTHETIC_PROBE}` 取数，再在 `产物` 项里写 "
+                                f"`{AESTHETIC_GEOM_KEY}: <geom.json 路径>`。")
+    elif n_geom < len(targets):
+        warn("审美判据渲染层", f"{n_geom}/{len(targets)} 个产物带渲染色 —— 其余产物的 R1-R3 仍是 SKIP"
+                                f"（**未检测**，不是通过）。")
+    elif r_ran == 0:
+        warn("审美判据渲染层", f"{n_geom}/{len(targets)} 个产物**登记了**渲染色，但 R 组实跑后"
+                                f"**全部 SKIP**（PASS 0 / FAIL 0 / SKIP {r_stat['SKIP']}）—— "
+                                f"渲染色里没有可判的输入（作用域选择器未命中 / nodes 为空 / "
+                                f"韵律网格未声明等）。**仍未检测，不是通过。**")
+    else:
+        ok("审美判据渲染层", f"{n_geom}/{len(targets)} 个产物带渲染色 → R 组实跑"
+                             f"（PASS {r_stat['PASS']} / FAIL {r_stat['FAIL']} / SKIP {r_stat['SKIP']}）")
+
+    # v1.5.0：**刻度层暴露率**（与渲染层注记同构）。G12/G13 要「声明刻度源」才跑得起来；
+    #   0 个产物登记时不能只说「FAIL 已清零」——那会把「刻度层没测」读成「刻度层没问题」。
+    #   且**登记了 ≠ 真跑起来了**（产物无时长 ⇒ G13 仍 SKIP），故按**实跑状态**计数，
+    #   不用「带没带开关」冒充干预生效（与 v1.2.2 渲染层那条同源）。
+    n_scale = sum(1 for _, _, s in targets if s)
+    s_ran = s_stat["PASS"] + s_stat["FAIL"]
+    if n_scale == 0:
+        warn("审美判据刻度层", f"0/{len(targets)} 个产物登记 `{AESTHETIC_SCALE_KEY}` —— "
+                                f"G12/G13（字号/时长刻度一致性）本次判 SKIP，**刻度层未检测**，"
+                                f"不是通过。要覆盖该层：在 `{AESTHETIC_KEY}` 块（或单个产物项）里写"
+                                f"『{AESTHETIC_SCALE_KEY}』，列出该产物依赖的**声明侧**令牌 CSS"
+                                f"（ui kit 类产物通常为 `src/styles/tokens.css` + 所用主题的令牌 CSS；"
+                                f"相对路径以 `--base` 为基准；**不得填被检的那份 CSS**）。")
+    elif s_ran == 0:
+        warn("审美判据刻度层", f"{n_scale}/{len(targets)} 个产物**登记了** `{AESTHETIC_SCALE_KEY}`，"
+                                f"但 G12/G13 实跑后**全部 SKIP**（PASS 0 / FAIL 0 / SKIP {s_stat['SKIP']}）"
+                                f"—— 仍**未检测，不是通过**（常见因：声明源里没有对应维度的令牌，"
+                                f"或产物本身不含该维度，如版式层无时长）。")
+    else:
+        ok("审美判据刻度层", f"{n_scale}/{len(targets)} 个产物带声明刻度源 → G12/G13 实跑"
+                             f"（PASS {s_stat['PASS']} / FAIL {s_stat['FAIL']} / SKIP {s_stat['SKIP']}）")
+
+    if exempt:
+        trace = "；".join(f"{k}=『{v}』" for k, v in exempt.items())
+        if stale:
+            warn("审美判据豁免", f"本次实跑并未 FAIL、却被豁免的判据：{'、'.join(stale)} —— "
+                                 f"豁免项长期闲置应收回（否则它会从「有理由的例外」退化成橡皮图章）。"
+                                 f"现存豁免：{trace}")
+        else:
+            ok("审美判据豁免", f"{len(exempt)} 条（留痕：{trace}）")
+
+
 def _check_category_decl(skill_dir: Path) -> None:
     """入口判定主类：① 声明块（确定性 → FAIL）② 疑似列扫描（启发式 → WARN）。
 
@@ -372,6 +735,54 @@ def _check_category_decl(skill_dir: Path) -> None:
     else:
         ok(item_scan, f"源集合 {len(texts)} 个文件未见「主类疑似列」含未登记取值"
                       "（启发式按列裸词占比判定，会漏会误，**不作门禁**）")
+
+
+def _check_cleanup(meta: dict, plan_path: Path | None = None) -> None:
+    """v4.10.0：meta.清理 —— 任务产物清理登记（阶段 6 第 7 条 / 检查项 23）。
+
+    与 `_check_entry_verdict` / `_check_aesthetic` 同源口径：
+      * 整段缺省 → **WARN**（向后兼容旧 plan，**不追认历史计划** —— 不拿新判据改写旧证据）
+      * 非映射 / 缺必填项 / `状态` 越界 / 计数项为负或非整数 → **FAIL**
+      * 登记了 `清单` 却解析不到文件 → **FAIL**（"登记了就必须到位"，同 `_check_aesthetic`
+        的渲染色口径：声明了就不能静默退回"未检测"）
+
+    ⚠️ **它不是门禁**：`状态` 由执行者填写，机器只校验**结构**与**清单文件是否存在**。
+       「确实安全清过」「这个该不该清」不在射程内 —— 与「用户放行」字段同一处诚实边界
+       （可自填的字段不是门禁，只能提高伪造成本）。
+    """
+    v = meta.get(CLEANUP_KEY, None)
+    if not v:
+        warn("meta.清理",
+             "未记录 —— 阶段 6 第 7 条（任务产物清理）本应产出。**只提示不阻断**："
+             "向后兼容旧 plan，不追认历史计划；本项**不是门禁**")
+        return
+    if not isinstance(v, dict):
+        fail("meta.清理 合法", f"应为映射，实际 {type(v).__name__}")
+        return
+    bad: list[str] = []
+    for k in CLEANUP_REQUIRED:
+        if not str(v.get(k, "") or "").strip():
+            bad.append(f"缺『{k}』或为空")
+    st = str(v.get("状态", "") or "").strip()
+    if st and st not in CLEANUP_STATES:
+        bad.append(f"状态=『{st}』（只允许 {'/'.join(CLEANUP_STATES)}）")
+    for k in CLEANUP_COUNT_KEYS:
+        n = v.get(k, None)
+        if n is None:
+            continue
+        if isinstance(n, bool) or not isinstance(n, int) or n < 0:
+            bad.append(f"{k}={n!r}（须为非负整数）")
+    man = str(v.get(CLEANUP_MANIFEST_KEY, "") or "").strip()
+    if man and plan_path is not None:
+        cand = Path(man)
+        if not cand.is_absolute():
+            cand = plan_path.parent / man
+        if not cand.is_file():
+            bad.append(f"清单『{man}』不存在（登记了就必须解析到位：{cand}）")
+    if bad:
+        fail("meta.清理 合法", "；".join(bad[:3]))
+    else:
+        ok("meta.清理 合法", f"状态={st}（**留痕，非门禁**；结构合法不代表清得干净）")
 
 def _check_stage_gates(steps: list) -> None:
     """阶段 2 / 4 的两条最低成本门禁（v3.5.0 / P2-2）：**只出 WARN**。
@@ -919,6 +1330,156 @@ def _check_homework_sample(meta: dict) -> None:
          + " —— 复核三问：①模式选对否 ②W5 有没有被忽略（简单题不该套完整五阶段）"
            "③W4 高时是否真给了诚信提示。**这是「一致率」抽样，不是「准确率」验证**；"
            "机器只指路，判定靠人（契约 §10）。**非门禁**。")
+
+def _check_learning_verdict(meta: dict) -> None:
+    """v4.8.0：meta.学习判定 —— **可选字段，填了就必须合法**（learning-judge 的产出）。
+
+    口径与 `_check_entry_verdict` / `_check_homework_verdict` 同源：整段缺省 → **WARN**
+    （向后兼容旧 plan，**不追认历史计划**）；非映射 / 缺必填项 / 取值越界 → **FAIL**。
+
+    ⚠️ **它不是门禁**：`confidence` 由模型自填、校准无法机器证明；本函数只做"结构合法 +
+    **派生字段自洽**"这一层（"这条值不值得学"不在射程内）。
+
+    ⭐ **两条确定性判据（与 `homework-judge` 同款，且是"算错"不是"判断分歧"）**：
+      ① `needs_learning` 是 `kind` 的**派生值**，矛盾即 FAIL；
+      ② **`无` 不得参与 `A+B` 组合** —— "没有"与"有"并列无意义，故属确定性非法。
+    """
+    v = meta.get(LEARNING_KEY, None)
+    if not v:
+        warn("meta.学习判定",
+             "未记录 —— 阶段 6 收尾（learning-judge）本应产出。**只提示不阻断**："
+             "向后兼容旧 plan，不追认历史计划；本项**不是门禁**（校准无法机器强制）")
+        return
+    if not isinstance(v, dict):
+        fail("meta.学习判定 合法", f"应为映射，实际 {type(v).__name__}")
+        return
+    bad = []
+    for k in LEARNING_REQUIRED:
+        if k not in v or (not isinstance(v[k], (int, float, bool)) and not v[k]):
+            bad.append(f"缺『{k}』或为空")
+    kind = str(v.get("kind", "") or "").strip()
+    if kind:
+        parts = [p.strip() for p in kind.split("+")]
+        if any(p not in LEARNING_KINDS for p in parts):
+            bad.append(f"kind=『{kind}』（只允许 {'/'.join(LEARNING_KINDS)} 及其 '+' 组合）")
+        elif len(parts) != len(set(parts)):
+            bad.append(f"kind=『{kind}』组合串含重复项（组合应是**不同**类型的并列）")
+        elif "无" in parts and len(parts) > 1:
+            # ⭐ v4.8.0：`无` 不得参与组合 —— "没有"与"有"并列无意义，属确定性非法
+            bad.append(f"kind=『{kind}』：『无』不得参与组合（它表示「本任务无可学信号」，不能与有并列）")
+    conf = v.get("confidence", None)
+    if conf is not None:
+        if isinstance(conf, bool) or not isinstance(conf, (int, float)):
+            bad.append(f"confidence={conf!r}（须为 0–1 的数）")
+        elif not 0.0 <= float(conf) <= 1.0:
+            bad.append(f"confidence={conf!r}（越界，须在 0–1）")
+    amb = v.get("ambiguity", None)
+    if amb is not None and not isinstance(amb, bool):
+        bad.append(f"ambiguity={amb!r}（须为 bool）")
+    dist = v.get("distribution", None)
+    dist_top = None
+    if isinstance(dist, dict):
+        if set(dist) != set(LEARNING_KINDS):
+            bad.append(f"distribution 键={sorted(dist)}（须恰为 {sorted(LEARNING_KINDS)}）")
+        else:
+            nums = []
+            for k, x in dist.items():
+                if isinstance(x, bool) or not isinstance(x, (int, float)):
+                    bad.append(f"distribution[{k}]={x!r}（须为数值）")
+                    continue
+                # 同作业判定：只校验"和 = 1"时**负概率可以配平通过**（如 {偏好:1.5, …:-0.5}）
+                if not 0.0 <= float(x) <= 1.0:
+                    bad.append(f"distribution[{k}]={x}（须在 0–1；负概率与 >1 均非法）")
+                nums.append(float(x))
+            if len(nums) != len(LEARNING_KINDS):
+                bad.append("distribution 含非数值项")
+            elif abs(sum(nums) - 1.0) > 1e-6:
+                bad.append(f"distribution 之和={sum(nums):.4f}（须为 1）")
+            if nums:
+                dist_top = max(nums)
+    elif dist is not None:
+        bad.append(f"distribution 应为映射，实际 {type(dist).__name__}")
+
+    # confidence 的派生自洽（契约 §5.1 定义 `confidence = max(distribution)`）
+    # 容差 1e-3 不是放宽：落盘是 4 位小数，量化误差量级 ≤ 2e-4
+    if dist_top is not None and isinstance(conf, (int, float)) and not isinstance(conf, bool):
+        if abs(float(conf) - dist_top) > 1e-3:
+            bad.append(f"confidence={conf} ≠ max(distribution)={dist_top:.4f}"
+                       f"（派生值，§5.1 定义为分布最大值）")
+
+    dims = v.get("dimensions", None)
+    if isinstance(dims, dict):
+        miss_d = [d for d in LEARNING_DIMS if d not in dims]
+        if miss_d:
+            bad.append(f"dimensions 缺 {'/'.join(miss_d)}")
+        for d in LEARNING_DIMS:
+            if d not in dims:
+                continue
+            x = dims[d]
+            if isinstance(x, bool) or not isinstance(x, (int, float)):
+                bad.append(f"dimensions[{d}]={x!r}（须为数值）")
+            elif not 0.0 <= float(x) <= 1.0:
+                bad.append(f"dimensions[{d}]={x}（越界，须在 0–1）")
+    elif dims is not None:
+        bad.append(f"dimensions 应为映射，实际 {type(dims).__name__}")
+
+    # ⭐ 派生字段自洽（确定性判据，见 docstring）
+    nl = v.get("needs_learning", None)
+    if nl is not None:
+        if not isinstance(nl, bool):
+            bad.append(f"needs_learning={nl!r}（须为 bool：它是 kind 的派生值）")
+        elif kind:
+            expect = kind.split("+")[0].strip() != "无"
+            if nl is not expect:
+                bad.append(f"needs_learning={nl} 与 kind=『{kind}』矛盾"
+                           f"（派生值应为主类型 ≠『无』⇒ {expect}）")
+    # 可选计数字段（由 kb_learn.py commit 回填，供"学习真的发生了"对账）
+    for ck in ("入库", "候选"):
+        cv = v.get(ck, None)
+        if cv is None:
+            continue
+        if isinstance(cv, bool) or not isinstance(cv, int) or cv < 0:
+            bad.append(f"{ck}={cv!r}（须为非负整数）")
+    if bad:
+        fail("meta.学习判定 合法",
+             "；".join(bad[:4]) + (f"（…等 {len(bad)} 项）" if len(bad) > 4 else ""))
+    else:
+        ok("meta.学习判定 合法",
+           f"kind={kind}（**留痕，非门禁**；结构合法不代表判对 —— 见 references/learning-judge.md §10）")
+
+def _check_learning_sample(meta: dict) -> None:
+    """v4.8.0：学习判定的**抽样人审信号** —— 非门禁，只指路。
+
+    抽样池（复核杠杆最高的三类）：① `kind` 为**组合态**（top2 接近，判定本身不稳）
+    ② `confidence` 低于自采信带 `LEARNING_SAMPLE_BAND` ③ `ambiguity=true`。
+    **永不计入 FAIL、不改退出码。**
+
+    复核三问（写进提示，机器不代替人做）：① 类型选得对吗（四类之一，还是应判『无』）
+    ② **V5 稳定性有没有被忽略** —— 时效性事实不该进 KB（应记工作区 memory）
+    ③ 若已入库，`入库` / `候选` 计数与实际 KB 文档数是否对得上。
+    ⚠️ 未证实前只说「**一致率**」，**不声称「准确率」**。
+    """
+    v = meta.get(LEARNING_KEY)
+    if not isinstance(v, dict) or not v:
+        return  # 无留痕 → 无可抽样项（缺省由检查项 20 的 WARN 覆盖）
+    kind = str(v.get("kind", "") or "").strip()
+    conf = v.get("confidence")
+    reasons = []
+    if "+" in kind:
+        reasons.append(f"kind=『{kind}』（组合态，top2 接近）")
+    if isinstance(conf, (int, float)) and not isinstance(conf, bool) and float(conf) < LEARNING_SAMPLE_BAND:
+        reasons.append(f"confidence={conf}<{LEARNING_SAMPLE_BAND}")
+    if v.get("ambiguity") is True:
+        reasons.append("ambiguity=true（契约 §5 要求留池观察，不得自动入库）")
+    if not reasons:
+        ok("学习判定抽样人审",
+           "无待抽样条目（单类型、confidence 达自采信带、非模糊）—— 机器未指路，非门禁")
+        return
+    warn("学习判定抽样人审",
+         "建议人工复核本任务学习判定：" + "；".join(reasons)
+         + " —— 复核三问：①类型选对否（还是应判『无』）②V5 稳定性有没有被忽略"
+           "（时效性事实不该进 KB，应记工作区 memory）③入库/候选计数与 KB 文档数对不对得上。"
+           "**这是「一致率」抽样，不是「准确率」验证**；机器只指路，判定靠人（契约 §10）。**非门禁**。")
 
 def _check_reflection_retry(meta: dict, steps: list) -> None:
     """v4.1.0：反思重试配置 —— **可选块，整段缺省即 SKIP（向后兼容）**。
