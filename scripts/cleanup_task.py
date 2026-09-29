@@ -26,8 +26,16 @@ v3.4.0 / P7 已把「探针与夹具输出一律放 `tasks/<任务>/tmp/`」定�
 1. **白名单容器式，不是黑名单**。「中间产物」无法机器判定，但「约定容器」可以 ——
    故只清 `tmp/` 一棵树，而不是「删掉所有非交付物」。后者会误删留痕与人审证据。
 2. **保护清单优先于删除清单**。交付物、`plan.yaml`、`trace.jsonl`、`_metrics.jsonl`、
-   各类报告、被 `SKILL.md`／`references/*.md` 引用的路径 —— 即使它们出现在 `tmp/` 里也不删。
+   各类报告、被 `SKILL.md`／`references/*.md` 引用的路径、**被本任务自身记录文件
+   （任务根 `*.md`）引用**的路径 —— 即使它们出现在 `tmp/` 里也不删。
    （交付物优先于容器约定：约定说的是「tmp 是中间产物」，不是「tmp 里的都该删」。）
+   ⚠️ **v4.14.1 补第二类引用面**：此前只扫技能自己的手册，于是**任务记录里引用的 tmp 证据会被清掉**，
+   记录正文随即留下**悬空引用**（与「文档写着有、实际不在」同源）—— 实测本仓 25/30 个活跃任务目录
+   都有这种引用。两类引用面合并为同一个保护判据，理由文案区分「技能手册」与「本任务记录」以便人核。
+   **该面的诚实边界**：只扫任务根 `*.md`，**`plan.yaml` 里的 `tmp/` 引用不覆盖** ——
+   若把 plan.yaml 一并纳入，就会与 `deliverable_paths()` 重叠，令 S4 阴性对照（"撤掉交付物保护后
+   必须能删到"）**恒判假绿**，反而毁掉「交付物保护有牙齿」的唯一证据（详见 `referenced_in_task()` 注释）。
+   故 `plan.yaml` 里**单独**引用的证据项仍会被清掉 —— 写记录时请把证据一并写进任务根的 `*.md`。
 3. **删后不给结论、只给证据**。删完重跑一次交付物对账 —— 双条件：**删干净了** **且**
    **没删该留的**。只报前半句等于把「误删」读成「成功」。
 
@@ -156,6 +164,47 @@ def referenced_paths(skill_root: Path) -> set:
     return out
 
 
+# 「本任务记录文件引用的 tmp 路径」抽取口径（v4.14.1 新增）。
+# 只认 `tmp/` 或 `tmp\` 起头、且不含空白/引号/括号/全角标点的连续片段 —— **刻意从宽**：
+# 多保护一项的代价是「少删一个中间产物」（可重来），漏保护一项的代价是
+# 「记录里出现悬空引用」（不可逆，且与「文档写着有、实际不在」同源）。
+_TMP_REF_RE = re.compile(r"tmp[\\/][^\s`\"'()\[\]{}<>，,；;：:、）】]+")
+
+
+def referenced_in_task(task_dir: Path) -> set:
+    """被**本任务自身的记录文件**（任务根 `*.md`）引用、且落在本任务 `tmp/` 下的路径。
+
+    v4.14.1 新增。此前 `referenced_paths()` 只扫**技能自己的** `SKILL.md`／`references/*.md` ——
+    而最可能引用本任务 `tmp/` 证据的恰恰是任务自己的记录（`三件套记录.md`、`自检-*.md`…）。
+    缺口后果：任务记录里的 `tmp/...` 引用在清理后全部变成**悬空引用**，
+    且 `engine_v4130/`（旧版引擎对照副本）这类**可重放证据**会被一并清掉。
+    """
+    out = set()
+    try:
+        tmp_root = (task_dir / "tmp").resolve()
+    except OSError:
+        return out
+    # ⚠️ 刻意**只扫任务根 `*.md`**：`plan.yaml` 的 `交付物` 字段已由 `deliverable_paths()` 单独覆盖，
+    #    若再把它算作「记录引用」，两套保护就会**重叠** —— 撤掉交付物保护时该项仍被这套兜住，
+    #    于是 S4 阴性对照（"撤掉后必须能删到"）**恒判假绿**，等于毁掉「交付物保护有牙齿」的唯一证据。
+    #    （实测踩过：把 plan.yaml 一并纳入后 S4 立刻 FAIL。）结论：**新增保护面必须先查它与既有面的重叠**。
+    for doc in sorted(task_dir.glob("*.md")):
+        if not doc.is_file():
+            continue
+        try:
+            text = doc.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        for m in _TMP_REF_RE.findall(text):
+            try:
+                cand = (task_dir / m).resolve()
+            except OSError:
+                continue
+            if cand == tmp_root or tmp_root in cand.parents:
+                out.add(cand)
+    return out
+
+
 def check_triggers(data: dict, gate_runner) -> tuple[bool, list, list]:
     """T1/T2/T3 —— 三条机器可判定的前置条件。返回 (是否通过, 通过项, 拒绝理由)。"""
     okk, bad = [], []
@@ -235,7 +284,7 @@ def collect(tmp_dir: Path, protected: set, task_dir: Path, skill_root: Path) -> 
     keep = []
     if not tmp_dir.is_dir():
         return [], keep
-    refs = referenced_paths(skill_root)
+    refs = referenced_paths(skill_root) | referenced_in_task(task_dir)
     items = list(tmp_dir.rglob("*"))
 
     def why(p: Path):
@@ -248,7 +297,7 @@ def collect(tmp_dir: Path, protected: set, task_dir: Path, skill_root: Path) -> 
         if p.name in PROTECT_NAMES or any(p.name.endswith(s) for s in PROTECT_SUFFIXES):
             return "保护名单（留痕/证据文件）"
         if ap in refs:
-            return "被 SKILL.md / references 引用"
+            return "被技能手册或本任务记录引用"
         if ap == SELF or ap == task_dir:
             return "脚本自身或任务目录"
         return None
@@ -485,6 +534,11 @@ def _fixture(root: Path, *, status="完成", fuse="", with_deliv_in_tmp=True) ->
     (task / "tmp" / "scratch.py").write_text("print(1)\n", encoding="utf-8")
     (task / "tmp" / "sub" / "probe.txt").write_text("中间产物\n", encoding="utf-8")
     (task / "tmp" / "确认表.md").write_text("留痕\n", encoding="utf-8")          # 测保护名单
+    (task / "tmp" / "refed_evidence.txt").write_text("被任务记录引用的证据\n", encoding="utf-8")
+    # v4.14.1：任务根记录**引用** tmp 证据 ⇒ 该证据必须被保护（否则清理会让记录出现悬空引用）。
+    #   ⚠️ 记录里**只**引用这一个文件 —— 若一并引用 `tmp/sub/probe.txt`，`sub/` 整棵会被保护，
+    #   下面「S2 tmp/ 子目录一并清除」的断言就会（正确地）失败。
+    (task / "记录.md").write_text("证据见 `tmp/refed_evidence.txt`。\n", encoding="utf-8")
     if with_deliv_in_tmp:
         (task / "tmp" / "declared_deliverable.md").write_text("被登记为交付物\n", encoding="utf-8")
     # ⚠️ 任务根**不放** trace.jsonl：那会启用「步骤闭环不变量（trace 自证）」判据而 FAIL。
@@ -529,7 +583,7 @@ def _run(task: Path, root: Path, apply=False, extra=(), script=SELF):
     return p.returncode, (p.stdout or "") + (p.stderr or "")
 
 
-def _tamper(dst: Path, *, kill_names=False, kill_deliv=False) -> Path:
+def _tamper(dst: Path, *, kill_names=False, kill_deliv=False, kill_taskref=False) -> Path:
     """复制本脚本并按需撤掉一处保护 —— 阴性对照的核心：**撤掉后必须能删到受保护项**。"""
     text = SELF.read_text(encoding="utf-8")
     if kill_names:
@@ -539,6 +593,11 @@ def _tamper(dst: Path, *, kill_names=False, kill_deliv=False) -> Path:
             'PROTECT_SUFFIXES = ("报告.md",)', "PROTECT_SUFFIXES = ()")
     if kill_deliv:
         text = text.replace("HONOR_DELIVERABLE_PROTECTION = True", "HONOR_DELIVERABLE_PROTECTION = False")
+    if kill_taskref:
+        # v4.14.1 新增保护面的阴性对照：只撤「本任务记录引用」这一半引用面。
+        text = text.replace(
+            "refs = referenced_paths(skill_root) | referenced_in_task(task_dir)",
+            "refs = referenced_paths(skill_root)")
     dst.write_text(text, encoding="utf-8")
     return dst
 
@@ -577,6 +636,8 @@ def main_selftest() -> int:
         case("S1 交付物不出现在待删清单", "declared_deliverable.md" not in _seg(out, "待清理"))
         case("S1 保护项被显式列出并说明理由",
              "确认表.md" in _seg(out, "受保护") and "交付物" in _seg(out, "受保护"))
+        case("S1 本任务记录引用的 tmp 项不出现在待删清单",
+             "refed_evidence.txt" not in _seg(out, "待清理"))
 
         r2 = R / "c2"; r2.mkdir()
         t2 = _fixture(r2)
@@ -587,6 +648,8 @@ def main_selftest() -> int:
         case("S2 交付物仍在", (t2 / "out" / "result.txt").exists())
         case("S2 tmp 内的交付物仍在（交付物优先于容器约定）", (t2 / "tmp" / "declared_deliverable.md").exists())
         case("S2 tmp 内的保护名单项仍在", (t2 / "tmp" / "确认表.md").exists())
+        case("S2 本任务记录引用的 tmp 项仍在（防记录悬空引用）",
+             (t2 / "tmp" / "refed_evidence.txt").exists())
         case("S2 生成了清理清单", bool(list(t2.glob("清理清单-*.txt"))))
         rc2, out2 = _run(t2, r2, apply=True, extra=("--no-trash",))
         case("S2 幂等：重跑报无待清理项", rc2 == 0 and "无操作" in out2, f"exit={rc2}")
@@ -610,6 +673,16 @@ def main_selftest() -> int:
         case("S4 阴性对照（撤掉交付物保护）→ tmp 内的交付物被删除",
              gone4,
              "撤掉后已删掉 ⇒ 该保护确实由交付物清单实现（非假绿）" if gone4
+             else "撤掉后仍删不掉 ⇒ 该保护不是它实现的（假绿）")
+
+        r4b = R / "c4b"; r4b.mkdir()
+        tt = _tamper(R / "tamper_taskref.py", kill_taskref=True)
+        t4b = _fixture(r4b)
+        rc, out = _run(t4b, r4b, apply=True, extra=("--no-trash",), script=tt)
+        gone4b = not (t4b / "tmp" / "refed_evidence.txt").exists()
+        case("S4b 阴性对照（撤掉任务记录引用保护）→ 被引用项被删除",
+             gone4b,
+             "撤掉后已删掉 ⇒ 该保护确实由本任务记录引用实现（非假绿）" if gone4b
              else "撤掉后仍删不掉 ⇒ 该保护不是它实现的（假绿）")
 
         # ── S5/S6 阴性对照：触发条件不满足 → 拒绝且不动手
