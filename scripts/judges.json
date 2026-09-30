@@ -1,5 +1,5 @@
 {
-  "_comment": "五个 judge 的 questions 模板。字段名与 laya.Agent.system_one 契约一致：type/instructions/criteria。候选类（gap_class / source_class）与维度分是固定题；候选工具（candidates）由调用侧运行时注入。v4.7.0 新增 homework_judge（模式选用）；v4.8.0 新增 learning_judge（学习信号）。",
+  "_comment": "七个 judge 的 questions 模板。字段名与 laya.Agent.system_one 契约一致：type/instructions/criteria。候选类（gap_class / source_class）与维度分是固定题；候选工具（candidates）由调用侧运行时注入。v4.7.0 新增 homework_judge（模式选用）；v4.8.0 新增 learning_judge（学习信号）；v4.11.0 新增 thinking_judge（任务审计）；v4.15.0 新增 style_judge（文风判别）。",
   "self_judge": {
     "state_fields": [
       "request_text"
@@ -525,5 +525,97 @@
       "拒绝": "停止处理 + 说明命中轴编号 + 一句替代方向（无则显式填「无」）+ **一句申诉指引 appeal_hint**；不复述违规内容；不计熔断、不入学习池（C8/C15/C22）"
     },
     "_note": "⚠️ 裁决四态是「该不该按原样做」，与主类三态（chat/code/content）、模式三态、能力四态、源类五态、学习类型五态**都是不同的物理量**，不得合并、不得互推（C9）；取值域见 references/thinking-panel.md §3，并与 references/data-model.md 的受守卫镜像同源（checks 口径守卫机检，两项：「思考裁决」与「思考否决轴」）。⚠️ `distribution` 的键**只有三个**，`拒绝` 不得作键（D7）；`dimensions` 只有 T1–T4，**不含 T5**（D9）。"
+  },
+  "style_judge": {
+    "state_fields": [
+      "product_path",
+      "category",
+      "genre",
+      "audience",
+      "author_sample"
+    ],
+    "verdict": {
+      "type": "choice",
+      "instructions": "本次产出的文风该怎么处置？走去味=是面向人阅读的散文正文且命中可机器判的表层特征；只登记=有信号但误伤正当用法的风险高于润色收益，不改写；已达标=是散文正文但校验器 FAIL=0；不适用=不是散文正文（代码/JSON/YAML/数据表/公式）。",
+      "criteria": {
+        "走去味": "面向人阅读的散文正文，且 humanize_scan 命中可机器判的表层特征 → 阶段 3 展开改写＋保真核对",
+        "只登记": "有信号，但改动风险（误伤正当用法）高于收益 → 不改写，把命中项登记为人审点",
+        "已达标": "是散文正文但 humanize_scan FAIL = 0 → 无需改写；SKIP 档仍登记为人审点",
+        "不适用": "不是散文正文（代码／JSON／YAML／数据表／公式／纯结构文本）→ 判 SKIP，不喊一遍"
+      }
+    },
+    "ambiguity": {
+      "type": "noul",
+      "instructions": "本次产出的文风处置是模糊的或混合的 —— 判不准就不改写（fail-closed 的动作是「不动」，不是「向用户追问」）。"
+    },
+    "dimensions": {
+      "S1": {
+        "type": "score",
+        "instructions": "产物是否面向人阅读的连续散文正文（而非代码、JSON、YAML、数据表、公式）。",
+        "criteria": [
+          "不是散文正文",
+          "偏低",
+          "偏高",
+          "是面向人阅读的散文正文"
+        ]
+      },
+      "S2": {
+        "type": "score",
+        "instructions": "humanize_scan.py 可判的表层特征（客服腔／套话收尾／意义拔高／emoji 标题／空转开头…）的命中密度。",
+        "criteria": [
+          "无命中",
+          "偏低",
+          "偏高",
+          "密集命中"
+        ]
+      },
+      "S3": {
+        "type": "score",
+        "instructions": "产物是否对外交付（发给他人、推送远端、发布上线）。",
+        "criteria": [
+          "仅本地",
+          "偏低",
+          "偏高",
+          "明确对外"
+        ]
+      },
+      "S4": {
+        "type": "score",
+        "instructions": "数字／否定／限定／归因 token 的密度 —— 即「改写可能改坏事实」的风险。",
+        "criteria": [
+          "极低",
+          "偏低",
+          "偏高",
+          "密集（改写必须跑保真比对）"
+        ]
+      },
+      "S5": {
+        "type": "score",
+        "instructions": "是否有该作者的文风样本可供校准（决定能否升级到 spec 档）。",
+        "criteria": [
+          "无样本",
+          "偏低",
+          "偏高",
+          "有充分样本"
+        ]
+      }
+    },
+    "thresholds": {
+      "auto_accept": 0.95,
+      "mid": 0.7,
+      "ambiguity_band": [
+        0.35,
+        0.65
+      ],
+      "_note": "阈值来自 references/humanize-judge.md §5；参数未拟合前只作留痕。⚠️ 与另六块的差异：fail-closed 的动作是「不改写」而非「向用户追问」—— 理由见契约 §5 末条（不改写的代价远低于改坏的代价，代价不对称）。"
+    },
+    "route_hint": {
+      "走去味": "阶段 3 展开：以 rubric 为线索改写 → humanize_scan.py --gate → --diff-fidelity 改写前 改写后 → 双条件均满足（FAIL 下降 且 保真零丢失）才进阶段 4/5；FAIL 未清零按 T1 反思重试，耗尽升「返修复查」",
+      "只登记": "不改写；把命中项（含 SKIP 档）登记为人审点，在交付说明里逐条列出并写明「未改写、理由是误伤风险」",
+      "已达标": "直接过；SKIP 档（17 条语义项）仍须登记为人审点，不得声称「已全面检查」",
+      "不适用": "判 SKIP；在结论里写明「本产物不是散文正文，未跑去味」（不喊一遍 ≠ 通过）",
+      "模糊 / 混合": "fail-closed：不改写，在结论里写明「文风判定未定」并登记为人审点"
+    },
+    "_note": "⚠️ verdict 四态是「文风处置」枚举，与主类三态（chat/code/content）、模式三态（作业题/讲解题/非作业）、能力四态、源类五态、学习类型五态、裁决四态都是**不同的物理量**，不得混称、不得互相推导；取值域见 references/humanize-judge.md §1。⚠️ 本块是家族里**唯一带机器验收层**的：登记了 `产物` 就把 scripts/humanize_scan.py 实跑一遍（检查项 26），**登记里的数字一概不采信**。⚠️ 触发面收敛：仅 self-judge.category == content 且交付物面向人阅读时展开；code/chat 判「不适用」。⚠️ 本判定**不判作者身份、不保证过任何 AI 检测器**（契约 §10）。"
   }
 }

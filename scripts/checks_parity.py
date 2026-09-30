@@ -30,6 +30,9 @@ from checks_core import (  # noqa: F401
     VALID_COMMIT_TYPES,
     VALID_TRIGGER,
     HOMEWORK_MODES,
+    HUMANIZE_RUBRIC_DEFAULT,
+    HUMANIZE_TOOL,
+    HUMANIZE_VERDICTS,
     CLEANUP_STATES,
     LEARNING_KINDS,
     THINKING_VERDICTS,
@@ -292,6 +295,53 @@ def _p_thinking_axes(text: str) -> set:
         vals |= {k for k in crit if re.fullmatch(r"A\d", str(k))}
     return vals
 
+def _p_humanize_verdicts(text: str) -> set:
+    """文风判定四态（v4.15.0）—— **一个物理量、三种载体**：
+
+      · **手册表格**（`references/humanize-judge.md` §1）：`| **走去味** | …` —— 首格是**加粗中文词**；
+        表头 `| 判定 | 含义 |`。⚠️ 该文件 §5 另有一张 `| 判定 | route_hint |`，故**必须锚两格**
+        （`| 判定 | 含义 |`）—— 只锚首格 `| 判定 |` 会把 §5 的 `route_hint` 表也并进来 → 假 FAIL。
+      · **受守卫镜像**（`references/data-model.md` §2.2）：表头 `| 文风判定 | 含义 |`。
+      · **模板 json**（`scripts/judges.json` 的 `style_judge.verdict.criteria`）：走 json 解析。
+
+    ⚠️ **镜像侧锚点唯一性**：本文件已有 `| 类型 | 含义 |`（提交类型）/`| 学习类型 | 含义 |`（学习类型）/
+    `| 清理状态 | 含义 |`（清理状态）/`| 思考裁决 | 含义 |`（思考裁决）/`| 思考否决轴 | 含义 |`（思考否决轴）
+    五张 `| X | 含义 |` 型表 —— 故本表表头必须**分别为唯一字符串**：`| 文风判定 | 含义 |`。
+
+    ⚠️ 并集模型固有边界（与既有各守卫共有，如实登记）：**"多写"会 FAIL，"少写"不会**。
+    """
+    vals: set = set()
+    # 手册侧：锚**两格**表头 `| 判定 | 含义 |`（避开同文件 §5 的 `| 判定 | route_hint |`）
+    m = re.search(r"^\|\s*判定\s*\|\s*含义\s*\|\s*$", text, re.M)
+    if m:
+        block: list[str] = []
+        for ln in text[m.end():].splitlines():
+            if ln.strip().startswith("|"):
+                block.append(ln)
+            elif block:
+                break
+        vals |= {x.strip() for x in re.findall(r"^\|\s*\*\*([^*|]+?)\*\*\s*\|", "\n".join(block), re.M)}
+    # 镜像侧：表头 `| 文风判定 | 含义 |`（唯一）
+    m2 = re.search(r"^\|\s*文风判定\s*\|\s*含义\s*\|\s*$", text, re.M)
+    if m2:
+        block2: list[str] = []
+        for ln in text[m2.end():].splitlines():
+            if ln.strip().startswith("|"):
+                block2.append(ln)
+            elif block2:
+                break
+        vals |= {x.strip() for x in re.findall(r"^\|\s*\*\*([^*|]+?)\*\*\s*\|", "\n".join(block2), re.M)}
+    # judges.json 分支：json 解析成功且含 style_judge 才取值；md 文件解析失败 → 静默跳过
+    # （源文件读不到由 _check_parity 的主循环兜，不在这里造第二个 FAIL 源）
+    try:
+        data = json.loads(text)
+    except (ValueError, TypeError):
+        return vals
+    if isinstance(data, dict) and isinstance(data.get("style_judge"), dict):
+        crit = (data["style_judge"].get("verdict") or {}).get("criteria") or {}
+        vals |= set(crit)
+    return vals
+
 def _resolve_sources(skill_dir: Path, spec) -> list[Path]:
     '''把 PARITY_ITEMS 的「源规格」解析为文件列表（v4.2.0 返修轮：支持多源）。
 
@@ -544,6 +594,55 @@ def _check_thinking_band_source(skill_dir: Path) -> None:
               f"{n_q} 个 question 均含 type/instructions")
 
 
+def _check_humanize_parity(skill_dir: Path) -> None:
+    """跨格式同源判据（v4.15.0）—— 断言 `references/humanize-rubric.yaml` 的 **machine 档规则 id 集合**
+    == `scripts/humanize_scan.py` 的**实现集合**（RULES + DENSITY），**双向比对**，多一处或少一处即 FAIL。
+
+    **存在意义**：rubric 是判据的**语义源**，scan.py 是它的**可执行副本** —— 两者分居 YAML 与 Python。
+    而 `PARITY_ITEMS` 的模型是「若干文本源 → 一个解析器 → 一个集合」，**表达不了跨格式**（YAML 里的
+    `- id: H01` + `judgeability: machine` 与 Python 里的 `RULES = [...]` 不是同一种解析）；
+    `guard_constants.py` 走 `ast.parse` 同样够不到 YAML 字段。⇒ 这正是「同一物理量两处不同源」的经典缺口，
+    且**本工作区最痛的就是这类漂移**（`Ledger.md` 为此留过多次更正记录）。
+
+    ⚠️ **不重复实现**：比对逻辑归校验器自己（`humanize_scan.py --audit`），本条只负责**调用它并读退出码**
+    —— 若在门禁里再写一份解析，就成了"三处同源"，反而多一个漂移面（同 `_check_thinking_band_source`
+    把 `thinking_model.py` 当唯一口径源的处置）。
+
+    ⚠️ **fail-closed**：校验器缺失 / 跑不起来 / 输出读不到 → **FAIL**（不得静默降级为跳过 ——
+    "守卫读不到规则 = 没有规则"）。
+
+    阴性对照（验收用，**判据换了必须重做夹具**）：
+      (a) 把 rubric 里任一条 machine 档（如 H01）的 `judgeability` 改成 `manual` → 本条必须红
+          （"判据集 machine 档有、实现无"方向）；
+      (b) 在 scan.py 的 `RULES` 里加一条 rubric 没有的 id（如 `H99`）→ 本条必须红
+          （"实现有、判据集 machine 档无"方向）；
+      (c) 把 scan.py 的 `--audit` 分支删掉 → 本条必须红（**不得因工具缺能力而变绿**）。
+    """
+    label = "口径守卫：文风判据同源（rubric ↔ 实现）"
+    tool = skill_dir / "scripts" / HUMANIZE_TOOL
+    rubric = skill_dir / HUMANIZE_RUBRIC_DEFAULT
+    if not tool.is_file():
+        fail(label, f"校验器缺失：{tool}（守卫读不到规则 = 没有规则）")
+        return
+    if not rubric.is_file():
+        fail(label, f"判据集缺失：{rubric}（守卫读不到规则 = 没有规则）")
+        return
+    try:
+        p = subprocess.run([sys.executable, str(tool), "--audit", "--rubric", str(rubric)],
+                           capture_output=True, text=True, encoding="utf-8",
+                           errors="replace", timeout=60)
+    except (OSError, subprocess.SubprocessError) as exc:
+        fail(label, f"校验器跑不起来：{type(exc).__name__}: {exc}（fail-closed：不当作通过）")
+        return
+    out = ((p.stdout or "") + (p.stderr or "")).strip()
+    if p.returncode == 0:
+        first = out.splitlines()[0][:90] if out else "audit 退出码 0"
+        ok(label, f"`{HUMANIZE_RUBRIC_DEFAULT}` 的 machine 档 ↔ `scripts/{HUMANIZE_TOOL}` 实现集合"
+                  f"双向一致（{first}）")
+    else:
+        fail(label, f"同源被破坏（exit={p.returncode}）：{out[:300]}")
+
+
 def _p_cleanup_states(text: str) -> set:
     """清理状态（v4.10.0）—— **一个物理量、两种载体**：
 
@@ -615,6 +714,13 @@ PARITY_ITEMS = (
     #   ⚠️ json 侧必须按 `A\d` 过滤 —— `veto_axis.criteria` 合法含 `无`，而 `无` 不在 THINKING_VETO_AXES。
     ("思考否决轴", ("references/thinking-panel.md", "references/data-model.md", "scripts/judges.json"),
      _p_thinking_axes, THINKING_VETO_AXES),
+    # v4.15.0 新增「文风判定」（style-judge）：**三源**（手册 + 受守卫镜像 + 模板 json）——
+    #   与「思考裁决」同型。⚠️ 手册侧锚点取**两格** `| 判定 | 含义 |`（`humanize-judge.md` §5 另有
+    #   `| 判定 | route_hint |`，只锚首格会撞锚 → 假 FAIL）；镜像侧锚 `| 文风判定 | 含义 |`（唯一）。
+    #   ⚠️ 与「文风判据同源」（rubric ↔ 实现，另由 _check_humanize_parity 判）是**两道不同守卫**：
+    #      本项锁「四态取值」跨手册/镜像/json 同源，那道锁「判据集 machine 档 id ↔ 实现集合」。
+    ("文风判定", ("references/humanize-judge.md", "references/data-model.md", "scripts/judges.json"),
+     _p_humanize_verdicts, HUMANIZE_VERDICTS),
     # ⚠️「入口判定主类」**不在本表内**（v4.2.0 第五轮换口径后由 `_check_category_decl` 单独判）：
     # 本表的模型是「若干源 → 一个解析器 → 一个集合」，多源时取并集比对；而主类那项需要
     # **跨文件的唯一性判定（源规格面内）**（声明块须恰一处），并集模型表达不了它 ——

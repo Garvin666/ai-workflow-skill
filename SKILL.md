@@ -1,13 +1,13 @@
 ---
 name: ai-workflow
-description: AI 标准化多阶段工作方法论，适用于量化分析、跨境电商选品、小说写作、学习资料生成、技术调研等项目：**thinking-judge 任务审计快判**（判「该不该按原样做」，四态裁决 接受／修正／澄清／拒绝 + 否决轴 A1–A6，契约见 `references/thinking-panel.md`）→ **self-judge 意图快判**（chat/code/content 三态 + 校准概率，契约见 `references/self-judge.md`）→ 入口分型（消息 / 正式需求 / Bug）与任务分层（轻操作豁免 / 快速通道 / 全流程）→ 查可用 Skill → 上下文收集与任务确认 → 调研与方案评审 → 编排执行（**自主决策层**：能力路由选型（**步骤级工具/方法选用快判**见 `references/method-judge.md`，与入口级 self-judge 同构）+ 自适应计划与重规划 + 决策留痕，机器可校验；计划先行、**检索快判**（判「该不该查、查哪类源、能否断言不存在」，契约见 `references/retrieval-judge.md`）、精检索、子代理 Handoff、**阶段感知模型路由**（行业实测降本 70–90%；本机账单待补））→ 独立审核**抽查制**（默认自查 + 机器门禁；高危产出／用户点名／返修触顶三类必送审，送审时执行者不自审）与返修复查 → 测试交付与验收（含发布协作）→ 结果核验、履历归档与复盘，**自研工具与技能须标注（名称/用途/适用场景）并按「本体 → ai-workflow-skill ／ 自研工具 → ai-workflow-tools」两类规则分流推送 public 仓库并做独立验收、交付附仓库链接**，流程末梢设**熔断机制**（触发即冻结并升级，机器可判定）。全流程按**效率 / 质量 / 信息安全**三项核心原则取舍（去重与并行、准确与一致、数据保护与访问控制），内置工作区边界（v4.3.0 起配**运行时闸门** `scripts/gate.py` —— 删改既有文件**之前**先过闸，范围判定与风险判定分离、fail-closed）、Token 纪律、评审防偏差与反模式清单，并内置**作业模式**（v4.10.1：面向课程作业／习题／复习题的精简解题结构（S0–S2：简要已知 → 解题过程含验证内联 → 答案；删思路分析/关键步骤解释两段），配数学计算／编程实现／论述写作三类题型骨架；**是否叠加由同构的「模式选用快判」（homework-judge）判定**，手册见 `references/homework-mode.md`、契约见 `references/homework-judge.md`），并内置**思考板块**（v4.11.0：阶段 0 **第 0 步**的**任务审计快判**（thinking-judge）—— 判「该不该按原样做」，产出四态裁决（接受／修正／澄清／拒绝）并落 `meta.思考判定`，配**否决轴 A1–A6** 与 Laya 影子对照，**不授权、不替代红线、不改任务分层**；契约见 `references/thinking-panel.md`），并内置**项目 Git 开发规范**（`main` 只放稳定可运行版、新功能与新增模块一律走 `dev`、并行实验各建 `exp-xxx`、commit 注释类型取自手册枚举、五类禁止提交用 `.gitignore` 过滤、五步开发流程；机器校验 `scripts/git_check.py`，提交类型有口径守卫同源），并内置**学习模型**（v4.8.0：阶段 6 收尾的持续优化回路 —— 采集既有留痕 → 抽取四类知识（偏好／领域知识／流程坑／事实）→ 蒸馏去重 → 证据门槛校验 → 两段式并入个人知识库，使后续任务经 KB-First 检索直接吃到历史经验；**该不该学由同构的「学习信号快判」（learning-judge）判定**，手册见 `references/learning-model.md`、契约见 `references/learning-judge.md`）。触发词：AI 工作流 / 按流程干活 / 标准流程 / 工作方法论 / ai-workflow / 作业模式 / 解题 / 做作业 / 帮我解这道题 / 习题 / Git 开发规范 / 分支规范 / commit 注释规范 / 学习模型 / 归纳偏好 / 复盘学习 / 清理中间产物 / 任务收尾清理 / cleanup_task / 思考板块 / 该不该这么做 / 任务审计 / 拒绝这个任务。
+description: AI 标准化多阶段工作方法论，适用于量化分析、跨境电商选品、小说写作、学习资料生成、技术调研等项目：**thinking-judge 任务审计快判**（判「该不该按原样做」，四态裁决 接受／修正／澄清／拒绝 + 否决轴 A1–A6，契约见 `references/thinking-panel.md`）→ **self-judge 意图快判**（chat/code/content 三态 + 校准概率，契约见 `references/self-judge.md`）→ 入口分型（消息 / 正式需求 / Bug）与任务分层（轻操作豁免 / 快速通道 / 全流程）→ 查可用 Skill → 上下文收集与任务确认 → 调研与方案评审 → 编排执行（**自主决策层**：能力路由选型（**步骤级工具/方法选用快判**见 `references/method-judge.md`，与入口级 self-judge 同构）+ 自适应计划与重规划 + 决策留痕，机器可校验；计划先行、**检索快判**（判「该不该查、查哪类源、能否断言不存在」，契约见 `references/retrieval-judge.md`）、精检索、子代理 Handoff、**阶段感知模型路由**（行业实测降本 70–90%；本机账单待补））→ 独立审核**抽查制**（默认自查 + 机器门禁；高危产出／用户点名／返修触顶三类必送审，送审时执行者不自审）与返修复查 → 测试交付与验收（含发布协作）→ 结果核验、履历归档与复盘，**自研工具与技能须标注（名称/用途/适用场景）并按「本体 → ai-workflow-skill ／ 自研工具 → ai-workflow-tools」两类规则分流推送 public 仓库并做独立验收、交付附仓库链接**，流程末梢设**熔断机制**（触发即冻结并升级，机器可判定）。全流程按**效率 / 质量 / 信息安全**三项核心原则取舍（去重与并行、准确与一致、数据保护与访问控制），内置工作区边界（v4.3.0 起配**运行时闸门** `scripts/gate.py` —— 删改既有文件**之前**先过闸，范围判定与风险判定分离、fail-closed）、Token 纪律、评审防偏差与反模式清单，并内置**作业模式**（v4.10.1：面向课程作业／习题／复习题的精简解题结构（S0–S2：简要已知 → 解题过程含验证内联 → 答案；删思路分析/关键步骤解释两段），配数学计算／编程实现／论述写作三类题型骨架；**是否叠加由同构的「模式选用快判」（homework-judge）判定**，手册见 `references/homework-mode.md`、契约见 `references/homework-judge.md`），并内置**思考板块**（v4.11.0：阶段 0 **第 0 步**的**任务审计快判**（thinking-judge）—— 判「该不该按原样做」，产出四态裁决（接受／修正／澄清／拒绝）并落 `meta.思考判定`，配**否决轴 A1–A6** 与 Laya 影子对照，**不授权、不替代红线、不改任务分层**；契约见 `references/thinking-panel.md`），并内置**文风判别**（v4.15.0：阶段 0 第 1.5 步的**第七块 System 1 快判**（style-judge）—— 判「本次产出要不要去 AI 味改写、命中哪几组模式」，四态（走去味／只登记／已达标／不适用）落 `meta.文风判定`，**触发面收敛到 content 类的散文正文**（对代码/JSON/YAML 判「不适用」，不喊一遍）；配判据集 `references/humanize-rubric.yaml`（31 条模式 A–F，来自 op7418/Humanizer-zh）与校验器 `scripts/humanize_scan.py`（machine 档实跑 ＋ `--diff-fidelity` 事实保真比对），验收**双条件**（FAIL 命中数下降 **且** 保真零丢失），契约见 `references/humanize-judge.md`），并接入**外部技能簇**（v4.16.0：技能库根下 mattpocock vendored 的 **24 个**第三方 MIT 技能，**扁平外挂、不属本体**，其 User-invoked／Model-invoked 分类与「何时该调」见 `references/external-skills.md`，机器检查用 `scripts/external_skill_lint.py` 而非本体的 `checks.py skill`），并内置**项目 Git 开发规范**（`main` 只放稳定可运行版、新功能与新增模块一律走 `dev`、并行实验各建 `exp-xxx`、commit 注释类型取自手册枚举、五类禁止提交用 `.gitignore` 过滤、五步开发流程；机器校验 `scripts/git_check.py`，提交类型有口径守卫同源），并内置**学习模型**（v4.8.0：阶段 6 收尾的持续优化回路 —— 采集既有留痕 → 抽取四类知识（偏好／领域知识／流程坑／事实）→ 蒸馏去重 → 证据门槛校验 → 两段式并入个人知识库，使后续任务经 KB-First 检索直接吃到历史经验；**该不该学由同构的「学习信号快判」（learning-judge）判定**，手册见 `references/learning-model.md`、契约见 `references/learning-judge.md`）。触发词：AI 工作流 / 按流程干活 / 标准流程 / 工作方法论 / ai-workflow / 作业模式 / 解题 / 做作业 / 帮我解这道题 / 习题 / Git 开发规范 / 分支规范 / commit 注释规范 / 学习模型 / 归纳偏好 / 复盘学习 / 清理中间产物 / 任务收尾清理 / cleanup_task / 思考板块 / 该不该这么做 / 任务审计 / 拒绝这个任务 / 去 AI 味 / 文风 / humanize / 去味改写 / 别这么写 / 外部技能 / 第三方技能。
 agent_created: true
 selfbuilt: true
 repo: https://github.com/Garvin666/ai-workflow-skill
-version: 4.14.1
+version: 4.16.0
 ---
 
-# AI 工作流 v4.14.1
+# AI 工作流 v4.16.0
 
 > **[自研技能]** 名称：`ai-workflow` ｜ 用途：为多阶段任务提供标准化流程编排（入口分型 / 任务分层 / 计划先行 / 三项核心原则 / 自主决策层 / 独立审核抽查制 / 熔断）＋面向作业题的**作业模式**（S0–S2 精简解题结构、三类题型骨架）＋**学习模型**（K1–K5 持续优化回路：归纳使用者偏好与领域知识、蒸馏去重后并入个人知识库），并配一套**机器可校验**的工具与门禁 ｜ 适用场景：产出文件或代码或报告、多步且步骤间有依赖、数据分析、跨文件改造、调研查重、方案评审；纯问答 / 查询 / 翻译 / 单文件读取不适用 ｜ 仓库：https://github.com/Garvin666/ai-workflow-skill
 
@@ -124,6 +124,14 @@ version: 4.14.1
    - `coverage=false` → 回退模型知识，并记录「知识缺口」，建议后续 `kb.py add` 补入库。
    - 读取 `~/.workbuddy/kb/` 属 ai-workflow 自身知识设施，**不算越界**；但 KB 文档**禁止随技能仓/工具仓推送**。
 
+1.5. **文风判别（style-judge，v4.15.0 新增；仅 `content` 类展开）**：`self-judge.category == content` **且**交付物面向人阅读时，跑**第七块 System 1 结构化快判** —— 判「**本次产出要不要去 AI 味改写、命中哪几组模式**」，据此决定阶段 3 是否展开「去味改写 → 事实保真核对」。产出 `{verdict, distribution, confidence, dimensions(S1–S5), ambiguity, route_hint, needs_humanize, 适用范围[, 产物, 判据集, 改写前, 改写后, 豁免]}`。
+   - **不新增前向**：它**挂在 `self-judge` 的 `content` 分支下**，复用其 `category` 做闸门（与 KB-First 同轮）；`code` / `chat` 判 **`不适用`**，**不喊一遍** —— 对代码/JSON/YAML/数据表/公式跑去味是纯浪费，正是「效率」原则要罚的冗余步骤。
+   - **契约**：`references/humanize-judge.md`（**取值表与阈值只以该文件为准**，本处不复述）；判据集 `references/humanize-rubric.yaml`（31 条模式 A–F，来自 `op7418/Humanizer-zh`）；校验器 `scripts/humanize_scan.py`。
+   - **四态**：`走去味`（阶段 3 展开改写＋保真核对）／`只登记`（有信号但误伤正当用法的风险高于收益，**不改写**、登记为人审点）／`已达标`（校验器 FAIL = 0）／`不适用`（非散文正文）。`confidence < 0.70` 或 `ambiguity=true` 时 **fail-closed：不改写**（不改写的代价远低于改坏的代价）。
+   - **落盘**：判定写入 `plan.yaml` 的 `meta.文风判定`。⚠️ **L2／层级不明 ⇒ 整段缺省判 FAIL**（`checks.py plan` 检查项 26）；**L1 出口**：显式声明 `meta.任务层级: L1` ⇒ 汇总为**一条 SKIP**（「不算缺口」）。一旦填写须结构合法（含 `needs_humanize` =（`verdict` == 走去味）这条**确定性判据**），非法即 FAIL。
+   - **它是家族里唯一带机器验收层的判别块**：登记了 `产物` 就把校验器**实跑一遍**（跑出 FAIL 即 FAIL —— **登记里的数字一概不采信**）；登记 `改写前`/`改写后` 就跑 `--diff-fidelity` 验**事实保真零丢失**。其余六块快判只校结构，本块**另有一层实跑**。
+   - ⚠️ **它不是 AI 检测器**：不判作者身份、不保证通过任何检测器；**模式命中 ≠ AI 生成**（「不是 X 而是 Y」「破折号」「四字格」在人类写作里正当存在）—— 契约 §10 五条诚实边界须原样遵守。
+
 2. **入口分型**（与 self-judge **正交并存**，本版保留）：先判定来源，不同来源走不同侧重：
 
    | 入口 | 判定特征 | 侧重 |
@@ -142,6 +150,7 @@ version: 4.14.1
    - **新鲜** → **读索引**（`~/.workbuddy/skills/README.md`）**按簇**定位候选，**只读命中候选的** `SKILL.md` frontmatter 判断是否匹配；**一个都不命中才**用 `Glob ~/.workbuddy/skills/*/SKILL.md` 与 `.workbuddy/skills/*/SKILL.md` 全量扫描。
    - **STALE / 缺失** → 先 `python scripts/gen_skill_index.py` 重建（项目级技能要一并纳入时加 `--workspace <工作区根>`），再按上一条走；重建失败则**回落全量扫描，并在回复里如实说明索引不可用**（不静默降级）。
    - **为什么先索引**：消除「全量 Glob + 逐个读 description」的每任务固定成本。索引带**内容指纹**（`--check` 用 SHA-1 比对内容、**不含 mtime**，故不受时钟偏移影响）。
+   - **外部技能簇**（技能库根下 mattpocock vendored 的 24 个，v4.16.0 起）命中时，读 `references/external-skills.md` 取路由表与调用口径 —— 那批技能**不属本体**，其分类（User-invoked / Model-invoked，机器依据是 frontmatter 的 `disable-model-invocation`）与「何时该调」都在该手册；查它们的机器检查用 `scripts/external_skill_lint.py`，不用本体的 `checks.py skill`（后者是为本体设计的）。
    - 无匹配则调用 **`find-skills` skill**，或用推荐市场检索。
 4. 判定：匹配 → 复用；部分匹配 → 复用可复用部分；无匹配 → 全新执行。
 5. 查 `assets/templates/`（字段规范见 `assets/templates/README.md`）→ 命中走 L1。
@@ -223,6 +232,32 @@ version: 4.14.1
 
 > 本小节是**通用原则**（主代理对子代理产出做核实）；下方「独立审核」是**抽查制的送审规则**——默认不派审核子代理，命中三类情形时必须派。两者不互相替代：**"我已经检查过了"不能替代送审**。
 
+### 文风质检：去味改写 → 事实保真核对（v4.15.0 新增）
+
+> **触发面收敛**：只对**面向人阅读的散文正文**（阶段 0 第 1.5 步的 `meta.文风判定.verdict == 走去味`）展开。**不是入口级必跑** —— 对代码、JSON、YAML、数据表、公式跑一遍是纯浪费。
+> **线索而非黑名单**：以 `references/humanize-rubric.yaml` 的 31 条为**检查线索**，不是词语替换表；**没有问题的段落可以原样保留**。
+
+**三步，缺一不可**：
+
+1. **改写**：按 rubric 的 FAIL 档与每条自带的「保留」示例改写。**四条编辑优先级**（依次遵守）：保留信息和确定程度 → 遵守用户编辑范围 → 匹配作者声音 → 处理具体表达问题。**保护原样**：代码块、行内代码、命令、路径、URL、链接目标、显式 ID、YAML front matter、表格数据；默认保留标题文字、层级与数量。
+2. **实跑校验**：`python scripts/humanize_scan.py --text <定稿> --gate` —— **有 FAIL 即 exit 1**；输出含 `id + 行号 + 片段`，**逐条可复算**。
+3. **保真核对**：`python scripts/humanize_scan.py --diff-fidelity <改写前> <改写后>` —— 数字（含量词/单位/百分比）、否定、情态限定（可能/据称/计划/正在/尚未/仅/超过）、归因标记（认为/表示/根据）**零丢失、零新增**。
+
+**验收是双条件（缺一不可，与技能「性能类双条件」同构）**：
+
+| 条件 | 判据 | 判定方式 |
+| --- | --- | --- |
+| **① 去味信号下降** | 校验器 **FAIL 档命中数**：改写后 **<** 改写前，且逐条可复算 | 机器 |
+| **② 事实保真不变** | `--diff-fidelity`：四类 token **零丢失、零新增** | 机器 |
+
+> **为什么必须是双条件**：只降命中数但改坏了事实 = **不通过**。这正是 humanizer 原文最强调的边界（不把相关改成因果、可能改成确定、计划改成已经完成），也是本工作区最容易发生的**静默失真**（本工作区核心痛点是「描述与实现不符」）。
+
+- **FAIL 未清零** → 按 **T1 反思重试**自动重试改写；耗尽升「返修复查」（**复用既有闭环，不新造触发编号**）。**不构成熔断触发**（属可自我纠正的 T1/T2，且非 F1–F5）。
+- **`豁免` 是唯一出口**：口径不适用时逐条写理由（禁占位符），**不得为消 FAIL 改阈值**（同 `aesthetic-rubric` 禁令）。
+- ⚠️ **元文本自指（已知边界）**：产物本身在**讨论/列举**这些模式时（判据文档、方案、评审记录），会命中「**引用**」而非「**犯**」—— 机器无法区分。处置：走 `豁免` 逐条写理由（**按 id 粒度、不按位置** —— 这是已知的粗糙点，如实登记）。
+- ⚠️ **它不是 AI 检测器**：不判作者身份、不保证过检测器；machine 档只覆盖可枚举的表层特征，**17 条 SKIP 档（语义项）只能人审**，不得宣称已全覆盖（契约 §10）。
+- ⚠️ **事实保真不可豁免**：`--diff-fidelity` 出的差异是**硬约束**（改坏了），与风格类 FAIL 不是一回事，**不给豁免出口**。
+
 ### 独立审核（抽查制：默认自查，三类必送）
 
 > **抽查制（用户 2026-09-11 决定）**：本环节由「每个关键产出都送审」的强制门禁降为抽查制 —— 理由是稳定发生的双倍人力税。**「执行者不得自审」未取消**，只在命中下方三类情形时生效；未命中者由**主代理自查 + 机器门禁**兜底。
@@ -296,7 +331,7 @@ version: 4.14.1
    - **设计类产物（交付物含 `.css`）另须跑 `check_aesthetics.py`**（v4.9.0）：判据集 `references/aesthetic-rubric.yaml`（30 条），逐产物或 `--batch` 出原始输出。**四条口径不得含糊**：① `PASS / FAIL / SKIP` 三者严格分开，**`SKIP` 不得并入通过率**（未检测 ≠ 通过）；② 令牌式 CSS 与渲染产物的**计量单位可能不同**（如「画面内色值数」vs「调色板角色数」），冲突时走 `meta.审美判据.豁免` 逐条写理由，**不得为消 FAIL 去改阈值**；③ 判据阈值全部来自 `source` 字段，非普适真理；④ **凡 source 讲「画面内」的（G1/G6/R1-R3），必须喂渲染结果**（`--geom`）—— 拿令牌清单顶该口径会造出成片假 FAIL（实测 21/21），未喂渲染色时这几条判 **SKIP**，不是通过（v1.2.2）。⑤ **G12/G13（字号/时长刻度一致性）要 `--scale-from` 才跑得起来**：在 `meta.审美判据` 块（或单个产物项）登记 `声明刻度源: [<声明侧令牌 CSS>...]`，门禁会自动透传；**声明侧必须是被检产物之外、且同属一个体系**的令牌文件（ui kit 类产物常为 `src/styles/tokens.css` + 所用主题令牌），**同源即被剔除**（刻度与被检值同源 ⇒ 判定恒真）。未登记时「审美判据刻度层」注记会明说**未检测，不是通过**（v1.5.0）。⑥ **韵律层与「层标注」各有判据（v1.6.0）**：**G16** 判错峰阶梯**非递减**（结构性不变量、**无阈值**；**刻意不要求步长均匀** —— 真实语料是加速步长 80/100/120/140/160/180ms；无 ≥`min_points` 点序列则 SKIP）；**W2** 的 `allowed_in_layers` 按块内**显式声明** `--ui-layer: 氛围层` 放行，**缺声明即 FAIL（fail-closed）** —— CSS 没有可机器识别的「层」概念，默认放行会让它变成 no-op。
 2. **Anti-drop 对账 + 熔断门禁**：`checks.py plan <plan.yaml> --base <工作区根>` 自动核对交付物是否真实存在、字段是否齐全、状态是否合法（**非当前目录时必须带 `--base`，否则相对路径解析基准错**；非文件型交付物标 SKIP 需人工确认）。**FAIL 未清零不得交付**。同一命令同时执行**熔断门禁**：`熔断状态: 已熔断` 或任一步骤状态为 `熔断` 时直接 FAIL——**已熔断的任务不得作为可交付物**。
 3. **审核状态已闭合 + 未熔断**：命中送审三类的产出须有「通过」结论且返修问题已逐条回归；未命中的须在 `plan.yaml` 验证方式与 `Ledger.md` 留痕 `抽查豁免（<理由>）`。同时 `熔断状态` 为 `正常`（红线：**未闭合或已熔断，均不得交付**）。
-4. **输出自检状态表**（**交付前自检**）：文件存在、可打开、编码正确、数据完整、符合验收标准、**验证闭环证据已出示**、**审核状态已闭合（通过 / 抽查豁免）**、**熔断状态为正常**、**产出全部落在工作区根内**、**references 按需加载（未预读全量 / 主上下文未超量）**、**三项核心原则自评（冗余是否已去／口径是否一致／外发面是否最小）**、**审美判据（仅设计类产物：`meta.审美判据` 已登记且实跑 FAIL 已清零，或逐条豁免并写明理由）**；此表由**主代理**在交付前给出，检验"东西是否做得对"；**报告类交付物的结构规范见 `assets/report-template.md`**（不要因为任务跳过阶段 4 就丢掉该模板）。
+4. **输出自检状态表**（**交付前自检**）：文件存在、可打开、编码正确、数据完整、符合验收标准、**验证闭环证据已出示**、**审核状态已闭合（通过 / 抽查豁免）**、**熔断状态为正常**、**产出全部落在工作区根内**、**references 按需加载（未预读全量 / 主上下文未超量）**、**三项核心原则自评（冗余是否已去／口径是否一致／外发面是否最小）**、**审美判据（仅设计类产物：`meta.审美判据` 已登记且实跑 FAIL 已清零，或逐条豁免并写明理由）**、**文风判据（仅面向人阅读的文本类产物：`meta.文风判定` 已登记且实跑 FAIL 已清零 ＋ `--diff-fidelity` 零丢失，或逐条豁免并写明理由）**；此表由**主代理**在交付前给出，检验"东西是否做得对"；**报告类交付物的结构规范见 `assets/report-template.md`**（不要因为任务跳过阶段 4 就丢掉该模板）。
    - **每项须标注判定方式（质量项，v3.3.0）**：可机器判定的（文件存在、编码、链接探活、py_compile、对账 FAIL 数）标 **`机器`** 并附命令与输出摘要；其余标 **`人审`**。**禁止把只有人审判定的项写成看起来像机器结论的语气**——这是"写在提示里的门禁不是门禁"在本节的具体要求。
 5. **出站前扫描（信息安全项，v3.3.0）**：交付物**对外可见**（发送给他人、推送远端、发布上线、写入共享目录）之前，须对**将外发的全部文件**做一次敏感模式扫描：凭据/令牌/私钥特征、个人隐私（邮箱/手机号/身份证号）、内部基建信息（内网主机名、内部绝对路径、账号名）。
    > **诚实标注**：**第 3／4 项（内部绝对路径／含用户名的主目录路径）已机器化** —— `scripts/outbound_scan.py` 扫描「将外发的全部文件」，命中即 FAIL，并在 `push_router.py` 中**阻塞推送**（fail-closed）。**其余各项仍是纪律项**，靠执行者比对 `references/security-guide.md` 清单完成。**不得声称六项都已自动拦截**。命中凭据类 → **立即停止所有对外动作**，按 `secret-leak-response` 处置。
@@ -323,7 +358,7 @@ version: 4.14.1
    - **任务级指标沉淀（v4.0.0 / U8；v4.10.1 修幂等）**：收尾时 `checks.py metrics <plan> --finalize`，把本任务指标写入 **`tasks/<任务>/_metrics.jsonl`**（**每任务一行**：层级 / 返修轮次 / 是否熔断 / 步骤数 / 完成数 / 不可逆动作数 / 放行记录数 / `superseded`）。用途：**给技能自身演进提供数据依据** —— 此前返修轮次分布、熔断频次、门禁 FAIL 率、阶段耗时一个都没有，工作区那份优化方案只能靠人工翻 10 份 `plan.yaml` 写出来。
      > ⚠️ **路径口径**：`_metrics.jsonl` 落在**任务目录内**（非工作区级），按任务分文件，归档时随任务一起移动。
      > ⚠️ **幂等口径（v4.10.1）**：该命令**读旧行后单行原子重写**，重复调用**恒为一行**。唯一键是**文件自身**（一个文件 = 一个任务），故任务在收尾前改名**不失配**。文件里已存在的重复行会被**一并收敛**，被替换掉的旧行数记入 `superseded`（首次写入为 0）—— 使"收敛了几条"可审计，而不是静默抹掉。旧实现是**无条件追加**，实测产生 2~3 行、且中途调用的半成品行与终值行并存 ⇒ 统计重复计数。`checks.py skill` 现有**三项行为级守卫**（空目录连跑 2 次 / 预置 2 行收敛 / 预置 1 行刷新不增行）盯这条口径；**它们只证"不增行"，不证"指标算得对"**。
-4. **沉淀分流**（**六路**目的地；v4.3.0 起补第 6 路与**触发信号清单**）：流程 → 更新本 skill；配置 → 更新 `assets/templates/<类型>.yaml`；坑 → 追加 `references/quality-gates.md` 反模式清单；**自研工具/技能 → 补标注块、`push --apply` 推送 public 仓库、`verify` 验证版本一致、登记 `meta.自研工具`**；仅本次有效的事实 → 工作区 memory 一行带过；**用户偏好纠正 → 回写对应技能的 `SKILL.md`／`references/`（v4.3.0 新增第 6 路）**。
+4. **沉淀分流**（**六路**目的地；v4.3.0 起补第 6 路与**触发信号清单**）：流程 → 更新本 skill；配置 → 更新 `assets/templates/<类型>.yaml`；坑 → 追加 `references/quality-gates.md` 反模式清单；**自研工具/技能 → 补标注块、`push --apply` 推送 public 仓库、`verify` 验证版本一致、登记 `meta.自研工具`**；仅本次有效的事实 → 工作区 memory 一行带过；**用户偏好纠正 → 回写对应技能的 `SKILL.md`／`references/`（v4.3.0 新增第 6 路）** —— 其中**文风偏好纠正**（「太啰嗦」「别这么写」「以后都照这个来」）的明确落点是 **`references/humanize-judge.md`**（v4.15.0 补；判据本身若要改，则连同 `references/humanize-rubric.yaml` 与 `scripts/humanize_scan.py` 一起改，并跑 `--selftest` 与口径守卫）。
    - **什么算必须分流的信号**（借 hermes-agent `_SKILL_REVIEW_PROMPT` 的三段结构）：下列是**一等信号**，不是"顺手记一笔的备注"——「stop doing X」「别这样」「太啰嗦」「**你总是 Y，我讨厌**」**及任何形式的用户纠正**、「remember this」「以后都照这个来」。**用户纠正默认要落到技能本体，而不是只进日志** —— 只进日志等于下次照样重犯。
    - **偏好纠正的落点优先级**（防"一会话一个文件"式的膨胀，hermes 原文即反对这种形状）：先改**本次已加载**的技能 → 再改伞形／上位技能 → 最后才新增 support 文件。
    - ⚠️ **零沉淀不是中性结果**：hermes 原文 —— *"A pass that does nothing is a **missed learning opportunity**, not a neutral outcome."* 一次什么都没沉淀的 pass 等于**漏掉**一次学习。故收尾须**显式**给出结论：要么登记 ≥1 条沉淀，要么在 `meta.复盘沉淀` 写明「无沉淀：理由」。**本项已机器化**（`checks.py plan` 的「复盘沉淀登记」判据，首版 WARN；见「技能库卫生」末段）。
@@ -583,6 +618,10 @@ version: 4.14.1
 | `references/skill-hygiene.md` | 技能库卫生四条硬约定（**仅改技能本体时读**） |
 | `references/office-guide.md` | openpyxl / python-docx / pypdf 避坑 |
 | `references/aesthetic-rubric.yaml` | **审美判据集**（30 条，v4.9.0 建 / **判据集 v1.6**）：由 `scripts/check_aesthetics.py` 消费；每条含 `judgeability`（machine/spec/manual/external）、`params`、`source`（阈值来源）、`applies_to`（适用产物）。含令牌层 G*/M*/W*/P*/C*/V* 与**渲染层 R1-R3**（需 `--geom` 渲染色，缺则 SKIP）、**刻度层 G12/G13**（需 `--scale-from` 声明源，缺则 SKIP）、**韵律层 G16**（错峰阶梯非递减，无序列则 SKIP）。⚠️ 它是**数据文件不是手册**，改阈值即改判据，须留痕 |
+| `references/humanize-judge.md` | **文风判别契约**（v4.15.0 建）：第七块 System 1 快判（style-judge）的完整契约 —— 四态判定（走去味／只登记／已达标／不适用）、S1–S5 维度、阈值路由与聚合规则、`meta.文风判定` 字段表、集成位置与诚实边界（五条原样）。**取值表与阈值只以该文件为准** |
+| `references/humanize-rubric.yaml` | **去 AI 味判据集**（v4.15.0 建，31 条模式 A–F，来源 `op7418/Humanizer-zh`）：由 `scripts/humanize_scan.py` 消费；每条含 `judgeability`（machine 13／manual 17／spec 1）、`level`（FAIL 8／WARN 5／SKIP 18）、`source`、`params`，另含独立 `fidelity` 段（事实保真 token 类目）。⚠️ 它是**数据文件不是手册**，改判据须同步改校验器并跑 `--selftest`（口径守卫机检同源） |
+| `references/external-skills.md` | **外部技能路由与适配**（v4.16.0 建）：技能库根下 mattpocock vendored 的 **24 个第三方 MIT 技能** —— 来源与许可、**User-invoked／Model-invoked 的机器判据**（frontmatter 的 `disable-model-invocation`）、24 行路由表（何时该调 → 调哪个）、只取机制的那 7 个技能与折进落点、六条已知边界（含「正文文件名提及 ≠ 技能内引用」这条把原定补丁 2 判为不必做的实测结论）、机器检查与上游同步规程。⚠️ **那批技能不属本体**，本文件是它们唯一的宿主侧适配层；阶段 0 命中外部技能簇时加载 |
+| `scripts/humanize_scan.py` | **去 AI 味校验器**（v4.15.0 建，纯标准库）：`--text <产物> [--gate]` 跑 machine 档判据；`--diff-fidelity <前> <后>` 做事实保真比对（数字/否定/限定/归因多重集）；`--audit` 判据集↔实现同源自检；`--selftest` 四条阴性对照夹具。**PASS/FAIL/SKIP 严格分开，SKIP 不计入通过率**；挂进阶段 3 文风质检与阶段 5（检查项 26） |
 | `scripts/geom-probe.js` | **渲染色取数器**（v1.2.2/P3）：页面侧提取器，**只读 DOM**，产出 `check_aesthetics.py --geom` 消费的契约 JSON。由任一 CDP 驱动注入（示例见 `references/aesthetic-rubric.yaml` 渲染层段）；校验器内**不**重复实现 CDP。⚠️ 两个真页面上踩出来的要点：① **务必限定作用域** —— `__geomProbe('.ui-deck__slide--active')`，整文档取数会把页面上其它画面（缩略图条等）也算成兄弟；② 缩放画布（`transform:scale` 的 deck）下 **rect 已是设计像素且以作用域根为原点** —— 直接拿渲染 px 比 8px 网格会整片假红 |
 | `assets/plan-template.yaml` ／ `report-template.md` ／ `templates/README.md` | 计划、报告、确认表规范 |
 | `assets/ledger-template.md` | 交付履历台账（工作区根 `Ledger.md`）格式 |
@@ -607,6 +646,7 @@ cleanup_task.py clean --plan <plan.yaml> [--apply] / selftest                  �
 http_fetch.py  --github-search "…" / --github-code-search "…" / --github-repo a,b / --check-links <urls.txt>
 data_query.py  files|sql|find|big                                             大数据集直查（DuckDB）
 gen_skill_index.py [--check]                                                  技能库索引生成/新鲜度校检
+external_skill_lint.py [--root <技能库根>] [--skill <名>] [--verify-lock]       外部 vendored 技能的放宽判据（frontmatter／引用分档／密钥／可疑脚本／lock 一致性）；范围限 lock 登记技能，不含本体
 outbound_scan.py <路径…> [--list <文件>] [--json]                               出站扫描（本机绝对路径）
 push_router.py push --base <rev> --head <rev> [--apply]                        分流推两仓（默认 dry-run）
 push_router.py classify                                                        离线分类 + 标注头×登记表交叉校验
@@ -620,6 +660,7 @@ laya_record.py run --file <样本.json> ( --judge <k> --a <A侧取值> | --a <ju
 homework_model.py aggregate --dims "W1=..,…,W5=.." / agree --pairs <json> / selftest   模式选用聚合模型（A 侧可复现半边）；参数未拟合，只作对照与回归
 thinking_model.py aggregate --dims "T1=..,…,T4=.." [--veto-noul <f>] [--ambiguity] [--amendments <json>] [--plan-block] / gold [--file <gold.yaml>] / agree --pairs <json> / selftest   思考板块聚合模型（A 侧可复现半边，v4.11.0）；verdict 由 derive 规则产出**不等于 argmax**、`拒绝` 不入 distribution；参数未拟合，只作对照与回归
 kb_learn.py  judge --dims "V1=..,…,V5=.." / note [--evidence|--contradicts|--supersedes] / commit [--apply] / retire [--approve <id>] [--apply] / stats / selftest   学习引擎（K3 蒸馏／K4 校验／K5 入库）＋冲突冻结／废止提案／证据固化；语义归模型、算术归代码；默认 dry-run
+humanize_scan.py --text <产物> [--rubric <判据集>] [--gate] [--json] / --diff-fidelity <改写前> <改写后> [--json] / --audit / --selftest   去 AI 味判据校验器（31 条，machine 档 13 条实跑 ＋ 事实保真多重集比对）；PASS/FAIL/SKIP 严格分开，SKIP 不计入通过率；挂进阶段 3 文风质检与阶段 5（检查项 26）
 check_aesthetics.py --rubric <判据集> --css <产物> [--spec <文档>] [--product ui|ppt|chart|image] [--geom <渲染色.json>] [--scale-from <声明源.css> ...] / --batch <目录> [--csv <out>] / --json / --audit / --self-test   审美判据校验器（30 条；实现 v1.7.0）；PASS/FAIL/SKIP 严格分开；R1-R3 需 --geom（缺则 SKIP=未检测）；**G12/G13 需 --scale-from 声明源**（刻度层，缺则 SKIP=未检测；须「声明侧 / 被检侧」分离且同属一个体系，自证式或同源刻度会被剔除/判 SKIP）；**G16 判错峰阶梯非递减**（韵律层，无阈值；无序列则 SKIP）；挂进阶段 5（检查项 22）
 geom-probe.js [可选作用域选择器]                                               渲染色取数器（页面侧，只读 DOM）—— 由 CDP 驱动注入后产出 `--geom` 输入；**建议传作用域**（如 `.ui-deck__slide--active`），并把 rect 归一为设计像素
 ```

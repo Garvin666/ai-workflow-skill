@@ -55,6 +55,14 @@ from checks_core import (  # noqa: F401
     HOMEWORK_MODES,
     HOMEWORK_REQUIRED,
     HOMEWORK_SAMPLE_BAND,
+    HUMANIZE_DIMS,
+    HUMANIZE_EXEMPT_PLACEHOLDER,
+    HUMANIZE_KEY,
+    HUMANIZE_REQUIRED,
+    HUMANIZE_RUBRIC_DEFAULT,
+    HUMANIZE_TEXT_EXT,
+    HUMANIZE_TOOL,
+    HUMANIZE_VERDICTS,
     INFRA_EXCEPTIONS,
     IRREVERSIBLE_HINT,
     LEARNING_DIMS,
@@ -753,6 +761,304 @@ def _check_aesthetic(meta: dict, steps: list | None = None, base: Path | None = 
                                  f"现存豁免：{trace}")
         else:
             ok("审美判据豁免", f"{len(exempt)} 条（留痕：{trace}）")
+
+
+def _humanize_invoke(tool: Path, rubric: Path, text: Path | None = None,
+                     gate: bool = False, diff: tuple | None = None):
+    """实跑去 AI 味校验器，返回 `(exit, payload_or_None, raw)`。**fail-closed**：任何异常都不当作通过。
+
+    `diff=(before, after)` 时跑 `--diff-fidelity`（保真比对）；否则跑 `--text <产物> --gate`（FAIL 即 exit 1）。
+    两者都带 `--json`，便于调用侧读结构化结果而**不解析人读文本**（解析展示串是"读数从被截断的字符串反解"
+    那类事故的温床）。
+    """
+    cmd = [sys.executable, str(tool)]
+    if diff is not None:
+        cmd += ["--diff-fidelity", str(diff[0]), str(diff[1]), "--json"]
+    else:
+        cmd += ["--text", str(text), "--rubric", str(rubric), "--json"]
+        if gate:
+            cmd += ["--gate"]
+    try:
+        p = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8",
+                           errors="replace", timeout=120)
+    except (OSError, subprocess.SubprocessError) as exc:
+        return 127, None, f"{type(exc).__name__}: {exc}"
+    raw = (p.stdout or "") + (p.stderr or "")
+    try:
+        return p.returncode, json.loads(p.stdout), raw
+    except (ValueError, TypeError):
+        return p.returncode, None, raw
+
+
+def _check_humanize(meta: dict, steps: list | None = None, base: Path | None = None) -> None:
+    """文风判据门禁（v4.15.0 / 检查项 26）：**面向人阅读的散文正文的验收，不是识别**。
+
+    与七块快判的分界（一句话）：快判让模型自报置信度、机器只能校结构；本项**除结构校验外还有一层实跑** ——
+    判据是「登记了哪些产物 → 我把校验器跑一遍 → 跑出几个 FAIL」。故本条实现技能一直想要的那件事：
+    **登记里的数字一概不采信**。
+
+    ⚠️ 与审美判据（检查项 22）的关系：同族、同一套三档纪律（PASS/FAIL/SKIP 严格分开、`source` 字段、
+    `豁免` 出口、阴性对照），但**输入不同**（审美吃 `.css`，本项吃散文正文），且**触发信号不同** ——
+    审美用「交付物后缀含 `.css`」做确定性触发；本项**不用后缀**（散文正文可以是 `.md/.txt/.docx`，
+    也可内嵌在别的产物里，靠后缀会漏），改由 style-judge 自报。**代价如实登记：漏报（该登记没登记）
+    机器抓不到** —— 这是本项诚实边界的一部分，不得含糊成"已全覆盖"。
+
+    ⚠️ 四条刻意的不对称，都在注释里说明理由而不是默默实现：
+      · **整段缺省按 L2 FAIL / L1 SKIP 分档**（与检查项 13/14/16/18/20/23/24 同口径）。
+        与审美判据的「缺省只 WARN」**不同**：审美缺省只 WARN 是因为它的触发信号是交付物后缀、
+        可能对非设计类任务误报；本项由 style-judge 自报，**缺省即"该判没判"**，故从严。
+      · **`豁免` 必须写理由**：口径不适用确实需要一个出口，但出口一旦无声就会变成橡皮图章 ——
+        故逐条打印、理由必填、并且「豁免了却本次没 FAIL」会 WARN（闲置的豁免该收回）。
+      · **事实保真不可豁免**：`--diff-fidelity` 出的差异是**硬约束**（去味不得改动任何数字/否定/限定/归因），
+        与 rubric 的风格类 FAIL **不是一回事** —— 它是「改坏了」，故**不给豁免出口**（同 §7.1 双条件）。
+      · **保真层单独报暴露率**（与审美判据的渲染层/刻度层注记同构）：未登记 `改写前`/`改写后` 时
+        不能只说「FAIL 已清零」—— 那会把「保真没测」读成「保真没问题」。
+    """
+    blk = meta.get(HUMANIZE_KEY)
+
+    if blk is None:
+        _absent(HUMANIZE_KEY,
+                "**L2 必填**：v4.15.0 起整段缺省判 FAIL（L1 出口见同批变更）。本项是面向人阅读"
+                "散文正文的机器验收 —— 交付物含报告/方案/文档类正文时，阶段 0 第 1.5 步的 style-judge "
+                "应产出本字段（判定为「不适用」也要写下来）。示例：\n"
+                "    %s:\n      verdict: 走去味\n"
+                "      distribution: {走去味: 0.8, 只登记: 0.1, 已达标: 0.05, 不适用: 0.05}\n"
+                "      confidence: 0.8\n      dimensions: {S1: 0.9, S2: 0.8, S3: 0.7, S4: 0.6, S5: 0.1}\n"
+                "      ambiguity: false\n      route_hint: 阶段 3 展开改写＋保真核对\n"
+                "      needs_humanize: true\n      适用范围: 报告正文（.md）\n"
+                "      产物: [tasks/<任务>/报告.md]\n"
+                "      改写前: tasks/<任务>/tmp/初稿.md\n      改写后: tasks/<任务>/报告.md"
+                % HUMANIZE_KEY,
+                meta)
+        return
+
+    if not isinstance(blk, dict):
+        fail(HUMANIZE_KEY, f"应为映射（含 {'/'.join(HUMANIZE_REQUIRED)}）")
+        return
+
+    bad = [f"缺 `{k}`" for k in HUMANIZE_REQUIRED if blk.get(k) in (None, "", [])]
+    if bad:
+        fail(HUMANIZE_KEY, "；".join(bad))
+        return
+
+    verdict = str(blk.get("verdict", "") or "").strip()
+    if verdict not in HUMANIZE_VERDICTS:
+        fail(HUMANIZE_KEY, f"`verdict`『{verdict}』非法：须在 {'/'.join(HUMANIZE_VERDICTS)} 内"
+                           f"（取值域唯一源见 references/humanize-judge.md §1）")
+        return
+
+    dist = blk.get("distribution")
+    if not isinstance(dist, dict) or set(dist) != set(HUMANIZE_VERDICTS):
+        fail(HUMANIZE_KEY, f"`distribution` 须恰含四键 {sorted(HUMANIZE_VERDICTS)}（与 verdict 同源）")
+        return
+    try:
+        dvals = {k: float(v) for k, v in dist.items()}
+    except (TypeError, ValueError):
+        fail(HUMANIZE_KEY, "`distribution` 各项须为数值")
+        return
+    if any(v < 0 or v > 1 for v in dvals.values()):
+        fail(HUMANIZE_KEY, "`distribution` 各项须 ∈ [0,1]")
+        return
+    if abs(sum(dvals.values()) - 1.0) > 1e-3:
+        fail(HUMANIZE_KEY, f"`distribution` 四键之和须 = 1（实测 {sum(dvals.values()):.4f}）")
+        return
+
+    try:
+        conf = float(blk.get("confidence"))
+    except (TypeError, ValueError):
+        fail(HUMANIZE_KEY, f"`confidence` 须为数值（实测『{blk.get('confidence')}』）")
+        return
+    if not (0.0 <= conf <= 1.0):
+        fail(HUMANIZE_KEY, f"`confidence` 须 ∈ [0,1]（实测 {conf}）")
+        return
+    if abs(conf - max(dvals.values())) > 1e-3:
+        fail(HUMANIZE_KEY, f"`confidence` 须 = max(distribution) = {max(dvals.values()):.4f}"
+                           f"（实测 {conf:.4f}）—— 派生自洽，不采信自报")
+        return
+
+    dims = blk.get("dimensions")
+    if not isinstance(dims, dict) or set(dims) != set(HUMANIZE_DIMS):
+        fail(HUMANIZE_KEY, f"`dimensions` 须恰含 {list(HUMANIZE_DIMS)}（不含其它键）")
+        return
+    try:
+        dvs = {k: float(v) for k, v in dims.items()}
+    except (TypeError, ValueError):
+        fail(HUMANIZE_KEY, "`dimensions` 各项须为数值")
+        return
+    if any(v < 0 or v > 1 for v in dvs.values()):
+        fail(HUMANIZE_KEY, "`dimensions` 各项须 ∈ [0,1]")
+        return
+
+    amb = blk.get("ambiguity")
+    if not isinstance(amb, bool):
+        fail(HUMANIZE_KEY, f"`ambiguity` 须为 bool（实测『{amb}』）")
+        return
+
+    nh = blk.get("needs_humanize")
+    if not isinstance(nh, bool):
+        fail(HUMANIZE_KEY, f"`needs_humanize` 须为 bool（实测『{nh}』）")
+        return
+    if nh != (verdict == "走去味"):
+        fail(HUMANIZE_KEY, f"`needs_humanize`={nh} 与 `verdict`『{verdict}』矛盾"
+                           f"（派生值必须 =（verdict == 走去味））—— 这是确定性判据，不采信自报")
+        return
+
+    scope = str(blk.get("适用范围", "") or "").strip()
+    if not scope:
+        fail(HUMANIZE_KEY, "`适用范围` 须非空（人审信号：写明产物范围与体裁，供核对「未对代码/JSON 跑去味」）")
+        return
+
+    skill_root = Path(__file__).resolve().parent.parent
+    tool = Path(__file__).resolve().parent / HUMANIZE_TOOL
+    if not tool.is_file():
+        fail(HUMANIZE_KEY, f"校验器缺失：{tool} —— fail-closed（工具不在即判 FAIL，不降级为跳过）")
+        return
+
+    rubric_txt = str(blk.get("判据集", "") or "").strip() or HUMANIZE_RUBRIC_DEFAULT
+    rp_cands = _candidate_paths(rubric_txt, base) if base else [Path(rubric_txt)]
+    rubric = next((c for c in rp_cands if c.is_file()), None)
+    if rubric is None and rubric_txt == HUMANIZE_RUBRIC_DEFAULT:
+        fallback = skill_root / HUMANIZE_RUBRIC_DEFAULT
+        rubric = fallback if fallback.is_file() else None
+    if rubric is None:
+        fail(HUMANIZE_KEY, f"判据集不存在：{rubric_txt}（相对路径以 --base 为基准解析；"
+                           f"省略该键时取技能自带 `{HUMANIZE_RUBRIC_DEFAULT}`）")
+        return
+
+    # 豁免：{id, 理由} —— 出口唯一，且必须留痕（**不适用于事实保真**）
+    exempt: dict[str, str] = {}
+    raw_ex = blk.get("豁免") or []
+    if not isinstance(raw_ex, list):
+        fail(HUMANIZE_KEY, "`豁免` 须为列表（每项 `{id, 理由}`）")
+        return
+    for i, it in enumerate(raw_ex, 1):
+        if not isinstance(it, dict):
+            fail(HUMANIZE_KEY, f"豁免第{i}项非映射（应为 `{{id, 理由}}`）")
+            return
+        eid = str(it.get("id", "") or "").strip()
+        why = str(it.get("理由", "") or "").strip()
+        if not eid:
+            fail(HUMANIZE_KEY, f"豁免第{i}项缺 `id`")
+            return
+        if not why or why.lower() in HUMANIZE_EXEMPT_PLACEHOLDER:
+            fail(HUMANIZE_KEY, f"豁免 `{eid}` 的理由为空或为占位符（『{why}』）—— "
+                               f"覆盖必须留痕：写清「为什么不适用」，否则不得豁免")
+            return
+        exempt[eid] = why
+
+    # 产物：逐项解析到位（声明了就必须能解析 —— 不静默退回「未检测」）
+    raw_targets = blk.get("产物")
+    targets: list = []
+    miss_t: list[str] = []
+    if raw_targets is not None:
+        if not isinstance(raw_targets, list):
+            fail(HUMANIZE_KEY, "`产物` 须为列表（每项为一个文本产物路径）")
+            return
+        for i, it in enumerate(raw_targets, 1):
+            txt = str(it or "").strip()
+            if not txt:
+                miss_t.append(f"第{i}项为空")
+                continue
+            cands = _candidate_paths(txt, base) if base else [Path(txt)]
+            hit = next((c for c in cands if c.is_file()), None)
+            if hit is None:
+                miss_t.append(f"第{i}项『{txt}』不存在")
+                continue
+            if hit.suffix.lower() not in HUMANIZE_TEXT_EXT:
+                miss_t.append(f"第{i}项『{txt}』后缀非 {'/'.join(HUMANIZE_TEXT_EXT)}"
+                              f"（本项以散文正文为输入；代码/JSON/YAML 不应登记）")
+                continue
+            targets.append(hit)
+    if miss_t:
+        fail(HUMANIZE_KEY, "；".join(miss_t) + "（相对路径以 `--base` 为基准；工作区根之外须写绝对路径）")
+        return
+
+    # 改写前/改写后：成对登记，供 --diff-fidelity
+    diff_pair = None
+    b_raw = str(blk.get("改写前", "") or "").strip()
+    a_raw = str(blk.get("改写后", "") or "").strip()
+    if b_raw or a_raw:
+        if not (b_raw and a_raw):
+            fail(HUMANIZE_KEY, "`改写前`/`改写后` 须**成对**登记（只填一个无法比对）")
+            return
+        bp = next((c for c in (_candidate_paths(b_raw, base) if base else [Path(b_raw)]) if c.is_file()), None)
+        ap = next((c for c in (_candidate_paths(a_raw, base) if base else [Path(a_raw)]) if c.is_file()), None)
+        if bp is None or ap is None:
+            fail(HUMANIZE_KEY, f"`改写前`/`改写后` 声明的路径解析不到（『{b_raw}』/『{a_raw}』）—— "
+                               f"声明了就必须到位，**不静默退回「未检测」**")
+            return
+        diff_pair = (bp, ap)
+
+    if verdict == "走去味" and not targets and diff_pair is None:
+        fail(HUMANIZE_KEY, "`verdict` = 走去味，但既未登记 `产物` 也未登记 `改写前/改写后` —— "
+                           "**声称要去味却没有实跑入口**（登记里的数字一概不采信；无入口即无法验证）")
+        return
+    if verdict == "不适用" and (targets or diff_pair):
+        warn(HUMANIZE_KEY, "`verdict` = 不适用，却登记了 `产物`/`改写前/改写后` —— "
+                           "判定与登记自相矛盾，请核对（仍会实跑，结果照报）")
+
+    all_fails: dict[str, list[str]] = {}
+    tool_err: list[str] = []
+    ran = 0
+    for t in targets:
+        rc, payload, raw = _humanize_invoke(tool, rubric, t, gate=True)
+        if payload is None:
+            tool_err.append(f"{t.name} → 校验器未产出可解析 JSON（exit={rc}）：{raw.strip()[:120]}")
+            continue
+        ran += 1
+        for h in payload.get("fail") or []:
+            all_fails.setdefault(str(h.get("id")), []).append(
+                f"{t.name}:L{h.get('line')} {h.get('snippet', '')}")
+    if tool_err:
+        fail(HUMANIZE_KEY, "；".join(tool_err))
+        return
+
+    fidelity_fail: dict = {}
+    if diff_pair is not None:
+        rc, payload, raw = _humanize_invoke(tool, rubric, None, diff=diff_pair)
+        if payload is None:
+            fail(HUMANIZE_KEY, f"保真比对未产出可解析 JSON（exit={rc}）：{raw.strip()[:120]}")
+            return
+        fidelity_fail = payload or {}
+
+    blocked = {k: v for k, v in all_fails.items() if k not in exempt}
+    stale = [k for k in exempt if k not in all_fails]
+
+    msgs: list[str] = []
+    if blocked:
+        items = "；".join(f"{k}（{len(v)} 处）" for k, v in sorted(blocked.items()))
+        sample = "；".join(v[0] for _, v in sorted(blocked.items()))
+        msgs.append(f"实跑 FAIL={sum(len(v) for v in blocked.values())} 处，未清零不得交付：{items}。"
+                    f"样例：{sample[:200]}")
+    if fidelity_fail:
+        cats = "；".join(f"{c} 缺失={d.get('缺失')} 新增={d.get('新增')}"
+                        for c, d in fidelity_fail.items())
+        msgs.append(f"**事实保真 FAIL**（硬约束、**不可豁免**）：{cats}")
+    if msgs:
+        fail(HUMANIZE_KEY, "｜".join(msgs)[:400])
+    else:
+        note = (f"verdict={verdict}；实跑 {ran} 个产物 / 判据集 {rubric.name} / 适用范围『{scope[:40]}』"
+                + (f"；豁免 {len(exempt)} 条已放行" if exempt else ""))
+        ok(HUMANIZE_KEY, note)
+
+    # 保真层暴露率（与审美判据的渲染层/刻度层注记同构）——「没测」必须与「通过」可区分。
+    if diff_pair is None:
+        warn("文风判据保真层", "未登记 `改写前`/`改写后` —— **事实保真本次未检测**，不是通过。"
+                               "去味改写的双条件之一是「保真零丢失」，它需要两份文本才能机器判。"
+                               "要覆盖该层：把改写前的稿与本轮定稿各存一份，在块内写 "
+                               "`改写前: <路径>` / `改写后: <路径>`。")
+    else:
+        ok("文风判据保真层", "已登记改写前后 → `--diff-fidelity` 实跑"
+                             + ("（零丢失、零新增）" if not fidelity_fail else "（有差异，见上）"))
+
+    if exempt:
+        trace = "；".join(f"{k}=『{v}』" for k, v in exempt.items())
+        if stale:
+            warn("文风判据豁免", f"本次实跑并未 FAIL、却被豁免的判据：{'、'.join(stale)} —— "
+                                 f"豁免项长期闲置应收回（否则它会从「有理由的例外」退化成橡皮图章）。"
+                                 f"现存豁免：{trace}")
+        else:
+            ok("文风判据豁免", f"{len(exempt)} 条（留痕：{trace}）")
 
 
 def _check_category_decl(skill_dir: Path) -> None:

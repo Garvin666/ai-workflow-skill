@@ -241,22 +241,81 @@ def check_triggers(data: dict, gate_runner) -> tuple[bool, list, list]:
 
 
 def _gate_checks_py(plan_path: Path, base: Path, checks_py):
-    """默认门禁实现：调技能自带 checks.py plan，只数 FAIL（口径与交付门禁同源）。"""
-    def runner():
-        if not checks_py or not Path(checks_py).is_file():
-            return False, "checks.py 缺失 → 门禁不可用（不可逆动作 fail-closed）"
+    """默认门禁实现：调技能自带 checks.py plan，只数 FAIL（口径与交付门禁同源）。
+
+    ⚠️ v4.14.2（2026-09-29）修「T3 自依赖循环」——**这不是取消门禁，而是拆掉一个悖论**：
+
+    缺口：`checks_core` 第 23 项规定「**L2** 且 `meta.清理` 缺省 ⇒ FAIL」（v4.14.0 起，
+    用户 2026-09-28 拍板；仅 L1 走 SKIP 出口）。而 `meta.清理` **恰是本脚本的产出**
+    ⇒ 门槛依赖本方产出：清理没跑过（无登记）⇒ T3 拒绝 ⇒ 清理永远跑不了 ⇒ 登记永远落不了。
+    实测 2026-09-29 被 fail-closed 拒绝两次，被迫手工清理 + 手工登记。
+
+    修法（最小侵入：不碰 checks.py、不改 v4.14.0 的既有契约）：
+      阶段 1  原样跑 plan；FAIL==0 ⇒ 通过（与从前完全一致）。
+      阶段 2  FAIL>0 时，在**同目录**构造一份临时 plan（**唯一改动** = 补
+              `meta.清理: {状态: 未完成}`）再跑：
+                · 补后 FAIL==0 ⇒ 证明「这些 FAIL 全部由清理登记缺省引起」⇒ 判 T3 通过，
+                  detail 如实注明「已对账通过，登记待本脚本产出后由执行者回填」；
+                · 补后仍 FAIL>0 ⇒ **拒绝**（存在与登记无关的未清零项，维持原语义「清理必须在交付之后」）。
+
+    边界（刻意保守）：
+      · 只豁免「清理登记缺省」这一**项**，其余任何 FAIL 一律照拦；
+      · 本函数**不写回** plan.yaml —— `checks_core:383` 明写「状态由执行者填写、机器只校验结构」，
+        自动回填属越权；登记由主流程打印可粘贴片段，交执行者落地；
+      · 临时副本用完即删（finally），不留痕；任一环节异常/无 yaml 模块 ⇒ fail-closed 拒绝。
+    """
+    def _run(pp: Path):
         try:
-            p = subprocess.run([sys.executable, str(checks_py), "plan", str(plan_path), "--base", str(base)],
+            p = subprocess.run([sys.executable, str(checks_py), "plan", str(pp), "--base", str(base)],
                                capture_output=True, text=True, encoding="utf-8",
                                errors="replace", timeout=180)
         except (OSError, subprocess.SubprocessError) as e:  # noqa: BLE001
-            return False, f"checks.py 调用失败（{type(e).__name__}）→ fail-closed"
+            return None, f"checks.py 调用失败（{type(e).__name__}）→ fail-closed"
         out = (p.stdout or "") + (p.stderr or "")
         m = re.search(r"FAIL=(\d+)", out)
         if m is None:
-            return False, "checks.py 未给出结果行 → 无法判定 → fail-closed"
-        n = int(m.group(1))
-        return (n == 0), f"FAIL={n}（exit {p.returncode}）"
+            return None, "checks.py 未给出结果行 → 无法判定 → fail-closed"
+        return int(m.group(1)), f"FAIL={m.group(1)}（exit {p.returncode}）"
+
+    def runner():
+        if not checks_py or not Path(checks_py).is_file():
+            return False, "checks.py 缺失 → 门禁不可用（不可逆动作 fail-closed）"
+        n, detail = _run(plan_path)
+        if n is None:
+            return False, detail
+        if n == 0:
+            return True, f"{detail}；对账已清零"
+
+        yaml = _load_yaml()
+        if yaml is None:
+            return False, f"{detail}；无 yaml 模块，无法归因「清理登记缺省」→ fail-closed"
+        probe = plan_path.parent / (plan_path.stem + ".__cleanup_gate_probe.yaml")
+        try:
+            data = yaml.safe_load(plan_path.read_text(encoding="utf-8")) or {}
+            meta = data.get("meta")
+            if not isinstance(meta, dict):
+                return False, f"{detail}；meta 非映射，无法归因 → fail-closed"
+            cur = meta.get("清理")
+            cur_status = str(cur.get("状态", "") or "") if isinstance(cur, dict) else ""
+            if cur_status.strip():
+                return False, f"{detail}；清理登记已填（{cur_status}）却仍有 FAIL ⇒ 与登记无关，拒绝"
+            meta["清理"] = {"状态": "未完成"}
+            probe.write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=False),
+                             encoding="utf-8")
+            n2, _ = _run(probe)
+        except Exception as e:  # noqa: BLE001
+            return False, f"{detail}；构造归因副本失败（{type(e).__name__}）→ fail-closed"
+        finally:
+            try:
+                if probe.exists():
+                    probe.unlink()
+            except OSError:
+                pass
+        if n2 == 0:
+            return True, (f"{detail} → 补上『清理登记缺省』后 FAIL=0 ⇒ 这些 FAIL 全部由"
+                          f"清理登记缺省引起（该字段由本脚本产出，不应作为本脚本的前置）"
+                          f"⇒ T3 判通过；清理完成后须回填 meta.清理（状态由执行者确认）")
+        return False, f"{detail}（补上清理登记后仍 FAIL={n2} ⇒ 存在其它未清零项，拒绝）"
     return runner
 
 
@@ -518,6 +577,15 @@ def main_clean(args) -> int:
     for p, note in failures:
         print(f"  失败：{p} —— {note}")
     print("  ⚠️ 清理未完成**不影响已完成交付的有效性**，但不得被读成「工作区已干净」。")
+    if all_ok:
+        print()
+        print("---- 请回填的清理登记（复制到 plan.yaml 的 meta 下；『状态』由你确认）----")
+        print("  清理:")
+        print('    状态: "已清理"')
+        print(f'    清单: "{manifest.name}"')
+        print(f"    文件数: {nf}")
+        print(f"    字节数: {nb}")
+        print("  · 本脚本**不自动回填** —— checks_core 明写「状态由执行者填写、机器只校验结构」。")
     return 0 if all_ok else 1
 
 
@@ -719,6 +787,49 @@ def main_selftest() -> int:
         shutil.rmtree(t7 / "tmp")
         rc, out = _run(t7, r7, apply=True, extra=("--no-trash",))
         case("S8 tmp 不存在时 --apply 幂等 exit 0", rc == 0 and "无操作" in out, f"exit={rc}")
+
+        # ── S9 单元：T3「清理登记缺省」自依赖的归因（v4.14.2 修）
+        #   用**桩脚本**替代真 checks.py，精确控制两次调用的 FAIL 数：
+        #   原 plan 返回 FAIL，补了 meta.清理 的归因副本返回 0 ⇒ 应放行；返回非 0 ⇒ 应仍拦。
+        try:
+            sys.path.insert(0, str(SELF.parent))
+            import cleanup_task as _ct2  # noqa: PLC0415
+            sd = R / "c_stub"; sd.mkdir(parents=True, exist_ok=True)
+            stub = sd / "checks_stub.py"
+            stub.write_text(
+                "import os, pathlib, sys\n"
+                "p = pathlib.Path(sys.argv[2])\n"
+                "probe = '__cleanup_gate_probe' in p.name\n"
+                "n = int(os.environ.get('STUB_FAIL_PROBE' if probe else 'STUB_FAIL', '0'))\n"
+                "print('=== 结果：FAIL=%d ===' % n)\n"
+                "raise SystemExit(0 if n == 0 else 1)\n",
+                encoding="utf-8")
+            pl = sd / "plan.yaml"
+            pl.write_text("meta:\n  任务层级: \"L2\"\n  熔断状态: \"\"\n"
+                          "steps:\n  - id: 1\n    状态: 完成\n", encoding="utf-8")
+
+            os.environ["STUB_FAIL"] = "1"; os.environ["STUB_FAIL_PROBE"] = "0"
+            ok1, d1 = _ct2._gate_checks_py(pl, sd, stub)()
+            case("S9（阳性）清理登记缺省引起的 FAIL → 归因后放行", ok1, d1)
+            case("S9 归因 detail 如实注明『清理登记』", "清理登记" in d1, d1[:60])
+            case("S9 归因副本未残留", not list(sd.glob("*__cleanup_gate_probe*")))
+
+            os.environ["STUB_FAIL"] = "3"; os.environ["STUB_FAIL_PROBE"] = "2"
+            ok2, d2 = _ct2._gate_checks_py(pl, sd, stub)()
+            case("S9（阴性）补登记后仍 FAIL → 拒绝（T3 门禁没被放宽）", not ok2, d2[:70])
+
+            os.environ["STUB_FAIL"] = "1"; os.environ["STUB_FAIL_PROBE"] = "0"
+            (sd / "plan2.yaml").write_text(
+                "meta:\n  任务层级: \"L2\"\n  熔断状态: \"\"\n  清理:\n    状态: \"已清理\"\n"
+                "steps:\n  - id: 1\n    状态: 完成\n", encoding="utf-8")
+            ok3, d3 = _ct2._gate_checks_py(sd / "plan2.yaml", sd, stub)()
+            case("S9（边界）登记已填却仍有 FAIL → 拒绝（不误放行）", not ok3, d3[:70])
+            os.environ.pop("STUB_FAIL", None); os.environ.pop("STUB_FAIL_PROBE", None)
+        except Exception as e:  # noqa: BLE001
+            case("S9 归因逻辑可测", False, f"{type(e).__name__}: {e}")
+        finally:
+            if str(SELF.parent) in sys.path:
+                sys.path.remove(str(SELF.parent))
 
     print()
     print(f"==== selftest：{n_ok}/{n_ok + n_bad} 通过，FAIL={n_bad} ====")

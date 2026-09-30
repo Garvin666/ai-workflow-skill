@@ -1,0 +1,305 @@
+# 去 AI 味判据集（Humanize Rubric）
+# 来源基底：op7418/Humanizer-zh（基于 blader/humanizer v3.0.0 + Humanizer-zh PR 39），31 条模式 A–F
+# 消费方：scripts/humanize_scan.py（同源守卫：本文件的 machine 档规则 id 集合 ↔ 实现集合，双向比对，见 checks.py skill）
+# 集成位置：ai-workflow 阶段 0「style-judge 快判」的判据源 ＋ 阶段 3 质检「去味改写→保真核对」的执行依据
+#
+# 设计原则（沿用 references/aesthetic-rubric.yaml 的既有纪律）
+#   1. 每条判据的阈值/模式必须有来源（source 字段），不得凭空设定
+#   2. 判据必须标注「可判定性」，把「通过 / 未检测 / 无法判定」分开报
+#   3. **模式清单是检查线索，不是词语黑名单** —— 故只有高置信、低误伤项才允许判 FAIL
+#   4. 阈值可被具体产物覆盖，但覆盖必须留痕；**不得为消 FAIL 改阈值**
+#
+# 可判定性三档（对应 SOUL.md「绿有三种」）
+#   machine — 可从文本直接量出（正则/计数），校验器自动判
+#   spec    — 需从声明文档解析（如作者样本），校验器半自动判
+#   manual  — 机器判不了，显式登记为人审点（不是「通过」，是「未检测」）
+#
+# 严重度三档
+#   FAIL — 阻断交付（除非逐条 豁免 且理由非占位符）
+#   WARN — 只提示，不阻断（可能是正当用法，需上下文确认）
+#   SKIP — 未检测；**不得并入通过率**
+#
+# 31 条模式 → 判据 id 映射（穷举，无孤儿）
+#   §A.1 不是X而是Y→S01  §A.2 单句收尾→S02  §A.3 格言伪深度→S03  §A.4 起跑式铺垫→H07
+#   §A.5 与假想敌辩论→S04  §B.6 强凑三段式→H13  §B.7 句式开头复读→S05  §B.8 破折号→H10
+#   §B.9 限定词堆叠→S06  §B.10 生造复合词→S07  §B.11 被动与缺主语→S08  §C.12 AI高频词→H09
+#   §C.13 意义拔高→H06  §C.14 模糊关联→S09  §C.15 句尾补充式拔高→H08  §C.16 宣传语→H08
+#   §C.17 借权威→S10  §C.18 回避是/有→S11  §D.19 粗体当装饰→H11  §D.20 装饰性标题→H03
+#   §D.21 引号与中文标点→H04  §E.22 客服腔→H01  §E.23 知识边界免责→S12  §E.24 首句复读标题→S13
+#   §E.25 谈论上一稿→S14  §F.26 层叠的「的」→S15  §F.27 进行＋动词→H12  §F.28 被字句堆叠→S16
+#   §F.29 四字词排比→S17  §F.30 随着…的发展→H05  §F.31 套话收尾→H02
+#
+# ⭐ v1.0（2026-09-30）建集说明 —— 从原型升为技能本体判据集，**31 条判据一个未改**
+#   起因：任务 tasks/humanize整合-ai-workflow-2026-09-30/ 的整合方案（§5 保留/改造清单、§6 文件级改动清单）。
+#   A. 判据逐字搬运自该任务的原型（prototype/humanize-rubric.yaml），含全部「保留」语义与 source 字段。
+#   B. 分档落定：machine 13 条（H01–H13）／manual 17 条（S01–S17）／spec 1 条（V01）。
+#      **只有高置信、低误伤的表层特征才进 FAIL**（H01–H08）；可能是正当用法的（H09–H13）一律只 WARN。
+#   C. 事实保真单列 `fidelity` 段（**不是 WARN，是硬门禁**）—— 由 `--diff-fidelity` 机器判，不只靠纪律。
+#   D. ⚠️ **本文档不是检测器**：模式命中 ≠ AI 生成。诚实边界见 references/humanize-judge.md §7。
+#   ⚠️ 与 aesthetic-rubric 同一条禁令：**不得为消 FAIL 改阈值** —— 改阈值即改判据，须留痕并配阴性对照。
+
+version: "1.0"
+updated: "2026-09-30"
+
+meta:
+  version: "1.0.0"
+  source_skill: op7418/Humanizer-zh
+  source_skill_url: https://github.com/op7418/Humanizer-zh
+  upstream: https://github.com/blader/humanizer
+  applies_to: [md, txt, docx]
+  scope:
+    只扫: 散文正文
+    保护原样:
+      - 代码块（fenced code）
+      - 行内代码
+      - 命令与路径
+      - URL 与链接目标
+      - YAML front matter
+      - 表格数据与显式 ID
+  entry_policy: 仅 self-judge.category == content 且交付物面向人阅读时展开；code/chat 判 SKIP
+
+judgeability:
+  machine: "可从文本直接量出（正则/计数），校验器自动判定"
+  spec: "需从声明文档解析（如作者样本），校验器半自动判定"
+  manual: "机器无法判定，登记为人审点（是「未检测」，不是「通过」）"
+
+# ── 事实保真（独立硬门禁，不是 WARN）────────────────────────────────
+fidelity:
+  rule: 去味改写不得改动任何数字、否定、限定、归因、时间、范围
+  method: 改写前后对四类 token 做多重集比对（缺失或新增即 FAIL）
+  categories:
+    数字: 数值 + 量词/单位/百分比
+    否定: 尚未/从未/不再/无法/不能/不得/禁止/没有/不是/不/无/未/没/非/否
+    限定: 可能/或许/也许/据称/据说/计划/拟/正在/尚未/仅/超过/至少/大约/估计/预计/有望/尝试/部分
+    归因: 认为/表示/指出/根据/据/称/报告/调研/统计
+  source: humanizer-zh §「编辑约束与优先级」第 1 条（保留信息和确定程度）
+
+# ── 判据清单 ───────────────────────────────────────────────────────
+rules:
+  # ===== FAIL 档 =====
+  - id: H01
+    group: E
+    name: 客服腔
+    judgeability: machine
+    level: FAIL
+    detector: regex
+    params: {pats: ["好问题[！!]", "希望这对您有帮助", "希望这能帮到你", "如有(任何)?疑问"]}
+    source: humanizer-zh §E.22
+    note: 独立文章中无内容的问候与提议；邮件/客服回复中的礼貌用语不判
+  - id: H02
+    group: F
+    name: 套话收尾
+    judgeability: machine
+    level: FAIL
+    detector: regex
+    params: {pats: ["让我们拭目以待", "期待更多可能", "未来可期"]}
+    source: humanizer-zh §F.31
+  - id: H03
+    group: D
+    name: emoji 装饰标题
+    judgeability: machine
+    level: FAIL
+    detector: regex
+    params: {pats: ["^#{1,6}\\s*[emoji]"], line_only: true}
+    source: humanizer-zh §D.20
+  - id: H04
+    group: D
+    name: 中文正文里的英文直引号
+    judgeability: machine
+    level: FAIL
+    detector: regex
+    params: {pats: ["[中文]\\\"[^\\\"]{1,40}\\\"[中文]"]}
+    source: humanizer-zh §D.21
+    note: JSON 字符串中的直引号与用户指定的「」样式不判
+  - id: H05
+    group: F
+    name: 「随着…的发展」式空转开头
+    judgeability: machine
+    level: FAIL
+    detector: regex
+    params: {pats: ["在[^，。]{0,15}(时代背景|大背景|浪潮)下", "^随着[^，。]{0,20}的发展"]}
+    source: humanizer-zh §F.30
+    note: 变化趋势、时间背景、真实因果不判（如「随着文件数量增加，检索时间也在增长」）
+  - id: H06
+    group: C
+    name: 意义拔高
+    judgeability: machine
+    level: FAIL
+    detector: regex
+    params: {pats: ["标志着[^，。]{0,20}(新时代|新纪元|新篇章|里程碑)"]}
+    source: humanizer-zh §C.13
+  - id: H07
+    group: A
+    name: 起跑式铺垫
+    judgeability: machine
+    level: FAIL
+    detector: regex
+    params: {pats: ["让我们(深入|一起)?(看看|探讨)", "以下是你(需要|必须)知道的"]}
+    source: humanizer-zh §A.4
+  - id: H08
+    group: C
+    name: 句尾补充式拔高 / 宣传语
+    judgeability: machine
+    level: FAIL
+    detector: regex
+    params: {pats: ["彰显了[^，。]{0,15}(不懈追求|卓越追求)", "堪称[^，。]{0,12}(梦想|理想)(天堂|之选)"]}
+    source: humanizer-zh §C.15 + §C.16
+
+  # ===== WARN 档（可能是正当用法，只提示）=====
+  - id: H09
+    group: C
+    name: AI 高频词
+    judgeability: machine
+    level: WARN
+    detector: regex
+    params: {pats: ["赋能", "至关重要", "深入探讨", "无缝", "闭环", "全方位", "抓手", "底层逻辑"]}
+    source: humanizer-zh §C.12
+    note: 正式词语与工程术语（如「闭环反馈」）不因命中词表而删除 —— 故只 WARN
+  - id: H10
+    group: B
+    name: 破折号当万能连接
+    judgeability: machine
+    level: WARN
+    detector: density
+    params: {unit: "——", min_count: 3, max_per_500: 1.0}
+    source: humanizer-zh §B.8
+  - id: H11
+    group: D
+    name: 粗体当装饰
+    judgeability: machine
+    level: WARN
+    detector: density
+    params: {unit: bold, max_per_para: 1.5}
+    source: humanizer-zh §D.19
+  - id: H12
+    group: F
+    name: 「进行＋动词」
+    judgeability: machine
+    level: WARN
+    detector: regex
+    params: {pats: ["进行(了|着)?(测试|优化|调整|分析|处理|讨论|研究|梳理|检查|评估|验证)"]}
+    source: humanizer-zh §F.27
+  - id: H13
+    group: B
+    name: 强凑三段式
+    judgeability: machine
+    level: WARN
+    detector: regex
+    params: {pats: ["(带来了|实现了|开启了)[^。]{0,40}、[^。]{0,20}、"]}
+    source: humanizer-zh §B.6
+
+  # ===== manual 档（机器判不了，显式登记为人审点）=====
+  - id: S01
+    group: A
+    name: 不是 X，而是 Y（假对比）
+    judgeability: manual
+    level: SKIP
+    source: humanizer-zh §A.1
+    note: 两部分都提供信息、或否定部分纠正真实误解时保留
+  - id: S02
+    group: A
+    name: 单句收尾与戏剧性碎片
+    judgeability: manual
+    level: SKIP
+    source: humanizer-zh §A.2
+  - id: S03
+    group: A
+    name: 格言与伪深度
+    judgeability: manual
+    level: SKIP
+    source: humanizer-zh §A.3
+  - id: S04
+    group: A
+    name: 与假想敌辩论
+    judgeability: manual
+    level: SKIP
+    source: humanizer-zh §A.5
+  - id: S05
+    group: B
+    name: 句式开头复读
+    judgeability: manual
+    level: SKIP
+    source: humanizer-zh §B.7
+  - id: S06
+    group: B
+    name: 限定词堆叠
+    judgeability: manual
+    level: SKIP
+    source: humanizer-zh §B.9
+  - id: S07
+    group: B
+    name: 生造复合词与连接号
+    judgeability: manual
+    level: SKIP
+    source: humanizer-zh §B.10
+  - id: S08
+    group: C
+    name: 被动与缺主语
+    judgeability: manual
+    level: SKIP
+    source: humanizer-zh §C.11
+    note: 施事者未知/不重要时被动正当；不得补造「系统」「研究人员」等主语
+  - id: S09
+    group: C
+    name: 模糊关联
+    judgeability: manual
+    level: SKIP
+    source: humanizer-zh §C.14
+  - id: S10
+    group: C
+    name: 借权威
+    judgeability: manual
+    level: SKIP
+    source: humanizer-zh §C.17
+    note: 不得把「专家认为」替换成编造的机构/报告/日期
+  - id: S11
+    group: C
+    name: 回避「是／有」
+    judgeability: manual
+    level: SKIP
+    source: humanizer-zh §C.18
+  - id: S12
+    group: E
+    name: 知识边界免责与猜测填充
+    judgeability: manual
+    level: SKIP
+    source: humanizer-zh §E.23
+  - id: S13
+    group: E
+    name: 首句复读标题
+    judgeability: manual
+    level: SKIP
+    source: humanizer-zh §E.24
+  - id: S14
+    group: E
+    name: 谈论上一稿
+    judgeability: manual
+    level: SKIP
+    source: humanizer-zh §E.25
+  - id: S15
+    group: F
+    name: 层叠的「的」
+    judgeability: manual
+    level: SKIP
+    source: humanizer-zh §F.26
+  - id: S16
+    group: F
+    name: 被字句堆叠
+    judgeability: manual
+    level: SKIP
+    source: humanizer-zh §F.28
+  - id: S17
+    group: F
+    name: 四字词排比
+    judgeability: manual
+    level: SKIP
+    source: humanizer-zh §F.29
+
+  # ===== spec 档（需作者样本，无样本判 SKIP）=====
+  - id: V01
+    group: 声音
+    name: 作者声音校准
+    judgeability: spec
+    level: SKIP
+    source: blader/humanizer v3.0.0（voice calibration）
+    note: 有作者样本才跑；无样本判 SKIP，**不得假装校准过**

@@ -165,6 +165,29 @@ AESTHETIC_SCALE_KEY = "声明刻度源"
 AESTHETIC_SCALE_IDS = ("G12", "G13")
 AESTHETIC_EXEMPT_PLACEHOLDER = ("待定", "无", "暂无", "tbd", "n/a", "na", "-", "—", "？", "?")
 
+# v4.15.0：文风判据门禁（面向人阅读的散文正文的机器验收）—— 判据集与校验器随技能发行
+#   ⚠️ 与**审美判据**（AESTHETIC_*）**同族但不同输入**：审美吃 `.css` 与渲染色；本项吃 `.md/.txt/.docx`
+#     的**散文正文**。两者共用同一套三档纪律（PASS/FAIL/SKIP 严格分开、source 字段、豁免出口、阴性对照），
+#     **互不替代、可同时命中**（PPT 讲稿正文两者都吃）。
+#   ⚠️ 与七块 judge 的关系：本项是 `style-judge`（文风判别快判）的**验收层**。快判落 `meta.文风判定`；
+#     本项只做两件事 —— ① 结构校验 ② **登记了产物就把 humanize_scan.py 实跑一遍**（登记数字不采信）。
+#   触发信号（与审美判据的差异）：审美用「交付物后缀含 .css」做确定性触发；本项**不用后缀** ——
+#     散文正文可以是 .md/.txt/.docx，也可内嵌在别的产物里，靠后缀会漏。改由 style-judge 自报
+#     （`meta.文风判定` 是否登记）+ 结构校验。**代价：漏报（该登记没登记）机器抓不到** —— 如实登记此边界。
+#   · 缺省 → **L2/层级不明判 FAIL、L1 出口汇一条 SKIP**（与检查项 13/14/16/18/20/23/24 同口径）。
+#   · 填写 → 结构须合法，且 **checks.py 自己实跑校验器**并把 FAIL 当 FAIL —— **登记里的数字一律不采信**。
+#   · `豁免` 是唯一出口：**必须写理由**、逐条留痕打印；「豁免了但本次并没有 FAIL」会 WARN（防橡皮图章）。
+#   机检落点：`checks.py plan` 检查项 26（`checks_judges._check_humanize`）。
+HUMANIZE_KEY = "文风判定"
+HUMANIZE_TOOL = "humanize_scan.py"
+HUMANIZE_RUBRIC_DEFAULT = "references/humanize-rubric.yaml"
+HUMANIZE_VERDICTS = ("走去味", "只登记", "已达标", "不适用")
+HUMANIZE_DIMS = ("S1", "S2", "S3", "S4", "S5")
+HUMANIZE_REQUIRED = ("verdict", "distribution", "confidence", "dimensions",
+                     "ambiguity", "route_hint", "needs_humanize", "适用范围")
+HUMANIZE_TEXT_EXT = (".md", ".txt", ".docx")
+HUMANIZE_EXEMPT_PLACEHOLDER = ("待定", "无", "暂无", "tbd", "n/a", "na", "-", "—", "？", "?")
+
 # v4.10.0：任务产物清理登记（检查项 23）—— 由 scripts/cleanup_task.py 产出并回填。
 #   「清理状态」与「步骤状态」（VALID_STATUS）是**不同物理量**：前者答"清理这件事的结果"，
 #   后者答"步骤做到哪了"。字形相近但语义无关，**不得合并、不得互推**（口径守卫见 checks_parity）。
@@ -382,6 +405,26 @@ plan 子命令检查项:
         解析到位、`文件数`/`字节数` 若填则须为非负整数），非法即 FAIL。
         ⚠️ **状态由执行者填写、机器只校验结构** —— 「确实安全清过」靠抽查，
         **不得把本字段读成「工作区已干净」**（清理有失败项时只报「未完成」，见阶段 6 第 7 条）。
+
+    26. 文风判据（v4.15.0）：meta「文风判定」可选 —— 面向人阅读的散文正文的机器验收（style-judge 的验收层）。
+        判据集：`references/humanize-rubric.yaml`（31 条，A–F 六组）；校验器：`scripts/humanize_scan.py`；
+        契约：`references/humanize-judge.md`。
+        **L2／层级不明 ⇒ 整段缺省判 FAIL**（与检查项 13/14/16/18/20/23/24 同口径）；**L1 出口**：显式声明
+        `meta.任务层级: L1` ⇒ 汇总为**一条 SKIP**（「不算缺口」）。
+        一旦填写须结构合法（`verdict` ∈ 走去味/只登记/已达标/不适用、`distribution` 恰含四键且和=1、
+        `confidence` ∈ [0,1] 且 = max(distribution)、`dimensions` 含 S1–S5、`ambiguity` 为 bool、
+        `route_hint` 非空、`needs_humanize` 为 bool 且 =（verdict == 走去味）、`适用范围` 非空），非法即 FAIL。
+        且 **checks.py 实跑校验器**（与检查项 22 同口径，**登记里的数字一概不采信**）：
+        —— `产物` 每项须为真实存在的文本产物（.md/.txt/.docx），逐项跑 `humanize_scan.py --gate`；
+           实跑命中 FAIL 且未被 `豁免` 覆盖 → **FAIL**（阻断交付）；
+        —— `改写前`/`改写后` 同时登记时，跑 `--diff-fidelity`：**零丢失、零新增**才算过；
+           任一类目有差异 → **FAIL**（这是本工作区核心痛点「描述与实现不符」的机器化）。
+        `豁免` 是唯一出口，**必须写理由**并逐条留痕；「豁免了却本次并没有 FAIL」→ WARN（防橡皮图章）。
+        ⚠️ **它不是 AI 检测器**：不判作者身份、不保证过任何检测器（契约 §10）；模式命中 ≠ AI 生成；
+        machine 档只覆盖可枚举的表层特征，17 条 SKIP 档只能人审 —— **不得宣称已全覆盖**。
+        ⚠️ **`已达标` ≠ 没问题**：SKIP 档是**未检测**，不是通过。
+        ⚠️ **触发信号与审美判据不同**：本项不用「交付物后缀」做确定性触发（散文正文可内嵌在别的产物里，
+        靠后缀会漏），改由 style-judge 自报。**代价：漏报（该登记没登记）机器抓不到** —— 如实登记此边界。
 
 状态取值: OK / FAIL / SKIP / **WARN**（WARN 只提示、不计入 FAIL，也不改变退出码）
 

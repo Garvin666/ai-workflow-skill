@@ -24,6 +24,7 @@ from checks_core import (          # noqa: F401 —— 下划线开头的模块�
     _TRACE_HINT,
 )
 from checks_parity import (  # noqa: F401
+    _check_humanize_parity,
     _check_parity,
     _check_thinking_band_source,
 )
@@ -38,6 +39,7 @@ from checks_judges import (  # noqa: F401
     _check_gate,
     _check_homework_sample,
     _check_homework_verdict,
+    _check_humanize,
     _check_irreversible,
     _check_learning_sample,
     _check_learning_verdict,
@@ -252,6 +254,9 @@ def check_skill(skill_dir: Path) -> int:
     # v4.11.0：跨格式阈值同源判据（思考模块的 ambiguity_band 在 judges.json 里，guard_constants 走 AST
     # 够不到 JSON）—— 单列，不并入 PARITY_ITEMS（后者比字符串集合，本条比浮点数组 + question 结构）。
     _check_thinking_band_source(skill_dir)
+    # v4.15.0：跨格式同源判据（文风判据的 rubric 在 YAML、可执行副本在 Python）—— 单列理由同 v4.11.0，
+    #   且比对逻辑归校验器自己（`humanize_scan.py --audit`），本条只读它的退出码，不重复实现。
+    _check_humanize_parity(skill_dir)
     # v4.2.0 第五轮：主类枚举单独判（声明块 FAIL + 启发式 WARN）—— 它的模型是「跨文件唯一性（源规格面内）」，塞不进 PARITY_ITEMS 的并集模型
     _check_category_decl(skill_dir)
     # v4.3.0 / 批次 B：平台门控 vs 真实 import（AST 口径，不认注释与字符串里的同名字面量）
@@ -333,6 +338,16 @@ def check_plan(plan_path: Path, base: Path) -> int:
     # v4.9.0：检查项 22 = 审美判据门禁（设计类产物：交付物含 .css）。与上面几条**不同族** ——
     # 它不做识别，也不信 plan 里自报的数字：登记了产物，就把校验器**实跑一遍**，跑出 FAIL 即 FAIL。
     _check_aesthetic(meta, steps, base)
+    # v4.15.0：检查项 26 = 文风判据门禁（面向人阅读的散文正文）。与检查项 22 **同族但触发信号不同**：
+    #   它不用交付物后缀（散文正文可内嵌在别的产物里，靠后缀会漏），改由 style-judge 自报 ——
+    #   故整段缺省按 **L2 FAIL / L1 SKIP** 分档（与 13/14/16/18/20/23/24 同口径），
+    #   而审美判据缺省只 WARN。**登记了产物就把校验器实跑一遍，跑出 FAIL 即 FAIL。**
+    #   独立 try 包裹（与检查项 24 同源理由）：异常降级为 FAIL，不让异常吞掉整批输出。
+    try:
+        _check_humanize(meta, steps, base)
+    except Exception as e:                       # noqa: BLE001 —— 刻意兜底，防穿透崩栈
+        fail("meta.文风判定 合法（检查器异常）",
+             f"{type(e).__name__}: {e} —— 已降级为 FAIL，不让异常吞掉整批输出")
     # v4.10.0：检查项 23 = 任务产物清理登记（可选字段；缺省 WARN、填写须合法；
     #   登记了 `清单` 却解析不到文件即 FAIL）。与检查项 22 同源口径：可选、填了就不能糊弄。
     _check_cleanup(meta, plan_path)
