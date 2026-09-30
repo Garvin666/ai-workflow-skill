@@ -1,0 +1,42 @@
+=== push_ontology（本体 → Garvin666/ai-workflow-skill@main）===
+模式：APPLY（真实推送）
+本地 git 根：C:\Users\<用户名>\.workbuddy\skills\ai-workflow
+改动面：7980289..HEAD
+
+本地：写入 13 项 / 删除 0 项
+远端 HEAD = 69528ba04a76de546cd1de70bc85fb57a952f022
+base_tree = aded1380b4e53baca694261d9079e29e70398eeb
+远端 blob 路径 222 个
+
+  [写] README.md
+        新建 blob  89d60ae4c2
+  [写] SKILL.md
+        新建 blob  0f1b0c26e2
+  [写] _archive/changelog.md
+        新建 blob  c32f4de0fe
+  [写] assets/templates/文献阅读.yaml
+        新建 blob  1dbc6f0a45
+  [写] references/literature-reading-mode.md
+        新建 blob  3baa6a20e5
+  [写] references/playbook.md
+        新建 blob  965d0c5e7c
+  [写] references/quality-gates.md
+        新建 blob  6a1da310c5
+  [写] references/skill-hygiene.md
+        新建 blob  05123a9cf9
+  [写] tasks/文献阅读模式-ai-workflow-v4.17.0-2026-09-30/确认表.md
+        新建 blob  ca6a313e70
+  [写] tasks/文献阅读模式-ai-workflow-v4.17.0-2026-09-30/自检报告.md
+        新建 blob  2d5beac0ca
+  [写] tasks/文献阅读模式-ai-workflow-v4.17.0-2026-09-30/验收输出.txt
+        新建 blob  94ba51a33b
+  [写] tasks/检查修补-文献阅读模式-2026-09-30/确认表.md
+        新建 blob  d9f248c84a
+  [写] tasks/检查修补-文献阅读模式-2026-09-30/自检报告.md
+        新建 blob  856c4bb1e8
+
+小计：新建 13 / 复用 0 / 同内容跳过 0 / 删除 0 / 删除跳过 0
+
+新 tree   = bec0103ac37662ce2124c99bd1de1d0499884dee
+新 commit = f7c9d13ab46dbfbbf632e64fe2a573f681d3fca6
+ref main 已更新：69528ba04a → f7c9d13ab4

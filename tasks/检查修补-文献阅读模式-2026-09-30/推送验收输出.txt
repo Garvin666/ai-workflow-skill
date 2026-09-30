@@ -1,0 +1,50 @@
+=== push_router push（分流推送）===
+技能根：C:\Users\<用户名>\.workbuddy\skills\ai-workflow
+改动面：7980289..HEAD
+模式：APPLY（真实推送两仓）
+
+── 分流判定 ──
+  [本体          ] README.md
+  [本体          ] SKILL.md
+  [本体          ] _archive/changelog.md
+  [本体          ] assets/templates/文献阅读.yaml
+  [本体          ] references/literature-reading-mode.md
+  [本体          ] references/playbook.md
+  [本体          ] references/quality-gates.md
+  [本体          ] references/skill-hygiene.md
+  [本体          ] tasks/文献阅读模式-ai-workflow-v4.17.0-2026-09-30/确认表.md
+  [本体          ] tasks/文献阅读模式-ai-workflow-v4.17.0-2026-09-30/自检报告.md
+  [本体          ] tasks/文献阅读模式-ai-workflow-v4.17.0-2026-09-30/验收输出.txt
+  [本体          ] tasks/检查修补-文献阅读模式-2026-09-30/确认表.md
+  [本体          ] tasks/检查修补-文献阅读模式-2026-09-30/自检报告.md
+
+── 交叉校验（标注头 vs plan.yaml 登记表）──
+  [OK  ] README.md                                  普通本体文件（无自研标注，无需登记）
+  [WARN] SKILL.md                                   出站扫描命中**本机盘符路径**（出站清单第 3 项，第 100 行）→ 本版只提示不阻断（边界已登记）：- 用户显式给出的其他路径（如「去 E:\X 读数据」）= 该路径临时纳入本任务范围，但仍不扩展到其上级或兄弟目录。
+  [OK  ] SKILL.md                                   有标注头且已登记，但登记链接指向**本体仓**（https://github.com/Garvin666/ai-workflow-skill）→ 只走本体通道，不推 tools 仓
+  [WARN] _archive/changelog.md                      出站扫描命中**本机盘符路径**（出站清单第 3 项，第 76、170、304、400 行）→ 本版只提示不阻断（边界已登记）：…` 多 home 段）**：实测 `E:\WBHomes\A|B\.workbuddy\skills` **皆为 ju
+  [OK  ] _archive/changelog.md                      普通本体文件（无自研标注，无需登记）
+  [OK  ] assets/templates/文献阅读.yaml                 普通本体文件（无自研标注，无需登记）
+  [OK  ] references/literature-reading-mode.md      普通本体文件（无自研标注，无需登记）
+  [OK  ] references/playbook.md                     普通本体文件（无自研标注，无需登记）
+  [OK  ] references/quality-gates.md                普通本体文件（无自研标注，无需登记）
+  [OK  ] references/skill-hygiene.md                普通本体文件（无自研标注，无需登记）
+  [OK  ] tasks/文献阅读模式-ai-workflow-v4.17.0-2026-09-30/确认表.md 普通本体文件（无自研标注，无需登记）
+  [OK  ] tasks/文献阅读模式-ai-workflow-v4.17.0-2026-09-30/自检报告.md 普通本体文件（无自研标注，无需登记）
+  [OK  ] tasks/文献阅读模式-ai-workflow-v4.17.0-2026-09-30/验收输出.txt 普通本体文件（无自研标注，无需登记）
+  [OK  ] tasks/检查修补-文献阅读模式-2026-09-30/确认表.md        普通本体文件（无自研标注，无需登记）
+  [OK  ] tasks/检查修补-文献阅读模式-2026-09-30/自检报告.md       普通本体文件（无自研标注，无需登记）
+  [SKIP] 登记表（共 24 项）                                另有 22 项未涉及本次改动面（历史登记或本次未改动，非错误）：guard_constants.py、publish_tools.py、push_ontology.py、push_router.py…
+  登记表共 24 项（来自 tasks/**/plan.yaml）
+
+── 推送计划 ──
+  本体     → Garvin666/ai-workflow-skill@main ：13 项（通道 push_ontology.py，Git Data API + base_tree）
+  自研工具 → Garvin666/ai-workflow-tools@main ：0 项（通道 publish_tools.py，contents API 逐文件）（无）
+
+── 通道 1/2：本体 → Garvin666/ai-workflow-skill ──
+  退出码 = 0
+
+── 通道 2/2：自研工具 → Garvin666/ai-workflow-tools ──
+  本次改动面无自研工具文件，跳过。
+
+分流推送完成：本体 13 项 → Garvin666/ai-workflow-skill ｜ 自研工具 0 项 → Garvin666/ai-workflow-tools
