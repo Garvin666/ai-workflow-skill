@@ -1,6 +1,6 @@
 # AI Workflow（ai-workflow）
 
-AI 标准化多阶段工作方法论 —— 一套「流程编排 + 机器可校验门禁」的自研技能（当前版本 **v4.16.0**）。
+AI 标准化多阶段工作方法论 —— 一套「流程编排 + 机器可校验门禁」的自研技能（当前版本 **v4.17.0**）。
 
 它不只是一个提示词模板：每个阶段都有对应的**机器判据**（自检、口径守卫、出站扫描、独立验收），流程产物（计划、决策、履历）全部落盘留痕，可审计、可回归。
 
@@ -35,6 +35,7 @@ AI 标准化多阶段工作方法论 —— 一套「流程编排 + 机器可校
 - **文风判别**（v4.15.0）：阶段 0 第 1.5 步的第七块快判 —— 判「本次产出要不要去 AI 味改写、命中哪几组模式」，四态落 `meta.文风判定`；触发面收敛到 `content` 类的散文正文（对代码 / JSON / YAML 判「不适用」）。判据集 `references/humanize-rubric.yaml`（31 条模式 A–F），校验器 `scripts/humanize_scan.py`（`--gate` 实跑 + `--diff-fidelity` 事实保真比对），验收为双条件（FAIL 命中数下降 且 保真零丢失）。它**不判作者身份、不保证过任何 AI 检测器**。
 - **作业模式**（v4.10.1）：面向课程作业 / 习题的精简解题结构 S0–S2（简要已知 → 解题过程（验证内联）→ 答案），配数学计算 / 编程实现 / 论述写作三类题型骨架。
 - **学习模型**（v4.8.0）：阶段 6 收尾的持续优化回路 —— 采集既有留痕 → 抽取四类知识（偏好 / 领域知识 / 流程坑 / 事实）→ 蒸馏去重 → 证据门槛校验 → 两段式并入个人知识库，使后续任务经 KB-First 检索直接吃到历史经验。入库由 `scripts/kb_learn.py` 的六条门槛裁决。
+- **文献阅读模式**（v4.17.0）：以**严苛审稿人**视角审阅一篇文献的产出结构 —— 角色契约 P1–P4（默认怀疑 / 判断可回溯 / 作者声称≠实际做到 / 不越界评价）＋ 四问结构 Q1–Q4（研究问题 / 创新点 / 可质疑点 / 精读略读分区），**四问按论证角色归入主张层（Q1/Q2，可在原文核对）/ 证据层（Q3，须审稿人构造）/ 结构层（Q4，阅读策略）三域**，配证据分级 A/B/C/D（直引 / 归纳 / 推断 / 无法确认）与位置锚（章节号或页码）要求。**不新增 plan 字段、judge 与机器判据**（识别是启发式），手册见 `references/literature-reading-mode.md`。
 - 项目 Git 开发规范：`main` 只放稳定可运行版，新功能与新增模块走 `dev`，并行实验各建 `exp-xxx`；commit 注释类型取自手册枚举，机器校验 `scripts/git_check.py`。
 - **外部技能簇**（v4.16.0）：技能库根下 mattpocock vendored 的 24 个第三方 MIT 技能，**扁平外挂、不属本体**，其 User-invoked / Model-invoked 分类与「何时该调」见 `references/external-skills.md`；机器检查用 `scripts/external_skill_lint.py`，不走本体的 `checks.py skill`。
 - 机器门禁：
@@ -74,7 +75,7 @@ PY="$HOME/.workbuddy/binaries/python/envs/ai-workflow/Scripts/python.exe"
 
 ### 使用
 
-- **作为技能调用**：在支持的宿主里用触发词唤起，主入口为 `SKILL.md`。常见触发词：`AI 工作流` / `按流程干活` / `标准流程` / `工作方法论` / `ai-workflow` / `作业模式` / `解题` / `做作业` / `习题` / `Git 开发规范` / `分支规范` / `commit 注释规范` / `学习模型` / `归纳偏好` / `复盘学习` / `清理中间产物` / `任务收尾清理` / `cleanup_task` / `思考板块` / `该不该这么做` / `任务审计` / `拒绝这个任务` / `去 AI 味` / `文风` / `humanize` / `去味改写` / `别这么写` / `外部技能` / `第三方技能`。
+- **作为技能调用**：在支持的宿主里用触发词唤起，主入口为 `SKILL.md`。常见触发词：`AI 工作流` / `按流程干活` / `标准流程` / `工作方法论` / `ai-workflow` / `作业模式` / `解题` / `做作业` / `习题` / `Git 开发规范` / `分支规范` / `commit 注释规范` / `学习模型` / `归纳偏好` / `复盘学习` / `清理中间产物` / `任务收尾清理` / `cleanup_task` / `思考板块` / `该不该这么做` / `任务审计` / `拒绝这个任务` / `去 AI 味` / `文风` / `humanize` / `去味改写` / `别这么写` / `外部技能` / `第三方技能` / `文献阅读` / `读文献` / `论文审阅` / `审稿意见`。
 - **直接跑工具**（进入技能目录后）：
 
 ```bash
@@ -152,8 +153,8 @@ ai-workflow/
 │   ├── model_tiers.json      # 模型档位配置（strong / mid / cheap）
 │   ├── fixtures/             # 校验器测试夹具（humanize）
 │   └── setup_env.ps1 / run_stage.ps1
-├── references/               # 32 份下沉手册（= 30 .md + 2 .yaml；judge 契约 / 流程模型 / 门禁口径 / 推送路由…）
-├── assets/                   # 计划 / 报告 / 台账模板（根下 4 份）+ templates/ 项目模板库（10 份 .yaml）+ thinking-gold.yaml + 熔断报告模板.md
+├── references/               # 33 份下沉手册（= 31 .md + 2 .yaml；judge 契约 / 流程模型 / 门禁口径 / 推送路由…）
+├── assets/                   # 计划 / 报告 / 台账模板（根下 4 份）+ templates/ 项目模板库（11 份 .yaml）+ thinking-gold.yaml + 熔断报告模板.md
 ├── tasks/                    # 活跃任务档案（plan.yaml / 报告 / 交付物）
 │   └── _archive/             # 历史任务归档（仅本地保留，不入版本控制）
 └── _archive/                 # 本地归档
@@ -169,5 +170,5 @@ ai-workflow/
 - **推送三原则**：默认 dry-run、`--apply` 才写远端；删除远端文件必须显式 `--allow-delete`；推送后用 `verify_push.py` 独立验收，不自证。
 - **推送不是 `git push`**：技能仓推的是**文件内容**（`push_ontology.py` 走 `api.github.com` Git Data API + `base_tree` 增量），不是提交历史，故本地 `dev` 与远端 `main` 的历史分叉不构成障碍，也不需要 force push。
 - **分支约定**：`main` 只放稳定可运行版；新功能走 `dev`，并行实验各建 `exp-xxx`；commit 注释类型取自 `references/git-conventions.md` 枚举，机器校验见 `scripts/git_check.py`。
-- **门禁口径**：`checks.py skill` 的计数与阈值是版本相关的状态量，跨版本不可直接相减；改判据须先量影响面，不为消 FAIL 改判据。v4.16.0 基线为 **通过 71/71，FAIL=0，SKIP=0，WARN=0**。
+- **门禁口径**：`checks.py skill` 的计数与阈值是版本相关的状态量，跨版本不可直接相减；改判据须先量影响面，不为消 FAIL 改判据。当前 v4.17.0 基线为 **通过 72/72，FAIL=0，SKIP=0，WARN=0**（v4.16.0 为 71/71）。
 - **平台限制**：技能面向 Windows / Git Bash 环境；`setup_env.ps1` 依赖 Windows PowerShell 5.1（脚本注释为 ASCII-only，因为 5.1 按 ANSI/cp936 读文件，非 ASCII 注释会吞掉下一行代码）。

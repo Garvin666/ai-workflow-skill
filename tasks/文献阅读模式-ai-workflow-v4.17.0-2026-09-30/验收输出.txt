@@ -1,0 +1,58 @@
+############ 验收输出（原始；本机主目录路径已按出站纪律脱敏为 ~，其余内容未编辑） ############
+技能根 : ~/.workbuddy/skills/ai-workflow
+时间   : 2026-09-30 16:02:30
+
+===== [1] checks.py skill —— 交付态 =====
+[ OK ] metrics 幂等：空目录连跑 2 次恒 1 行 — 实测 1 行
+[ OK ] metrics 幂等：预置 2 行收敛为 1 行 — 实测 1 行
+[ OK ] metrics 幂等：预置 1 行时刷新内容且不增行 — 内容={"task": "幂等守卫用例", "level": "L2", "date": "2026-09-30", "revisions": 0, "fused":
+=== 结果：通过 72/72，FAIL=0，SKIP=0，WARN=0 ===
+
+===== [2] checks.py plan —— 交付态 =====
+[ OK ] 熔断状态 — 正常（未声明）
+[SKIP] 步骤闭环不变量 — 无已完成步骤
+=== 结果：通过 22/32，FAIL=0，SKIP=4，WARN=6 ===
+
+===== [3] humanize_scan --text references/literature-reading-mode.md =====
+扫描对象: references/literature-reading-mode.md
+  FAIL = 0  |  WARN = 2  |  SKIP = 17（未检测，不计入通过率）
+  [WARN]
+    H10 破折号当万能连接 @全文 —— 「——」出现 22 次 / 每 500 字约 1.6 次
+    H11 粗体当装饰 @全文 —— 粗体 194 处 / 66 段 = 2.94 处每段
+
+===== [4] 阴性对照 A：把手册内一处引用改成不存在的文件 =====
+注入：references/playbook.md -> references/playbook-NOTEXIST.md
+[ OK ] metrics 幂等：预置 2 行收敛为 1 行 — 实测 1 行
+[ OK ] metrics 幂等：预置 1 行时刷新内容且不增行 — 内容={"task": "幂等守卫用例", "level": "L2", "date": "2026-09-30", "revisions": 0, "fused":
+=== 结果：通过 71/72，FAIL=1，SKIP=0，WARN=0 ===
+还原后：
+[ OK ] metrics 幂等：预置 2 行收敛为 1 行 — 实测 1 行
+[ OK ] metrics 幂等：预置 1 行时刷新内容且不增行 — 内容={"task": "幂等守卫用例", "level": "L2", "date": "2026-09-30", "revisions": 0, "fused":
+=== 结果：通过 72/72，FAIL=0，SKIP=0，WARN=0 ===
+还原字节一致：True
+
+===== [5] 阴性对照 B：把 SKILL.md 的 H1 版本号改回 v4.16.0 =====
+注入：H1 -> # AI 工作流 v4.16.0（frontmatter 仍为 4.17.0）
+[ OK ] metrics 幂等：预置 2 行收敛为 1 行 — 实测 1 行
+[ OK ] metrics 幂等：预置 1 行时刷新内容且不增行 — 内容={"task": "幂等守卫用例", "level": "L2", "date": "2026-09-30", "revisions": 0, "fused":
+=== 结果：通过 72/72，FAIL=0，SKIP=0，WARN=0 ===
+>>> 结论：对照 B **不成立** —— 门禁**抓不到** H1 与 frontmatter 的版本号不一致。
+>>> 即：『版本号三处同源』**没有机器判据**，属纪律项，只能靠人工 grep 回查（见自检报告）。
+还原后：
+[ OK ] metrics 幂等：预置 2 行收敛为 1 行 — 实测 1 行
+[ OK ] metrics 幂等：预置 1 行时刷新内容且不增行 — 内容={"task": "幂等守卫用例", "level": "L2", "date": "2026-09-30", "revisions": 0, "fused":
+=== 结果：通过 72/72，FAIL=0，SKIP=0，WARN=0 ===
+还原字节一致：True
+
+===== [6] 交付态最终复跑 =====
+[ OK ] metrics 幂等：预置 2 行收敛为 1 行 — 实测 1 行
+[ OK ] metrics 幂等：预置 1 行时刷新内容且不增行 — 内容={"task": "幂等守卫用例", "level": "L2", "date": "2026-09-30", "revisions": 0, "fused":
+=== 结果：通过 72/72，FAIL=0，SKIP=0，WARN=0 ===
+
+===== [7] 手册内文件引用存在性逐个核验 =====
+references/decision-tables.md                  OK
+references/playbook.md                         OK
+references/retrieval-judge.md                  OK
+references/self-judge.md                       OK
+references/literature-reading-mode.md          OK
+assets/templates/文献阅读.yaml                     OK
