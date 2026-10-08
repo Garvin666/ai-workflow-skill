@@ -34,6 +34,7 @@ from checks_core import (  # noqa: F401
     HUMANIZE_TOOL,
     HUMANIZE_VERDICTS,
     CLEANUP_STATES,
+    CRAM_STATES,
     LEARNING_KINDS,
     THINKING_VERDICTS,
     THINKING_VETO_AXES,
@@ -672,6 +673,36 @@ def _p_cleanup_states(text: str) -> set:
                 vals.add(c)
     return vals
 
+
+def _p_cram_states(text: str) -> set:
+    """恶补状态（v4.19.0）—— **一个物理量、两种载体**：
+
+      · **模板注释行**（`assets/plan-template.yaml`）：`· 恶补状态取值：已出 / 无知识点 / 未完成 / 已拒绝`
+        —— 这是**可执行副本**（执行者照着它填）；
+      · **受守卫镜像**（`references/data-model.md` §2.2）：`| 恶补状态 | 含义 |` 表。
+
+    ⚠️ 刻意**不复用** `_p_cleanup_states`：后者锚 `状态(必填)：…`，而 `re.search` **取首个匹配** ——
+      若两处都用同一锚点，先出现的那个会被另一个解析器吃掉（撞锚 → 假 FAIL）。故本项用
+      **唯一锚点 `恶补状态取值`**（不与「状态(必填)」/「status 取值」/「清理状态」重叠）。
+    """
+    vals: set = set()
+    m = re.search(r"恶补状态取值\s*[:：]\s*(.+)$", text, re.M)
+    if m:
+        vals |= {x.strip() for x in re.split(r"[/／]", m.group(1)) if x.strip()}
+    m2 = re.search(r"^\|\s*恶补状态\s*\|\s*含义\s*\|\s*$", text, re.M)
+    if m2:
+        block: list[str] = []
+        for ln in text[m2.end():].splitlines():
+            if ln.strip().startswith("|"):
+                block.append(ln)
+            elif block:
+                break
+        for cell in re.findall(r"^\|\s*([^|]+?)\s*\|", "\n".join(block), re.M):
+            c = cell.strip().strip("`*")
+            if c and not re.fullmatch(r"[-:\s]+", c):
+                vals.add(c)
+    return vals
+
 PARITY_ITEMS = (
     # v4.4.0+（P0-1，2026-09-21）：每项源规格**追加 `references/data-model.md`** ——
     # 把该文件作为各枚举的**受守卫镜像**（中心注册表）。多源取并集比对，故 data-model.md
@@ -705,6 +736,13 @@ PARITY_ITEMS = (
     #      镜像侧锚表头 `| 清理状态 | 含义 |`（避开 `| 类型 |` 与 `| 学习类型 |` 两处已占用锚点）。
     ("清理状态", ("assets/plan-template.yaml", "references/data-model.md"),
      _p_cleanup_states, CLEANUP_STATES),
+    # v4.19.0 新增「恶补状态」：**两源**（模板注释行 + 受守卫镜像）—— 与「清理状态」同型,
+    #   但**锚点刻意分家**：模板侧锚 `恶补状态取值：…`（不复用 `状态(必填)` —— `re.search`
+    #   取首个匹配,同锚点会互相吃掉 → 假 FAIL）；镜像侧锚表头 `| 恶补状态 | 含义 |`。
+    #   ⚠️ 它是「知识点恶补报告」登记的四态，与「清理状态」「步骤状态」是**不同物理量**,
+    #      不得合并、不得互推。
+    ("恶补状态", ("assets/plan-template.yaml", "references/data-model.md"),
+     _p_cram_states, CRAM_STATES),
     # v4.11.0 新增「思考裁决」（thinking-judge）：**三源**（手册 + 受守卫镜像 + 模板 json）——
     #   与「学习类型」同型。⚠️ 手册侧锚点取**整条表头** `| 裁决 | 含义 | 后续动作 |`（该文件 §1.2
     #   维度表首格同为加粗中文词，只锚前两格会撞锚 → 假 FAIL）。

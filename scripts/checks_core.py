@@ -86,6 +86,15 @@ _DECL_END = "<!-- ai-workflow:category-decl:end -->"
 _SEP_CELL = re.compile(r"^:?-{2,}:?$")
 _BARE_CELL = re.compile(r"^[A-Za-z][A-Za-z0-9_\-]{0,20}$")
 CATEGORY_SOURCES = ("SKILL.md", "references/*.md", "assets/*.md", "assets/*.yaml")
+# 入口手册体量预算（v4.19.0）：**软预算**，只报 WARN、永不 FAIL。
+#   为什么是软预算：体量偏大属「可维护性」问题，不是「正确性」问题；判 FAIL 会把「手册偏大」
+#   与「交付物有缺陷」划等号，而本仓既有纪律是新判据**先量影响面再定分级**（参见 v4.3.0 三条
+#   判据的分级理由，以及 v3.5.0「噪音的结局是判据被整体绕过」的教训）。
+#   ⚠️ 本常量是该阈值的**唯一口径源**：`references/skill-hygiene.md` 第 6 条只引用它、不复制数值
+#   （本仓硬约定第 4 条：同一物理量的判据出现两处即为不符合）。
+#   取值依据：落地实测基线 SKILL.md = 125 086 B（2026-10-07），预算取 160 KiB 留约 31% 余量 ——
+#   既要能在真正膨胀时报警，又不能因小幅正常增量就常亮（常亮的 WARN 会被无视）。
+SKILL_MD_BUDGET_BYTES = 160 * 1024   # 163 840 B
 STAGE2_STEP_RE = re.compile(r"方案评审|候选方案|方案对比|对比表|备选方案")
 STAGE2_SIGNAL_RE = re.compile(r"(≥|>=|不少于|至少)\s*2|2\s*个\s*(候选|方案|备选)|方案\s*[AB一二]|候选\s*[AB]|横向对比|双跑")
 STAGE4_EXT = (".docx", ".xlsx", ".pdf", ".pptx")
@@ -143,9 +152,10 @@ LEARNING_SAMPLE_BAND = 0.95
 #   · `豁免` 是唯一出口（口径不适用时用）：**必须写理由**、逐条留痕打印；
 #     且「豁免了但本次并没有 FAIL」会 WARN —— 防豁免项长期躺着变成橡皮图章。
 #   · **渲染层是可选的第二入口（v1.2.1 / P3）**：`产物` 每项可为 `{路径, 渲染色}`；登记了
-#     `渲染色`（geom JSON）就把 `--geom` 传给校验器，R1-R3（近乎对齐 / 兄弟尺寸 / 垂直韵律）
-#     才会**实跑**；没登记则这三条判 SKIP —— 届时要 WARN 明说「渲染层**未检测**，不是通过」，
-#     绝不把「没测」并进「已通过」。取数器：`scripts/geom-probe.js`（页面侧、只读 DOM）。
+#     `渲染色`（geom JSON）就把 `--geom` 传给校验器，R1-R4（近乎对齐 / 兄弟尺寸 / 垂直韵律 /
+#     几何重叠）才会**实跑**；没登记则这几条判 SKIP —— 届时要 WARN 明说「渲染层**未检测**，
+#     不是通过」，绝不把「没测」并进「已通过」。取数器：`scripts/geom-probe.js`（页面侧、
+#     只读 DOM；**v3 起节点带 `bgAlpha`**，R4 依赖该字段，缺则 R4 判 SKIP）。
 #   机检落点：`checks.py plan` 检查项 22（`checks_judges._check_aesthetic`）。
 AESTHETIC_KEY = "审美判据"
 AESTHETIC_TOOL = "check_aesthetics.py"
@@ -196,8 +206,23 @@ CLEANUP_REQUIRED = ("状态",)
 CLEANUP_STATES = ("已清理", "无待清理项", "未完成", "已拒绝")
 CLEANUP_MANIFEST_KEY = "清单"
 CLEANUP_COUNT_KEYS = ("文件数", "字节数")
-SEDIMENT_TOKENS = ("沉淀", "复盘", "sediment", "metrics")
 
+# v4.19.0：知识点恶补报告登记（检查项 27）—— 阶段 6 第 4 条（knowledge-cram-report 技能链路）。
+#   ⚠️ 与「清理」（必然适用）**不同**：恶补是**条件性产出** —— 确无值得记的知识点时可合法不产出，
+#     故首版取「**缺省 WARN**（可见但不阻断）＋ 填写须合法」的升格史标准口径（同检查项 22），
+#     **刻意不设「L2 缺省即 FAIL」** —— 那会让全工作区（含他线）每个 L2 任务回溯判红，
+#     并迫使空任务写橡皮图章。待真实数据检验后可升格为 FAIL（同 13/14/16/18/20/23/24/26 的路径）。
+#   ⚠️ 归档硬约束（用户 2026-10-07 指定）：报告**只落** `<工作区根>/恶补/<项目名>/<年-月>/` 一处。
+#   ⚠️ 「恶补状态」与「清理状态」「步骤状态」都是**不同物理量**，字形相近但语义无关，
+#     **不得合并、不得互推**（口径守卫见 checks_parity；镜像锚 `| 恶补状态 | 含义 |`）。
+CRAM_KEY = "恶补"
+CRAM_REQUIRED = ("状态",)
+CRAM_STATES = ("已出", "无知识点", "未完成", "已拒绝")
+CRAM_PROJECT_KEY = "项目名"
+CRAM_REPORT_KEY = "报告"
+CRAM_REASON_KEY = "理由"
+CRAM_ARCHIVE_ROOT = "恶补"
+SEDIMENT_TOKENS = ("沉淀", "复盘", "sediment", "metrics")
 # v4.11.0：thinking-judge（思考板块 · 任务审计快判）—— 判「该不该按原样做」；契约见 references/thinking-panel.md
 #   ⚠️ `THINKING_VERDICTS` 是「**裁决四态**」枚举，与 `VALID_CATEGORY`（主类三态）、`HOMEWORK_MODES`
 #     （模式三态）、`VALID_CAPABILITY`（能力四态）、`RETRIEVAL_SOURCE_CLASSES`（源类五态）、
@@ -243,6 +268,70 @@ THINKING_AMEND_SIDES = ("授权内", "触界")
 #   · 字段名不得共用：「模糊」与「疑似违规」是两个物理量，故 `ambiguity` 与 `veto.suspect` **不得**互相代用。
 THINKING_NUOL_BAND = (0.35, 0.65)
 VETO_HIT = THINKING_NUOL_BAND[1]
+
+# =============================================================================
+# v4.21.0：豁免粒度矩阵 —— 把 `_tier_is_l1` 的**二元全局开关**细化为**字段级适用性**
+#   背景（方案《升级方案-ai-workflow效率提升-2026-10-07》§1.2）：`_tier_is_l1` 一个开关
+#   同时控制 8 个判定字段的豁免 ⇒ 「该记的不记」（声明 L1 即全豁免，真缺字段也被并进
+#   那条 SKIP，降噪降成静音）与「不该记的也要记」（L2 一律要，纯 code 任务也得写作业/
+#   文风判定，填「不适用」才过关）**两侧都错**。
+#
+# ⚠️⭐ 三条防滥用约束（每条都对应一种**不报错**的失效，缺任一即fail-open）：
+#   1. **必须产 SKIP**，不得静默 return —— 否则该字段从报告里彻底消失，
+#      这正是 `_absent` docstring 警告的「不是沉默」的反面（既不 FAIL 也不 SKIP）。
+#   2. **必须校验客观依据**（`_decl_matches_evidence`），不能只认自述串。
+#   3. **不得与 `_tier_is_l1` 合并进 `flush_absent` 聚合** —— 汇进那条就分不清
+#      「不适用」与「已登记欠账」，又回到靠汇总语判断的老问题。
+# =============================================================================
+
+# 存量豁免台账：只登记「**需要但历史上没做**」的已知欠账，**不追认、不编造**。
+#   ⚠️ 与 L1 出口**性质不同、不得合并**：L1 是「本来就不需要」，本台账是「需要但没做」。
+#     合并就等于回到「降噪降成静音」。故台账缺省判**独立 SKIP（带字段名 + 依据）**。
+LEGACY_EXEMPT_KEY = "存量豁免"
+LEGACY_EXEMPT_LIST_KEY = "任务"
+LEGACY_EXEMPT_FIELDS_KEY = "缺失字段"
+LEGACY_EXEMPT_BASIS_KEY = "依据"
+LEGACY_EXEMPT_DATE_KEY = "登记时间"
+LEGACY_EXEMPT_FILE = "legacy_exemptions.json"     # 相对 scripts/，与本模块同目录
+LEGACY_EXEMPT_ROOT_FIELDS = (LEGACY_EXEMPT_LIST_KEY, LEGACY_EXEMPT_FIELDS_KEY,
+                             LEGACY_EXEMPT_BASIS_KEY, LEGACY_EXEMPT_DATE_KEY)
+
+# 字段适用性矩阵：声明「本任务该字段不适用」，**缺省 = 现行行为（一律要）**，保证老plan 语义不变。
+FIELD_EXEMPT_KEY = "字段适用性"
+FIELD_EXEMPT_VERDICT = "不适用"
+FIELD_EXEMPT_BASIS_KEY = "不适用依据"
+
+# ⭐⭐ **可豁免字段白名单只有 3 个** —— 这是本设计最重要的**限制**，不是遗漏。
+#   方案 §3.4 自己指出：8 个字段里「有一半其实不适合字段级豁免」，因为
+#   `_decl_matches_evidence` **查不到客观依据**（执行者自己声明，无机器可核的事实）。
+#   按 MEMORY 纪律「查不到客观依据，正确处置是**关掉豁免通道**，而不是放宽校验」——
+#   若给它们开通道，`_field_exempt` 立刻退化成「声明一句即永久免判」的**自证回路**，
+#   正是护栏 G4 要堵的那个洞。
+#   ⇒ 收益上限因此砍掉约一半（方案 §5 第 3 条已预警「可能让收益缩水」）。
+#     **不降低质量优先于降本**；这是刻意的取舍，不是待办。
+FIELD_EXEMPTABLE = (
+    HUMANIZE_KEY,     # 文风判定：依据 =入口判定.category ∈ {chat, code}（SKILL.md 阶段 0 第 1.5 步）
+    HOMEWORK_KEY,     # 作业判定：依据 = 入口判定.category == content 且非作业三判据
+    RETRIEVAL_KEY,    # 检索判定：依据 = steps[].验证方式 无检索类信号
+)
+# 显式列出**不可豁免**的字段（fail-closed）—— 登记它们是为了让「为什么不能豁免」可机器核对，
+#   而不是靠「没在白名单里」这种隐式推断（隐式推断无法区分「漏配」与「故意关闭」）。
+FIELD_EXEMPT_BLOCKED = (ENTRY_KEY, METHOD_KEY, LEARNING_KEY, CLEANUP_KEY, THINKING_KEY)
+
+# 语义键 → `_absent` 用的 item 名。**刻意不用 item 名字符串前缀**：
+#   实测「文风判定」的 FAIL 项名是`文风判定`（**不带 `meta.` 前缀**，见 `_check_humanize`），
+#   而其余七项是 `meta.xxx` ⇒ 按前缀匹配会**静默漏掉文风判定**。
+#   ⇒台账与豁免矩阵一律按**语义键**索引，此映射是唯一转换点。
+LEGACY_EXEMPT_ITEM_NAMES = {
+    ENTRY_KEY: "meta.入口判定",
+    METHOD_KEY: "meta.方法选用",
+    RETRIEVAL_KEY: "meta.检索判定",
+    HOMEWORK_KEY: "meta.作业判定",
+    LEARNING_KEY: "meta.学习判定",
+    THINKING_KEY: "meta.思考判定",
+    HUMANIZE_KEY: HUMANIZE_KEY,          # ⚠️ 刻意无前缀（见上）
+    CLEANUP_KEY: "meta.清理",
+}
 # ⭐ 置信分档（A 侧语义，C19）—— 阈值表**只对 A 侧定义**；`band = f(confidence)` 由 D19 守同源。
 #   ⚠️ 原设计文档只「命名」了这两个常量却从未给值（§7.27 登记的「声明了从未定义」形态），在此补值。
 THINKING_SAMPLE_BAND = (0.70, 0.95)   # (下界, 自采信上界)：<0.70 或 ambiguity ⇒ 低；0.70–0.95 ⇒ 中；≥0.95 ⇒ 高
@@ -382,7 +471,7 @@ plan 子命令检查项:
     21. 学习判定抽样人审（v4.8.0）：**非门禁，只指路** —— 口径与检查项 15/17/19 逐条相同。
 
     22. 审美判据（v4.9.0）：meta「审美判据」可选 —— 设计类产物（交付物含 `.css`）的机器验收。
-        判据集：`references/aesthetic-rubric.yaml`（30 条）；校验器：`scripts/check_aesthetics.py`。
+        判据集：`references/aesthetic-rubric.yaml`（31 条）；校验器：`scripts/check_aesthetics.py`。
         **触发信号 = 交付物里出现 `.css`**（确定性信号，不看 category）。**整段缺省 → 只 WARN**
         （向后兼容旧 plan、不追认历史计划；且仅在确实有 `.css` 交付物时才提示，非设计类任务判 SKIP）。
         一旦填写须结构合法（`产物类型` ∈ ui/ppt/chart/image、`产物` 为非空的真实存在 `.css` 列表、
@@ -390,12 +479,13 @@ plan 子命令检查项:
         —— 实跑命中 FAIL 且未被 `豁免` 覆盖 → **FAIL**（阻断交付）；
         —— `豁免` 是唯一出口，**必须写理由**并逐条留痕；「豁免了却本次并没有 FAIL」→ WARN（防橡皮图章）。
         **渲染层**（v1.2.1 / P3）：`产物` 每项可为 `{路径, 渲染色}`；登记 `渲染色` 即把 `--geom`
-        传给校验器，R1-R3 才实跑；未登记则 R1-R3 判 SKIP 并出 WARN 明说「**未检测**，不是通过」。
-        取数器 `scripts/geom-probe.js`（页面侧、只读 DOM，由 CDP 驱动注入）。
+        传给校验器，R1-R4 才实跑；未登记则这几条判 SKIP 并出 WARN 明说「**未检测**，不是通过」。
+        取数器 `scripts/geom-probe.js`（页面侧、只读 DOM，由 CDP 驱动注入；**v3 起节点带
+        `bgAlpha`**，R4 几何重叠依赖它，缺则 R4 判 SKIP「结构性不适用」）。
         ⚠️ v1.2.2：**「登记了渲染色」也不等于「R 组跑起来了」** —— geom 存在但作用域没命中 /
         nodes 为空时 R 组仍全 SKIP，此时渲染层注记**照样是 WARN**（开关存在 ≠ 干预生效）。
         故暴露率按**校验器实际产出的 R 组状态**计数，不按"带没带 geom"。
-        ⚠️ 同理，判据集里凡 source 讲「**画面内**」的（G1/G6/R1-R3）**必须吃渲染结果**：
+        ⚠️ 同理，判据集里凡 source 讲「**画面内**」的（G1/G6/R1-R4）**必须吃渲染结果**：
         拿令牌清单顶该口径会造出成片假 FAIL（实测 21/21），故无 `--geom` 时这几条判 SKIP。
         ⚠️ **不采信 plan 里自报的 FAIL 数** —— 判据只有一条：「我实跑出来是什么」。
 

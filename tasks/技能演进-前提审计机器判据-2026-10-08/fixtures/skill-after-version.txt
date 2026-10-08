@@ -1,0 +1,76 @@
+=== ai-workflow 技能自检 ===
+[ OK ] SKILL.md 存在
+[ OK ] frontmatter 可解析 — 3713 字符 / 6 行（结构化取块，非字符窗口）
+[ OK ] frontmatter 含 name
+[ OK ] frontmatter 含 description
+[ OK ] frontmatter 含 agent_created
+[ OK ] 文档引用完整性 — 检查 138 条引用
+[ OK ] 模板 schema：_示例-数据分析.yaml — 9/9
+[ OK ] 模板 schema：UI组件库搭建.yaml — 9/9
+[ OK ] 模板 schema：作业解题.yaml — 9/9
+[ OK ] 模板 schema：学习资料生成.yaml — 9/9
+[ OK ] 模板 schema：小说写作.yaml — 9/9
+[ OK ] 模板 schema：技术调研.yaml — 9/9
+[ OK ] 模板 schema：文献阅读.yaml — 9/9
+[ OK ] 模板 schema：算法评估升级.yaml — 9/9
+[ OK ] 模板 schema：调研报告.yaml — 9/9
+[ OK ] 模板 schema：选品分析.yaml — 9/9
+[ OK ] 模板 schema：量化分析.yaml — 9/9
+[ OK ] plan-template 必填键 — 齐全
+[ OK ] py_compile：ai_call.py
+[ OK ] py_compile：archive_tasks.py
+[ OK ] py_compile：check_aesthetics.py
+[ OK ] py_compile：checks.py
+[ OK ] py_compile：checks_cmds.py
+[ OK ] py_compile：checks_core.py
+[ OK ] py_compile：checks_judges.py
+[ OK ] py_compile：checks_parity.py
+[ OK ] py_compile：cleanup_task.py
+[ OK ] py_compile：data_query.py
+[ OK ] py_compile：external_skill_lint.py
+[ OK ] py_compile：gate.py
+[ OK ] py_compile：gen_skill_index.py
+[ OK ] py_compile：git_check.py
+[ OK ] py_compile：guard_constants.py
+[ OK ] py_compile：homework_model.py
+[ OK ] py_compile：http_fetch.py
+[ OK ] py_compile：humanize_scan.py
+[ OK ] py_compile：kb_learn.py
+[ OK ] py_compile：laya_client.py
+[ OK ] py_compile：laya_ensure.py
+[ OK ] py_compile：laya_record.py
+[ OK ] py_compile：office_io.py
+[ OK ] py_compile：outbound_scan.py
+[ OK ] py_compile：perf_baseline.py
+[ OK ] py_compile：publish_tools.py
+[ OK ] py_compile：push_ontology.py
+[ OK ] py_compile：push_router.py
+[ OK ] py_compile：thinking_model.py
+[ OK ] py_compile：verify_push.py
+[ OK ] 口径守卫：模型档位 — references/routing-guide.md + references/data-model.md（读得 2 个文件，取并集） ↔ cheap/default/mid/strong（4 项一致）
+[ OK ] 口径守卫：步骤状态 — assets/plan-template.yaml + references/data-model.md（读得 2 个文件，取并集） ↔ 受阻/完成/待办/熔断/进行中（5 项一致）
+[ OK ] 口径守卫：能力类 — references/capability-routing.md + references/data-model.md（读得 2 个文件，取并集） ↔ 事实/手脚/知识/算力（4 项一致）
+[ OK ] 口径守卫：重规划触发 — references/adaptive-planning.md + references/data-model.md（读得 2 个文件，取并集） ↔ R1/R2/R3/R4/R5/R6（6 项一致）
+[ OK ] 口径守卫：熔断状态 — SKILL.md + references/data-model.md（读得 2 个文件，取并集） ↔ 已熔断/正常（2 项一致）
+[ OK ] 口径守卫：反思触发 — references/reflection-retry.md + references/data-model.md（读得 2 个文件，取并集） ↔ T1/T2/T3（3 项一致）
+[ OK ] 口径守卫：终止策略 — references/reflection-retry.md + references/data-model.md（读得 2 个文件，取并集） ↔ 升级用户决策/升级返修复查/触发熔断/重规划R（4 项一致）
+[ OK ] 口径守卫：提交类型 — references/git-conventions.md + references/data-model.md + scripts/git_check.py（读得 3 个文件，取并集） ↔ docs/feat/fix/refactor（4 项一致）
+[ OK ] 口径守卫：作业模式 — references/homework-judge.md + references/data-model.md + scripts/judges.json（读得 3 个文件，取并集） ↔ 作业题/讲解题/非作业（3 项一致）
+[ OK ] 口径守卫：学习类型 — references/learning-judge.md + references/data-model.md + scripts/judges.json（读得 3 个文件，取并集） ↔ 事实/偏好/无/流程坑/领域知识（5 项一致）
+[ OK ] 口径守卫：清理状态 — assets/plan-template.yaml + references/data-model.md（读得 2 个文件，取并集） ↔ 已拒绝/已清理/无待清理项/未完成（4 项一致）
+[ OK ] 口径守卫：恶补状态 — assets/plan-template.yaml + references/data-model.md（读得 2 个文件，取并集） ↔ 已出/已拒绝/无知识点/未完成（4 项一致）
+[ OK ] 口径守卫：思考裁决 — references/thinking-panel.md + references/data-model.md + scripts/judges.json（读得 3 个文件，取并集） ↔ 修正/拒绝/接受/澄清（4 项一致）
+[ OK ] 口径守卫：思考否决轴 — references/thinking-panel.md + references/data-model.md + scripts/judges.json（读得 3 个文件，取并集） ↔ A1/A2/A3/A4/A5/A6（6 项一致）
+[ OK ] 口径守卫：文风判定 — references/humanize-judge.md + references/data-model.md + scripts/judges.json（读得 3 个文件，取并集） ↔ 不适用/只登记/已达标/走去味（4 项一致）
+[ OK ] 跨格式阈值同源（思考） — ambiguity_band=[0.35, 0.65] 与 checks_core.THINKING_NUOL_BAND 逐值相等；4 个 question 均含 type/instructions
+[ OK ] 口径守卫：文风判据同源（rubric ↔ 实现） — `references/humanize-rubric.yaml` 的 machine 档 ↔ `scripts/humanize_scan.py` 实现集合双向一致（判据集↔实现同源: 一致）
+[ OK ] 口径守卫：入口判定主类 — 声明块（self-judge.md，源规格面内须恰 1 处）↔ 代码常量 chat/code/content（3 项一致）
+[ OK ] 口径守卫：入口判定主类扫描（启发式·WARN） — 源集合 39 个文件未见「主类疑似列」含未登记取值（启发式按列裸词占比判定，会漏会误，**不作门禁**）
+[ OK ] 平台门控：行内豁免 — 6 处（checks_core.py:/usr/bin/@357; checks_core.py:/usr/local/@357; checks_core.py:/var/run/@357; checks_core.py:/etc/@357; checks_core.py:/bin/@357…）—— 合法用途仅限判据自身规则表与文档示范
+[ OK ] 平台门控 vs 真实 import — scripts/*.py 无单平台 API 依赖（AST 口径）
+[ OK ] 运行时闸门（gate.py 可用性与同源） — gate.py 就位；INFRA_EXCEPTIONS 由 checks.py 同源加载（未自建副本）；--selftest 退出码 0（13 项对照全绿）
+[ OK ] metrics 幂等：空目录连跑 2 次恒 1 行 — 实测 1 行
+[ OK ] metrics 幂等：预置 2 行收敛为 1 行 — 实测 1 行
+[ OK ] metrics 幂等：预置 1 行时刷新内容且不增行 — 内容={"task": "幂等守卫用例", "level": "L2", "date": "2026-10-08", "revisions": 0, "fused":
+[ OK ] 入口手册体量预算 — SKILL.md 141459 B / 预算 163840 B（86%）；references/ 33 个文件共 666916 B
+=== 结果：通过 74/74，FAIL=0，SKIP=0，WARN=0 ===

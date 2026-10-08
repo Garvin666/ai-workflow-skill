@@ -2222,7 +2222,7 @@ def _check_thinking_verdict(meta: dict) -> None:
     ⚠️ **它不是门禁** —— `confidence` / `veto` 由模型自填，机器只能校验**结构合法与跨字段自洽**
     （**类型合法 ≠ 判得对**，见 `references/thinking-panel.md` §9）。价值观判定**无机器 oracle**。
 
-    ⭐ **本函数覆盖 D1–D11、D14–D19 与 D20–D22（共 20 条），刻意不含 D12 / D13** —— 那两条的**靶面不在
+    ⭐ **本函数覆盖 D1–D11 与 D14–D19（共 17 条），刻意不含 D12 / D13** —— 那两条的**靶面不在
     `plan.yaml` 里**（契约 §5.3 明列）：D12 读 `thinking-gold.yaml` 的 `provenance`/`anchors_fitted`
     与一致率报表，D13 读 `thinking_model agree --report` 的分母。它们的机器落点是
     `thinking_model.py` 的 `selftest` / `gold`（同为可复跑的机器判据），**不是**本检查项 ——
@@ -2415,47 +2415,6 @@ def _check_thinking_verdict(meta: dict) -> None:
     if not str(v.get("route_hint", "") or "").strip():
         bad.append("route_hint 为空（须给出处理指引，§3.2 route_hint 对应表）")
 
-    # ---- D20 / D21 / D22：前提审计（v4.22.0 新增子块，挂在 meta.思考判定 下，契约 §5.6）----
-    # 承载用户 2026-10-08 指定的回复口径要求里「既有面未覆盖」的三项：
-    #   P1 前提审计 / P3 来源核实 / P5 遗漏提醒。另两项（P2 不迎合·独立判断、P4 直陈依据）
-    #   **由既有面覆盖**（四态『修正/拒绝』+ amendments[].依据 + D3/D4/D14），故不重复登记 ——
-    #   新增判据若与既有面重叠，会让既有的阴性对照恒判假绿（项目纪律）。
-    # ⭐ 接入策略 = **软启动**（沿用 v4.11.0 的 thinking-judge 先例）：**缺省只 WARN**，
-    #   以兼容存量 plan（实测两个工作区根合计 56 个任务目录、多为 L2；缺省即 FAIL 会让
-    #   全量历史 plan 回归新增大量 FAIL）；**一旦填写则结构/自洽非法即 FAIL**。
-    #   ⚠️ WARN ≠ 通过 —— 它是「这次没填」，不是「填过且没问题」（同 meta.恶补 的口径）。
-    pa = v.get("前提审计", None)
-    if pa is None:
-        pass                                   # 缺省 → 末尾只 WARN（软启动）
-    elif not isinstance(pa, dict):
-        bad.append(f"前提审计 应为映射，实际 {type(pa).__name__}（D22）")
-    else:
-        for _k in ("前提", "来源核实", "遗漏提醒"):
-            if _k not in pa:
-                bad.append(f"缺前提审计子键『{_k}』（D22：三键齐备）")
-        # D20：裁决与前提审计自洽 ——「接受」= 按原样做，不得同时登记着未消解的前提问题
-        qian = pa.get("前提", None)
-        if qian is not None and not isinstance(qian, list):
-            bad.append(f"前提审计.前提 应为列表，实际 {type(qian).__name__}（D22）")
-        elif isinstance(qian, list) and qian and verdict == "接受":
-            bad.append(f"verdict=接受 而 前提审计.前提 非空（{len(qian)} 项）（D20：说前提有问题却按原样做"
-                       f" —— 与 D4 同族，堵同一条退化路径的另一条支路）")
-        # D21：来源核实 fail-closed —— 声称需要核实，就必须留下「已核实」或「未核实」的痕迹
-        src = pa.get("来源核实", None)
-        if src is not None and not isinstance(src, dict):
-            bad.append(f"前提审计.来源核实 应为映射，实际 {type(src).__name__}（D22）")
-        elif isinstance(src, dict):
-            need = src.get("需要核实", None)
-            if not isinstance(need, bool):
-                bad.append(f"前提审计.来源核实.需要核实={need!r}（D22：须为布尔 —— 缺失/null 会被静默读成"
-                           f" false ⇒ fail-open，与 D17 同源）")
-            elif need and not (src.get("已核实") or []) and not (src.get("未核实") or []):
-                bad.append("前提审计.来源核实.需要核实=true 而 已核实/未核实 均为空"
-                           "（D21：声称要核实却什么都没记 —— fail-closed）")
-        miss = pa.get("遗漏提醒", None)
-        if miss is not None and not isinstance(miss, list):
-            bad.append(f"前提审计.遗漏提醒 应为列表，实际 {type(miss).__name__}（D22）")
-
     if bad:
         fail("meta.思考判定 合法",
              "；".join(bad[:4]) + (f"（…等 {len(bad)} 项）" if len(bad) > 4 else ""))
@@ -2463,12 +2422,6 @@ def _check_thinking_verdict(meta: dict) -> None:
         ok("meta.思考判定 合法",
            f"verdict=『{verdict}』band={band}（**留痕，非门禁**；类型合法 ≠ 判得对"
            f" —— 见 references/thinking-panel.md §9）")
-        if pa is None:
-            warn("meta.思考判定.前提审计",
-                 "未登记 —— v4.22.0 新增子块（前提审计 / 来源核实 / 遗漏提醒）。**本项首版只 WARN**"
-                 "（软启动，兼容 v4.22.0 之前创建的存量 plan）：新计划应从 assets/plan-template.yaml 的模板"
-                 "或 `thinking_model.to_yaml_block` 带上该子块；**一旦填写，结构/自洽非法即 FAIL**（D20–D22）。"
-                 "⚠️ WARN ≠ 通过 —— 它是「这次没填」，不是「填过且没问题」。契约见 references/thinking-panel.md §5.6。")
 
 def _check_thinking_sample(meta: dict) -> None:
     """v4.11.0：检查项 25 —— 思考判定的**抽样人审指路**（非门禁，只指路）。

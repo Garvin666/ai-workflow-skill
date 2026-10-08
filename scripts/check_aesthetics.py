@@ -263,6 +263,24 @@ v1.7.0（2026-09-27）——「已声明未消费的参数」由一次性探针�
     C. `PARAM_SPEC` 清掉 `memory_point_count.field` —— 该键**无判据集声明、无实现读取、
        note 未提及**，属纯冗余白名单（留着会让人以为「配了就能用」）。
     ⚠️ 本版**未改判据集**：`aesthetic-rubric.yaml` 条文与阈值一字未动（判据仍 30 条）。
+
+v1.8.0（2026-10-07）—— 新增渲染层检查器 R4 几何重叠（为「图示设计模式」落地）
+    A. 新增 `chk_geometry_occlusion`（判据集 **R4** / `geometry_occlusion`）：对每个**可见·
+       有 rect·承载文字**的节点，若存在**文档序在其后**、`bgAlpha ≥ opaque_alpha`（实心）、
+       且其 rect 覆盖该文本 rect 的比例 ≥ `cover_ratio` 的节点 ⇒ FAIL。配 `PARAM_SPEC`
+       （`opaque_alpha` / `cover_ratio`；两键**均被读取** ⇒ 不落悬空）。
+    B. ⚠️ **绘制先后用文档序 `i` 近似层叠序**（不解析 z-index）：文档序遍历下**祖先必先于
+       后代**，故「父容器背景盖住子文本」这类必然误报**不会发生**；但靠定位/层叠上下文改变
+       绘制序的版面**不在射程内**。本判据报的是**几何事实**（有实心元素覆盖了文本），
+       **是否刻意遮挡（模态框、合法遮罩层）交人审判断** —— 已写入判据集 R4 的 note。
+    C. 三态 SKIP 分开措辞、且都不判 PASS：缺 `--geom`（未检测）／空 `nodes`（无数据）／
+       **缺 `bgAlpha` 字段（结构性不适用 —— 旧版 geom-probe.js 未输出该字段）**；
+       `opaque_alpha` / `cover_ratio` 越界 ⇒ SKIP（配置自相矛盾不许静默变成永不报警）。
+    D. 自检新增 **R4 八态夹具**：无geom⇒SKIP / 空集⇒SKIP / 缺字段⇒SKIP / 无遮挡⇒PASS /
+       **实心完全覆盖⇒FAIL** / 半透明⇒PASS / 祖先覆盖⇒PASS / `cover_ratio` 越界⇒SKIP。
+    ⚠️ 本版**配套**改两处：`aesthetic-rubric.yaml` 判据集 v1.6→**v1.7**（新增 R4 一条；
+       既有 30 条条文与阈值**一字未改**）与 `geom-probe.js` **v3**（新增节点字段 `bgAlpha`）。
+       既有检查器与阈值**未动**。
 """
 
 from __future__ import annotations
@@ -283,7 +301,7 @@ try:  # Windows 控制台中文输出
 except Exception:
     pass
 
-VERSION = "1.7.0"
+VERSION = "1.8.0"
 PRODUCTS = ("ui", "ppt", "chart", "image")
 # 覆盖 reason 的占位文本（写了等于没写）
 PLACEHOLDER_REASONS = {
@@ -778,7 +796,9 @@ def extract_geom(path) -> dict:
     """渲染色（v1.2.0 P3）。契约见 --self-test 输出与技能 references/。
 
     必填：nodes 数组，每项 {i, parent, tag, rect:{x,y,w,h}, fontSize, visible}
-    可选：text / cls / color / bg / fontWeight
+    可选：text / cls / color / bg / fontWeight / **bgAlpha**（v1.7.0 新增：
+    `backgroundColor` 的 alpha（0..1），供 R4 几何重叠判「实心元素」；缺该字段时 R4 判
+    SKIP「结构性不适用」，**不是 PASS**）
     """
     d = json.loads(Path(path).read_text(encoding="utf-8"))
     nodes = d.get("nodes")
@@ -1693,6 +1713,109 @@ def chk_baseline_rhythm(ctx, params):
     return "PASS", f"{total} 个文本节点全部落在 {base}px 韵律网格上"
 
 
+def _geom_ancestors(nodes) -> dict:
+    """节点 i → 其**祖先 i 集合**（v1.7 新增，供 R4 排除「后代覆盖祖先」）。
+
+    只用于结构性误报的排除；不解析 z-index 与层叠上下文。
+    """
+    by_i = {n.get("i"): n for n in nodes}
+    out = {}
+    for n in nodes:
+        i = n.get("i")
+        anc, seen = set(), set()
+        p = n.get("parent")
+        while p is not None and p in by_i and p not in seen:
+            seen.add(p)
+            anc.add(p)
+            p = by_i[p].get("parent")
+        out[i] = anc
+    return out
+
+
+def _cover_ratio(cover_rect, target_rect) -> float:
+    """cover 覆盖 target 的面积比（**分母 = target 面积**）。两者均为 (x, y, w, h)。"""
+    cx, cy, cw, ch = cover_rect
+    tx, ty, tw, th = target_rect
+    if tw <= 0 or th <= 0:
+        return 0.0
+    ox = max(0.0, min(cx + cw, tx + tw) - max(cx, tx))
+    oy = max(0.0, min(cy + ch, ty + th) - max(cy, ty))
+    return (ox * oy) / (tw * th)
+
+
+def chk_geometry_occlusion(ctx, params):
+    """文本/遮罩层是否被**其后绘制的实心元素**覆盖（v1.7 新增，判据集 R4）。
+
+    依据 `cathrynlavery/diagram-design@d1376371965f513d99cc9ec388835d255c5c88d5`
+    的设计纪律「文本/遮罩层不被其后绘制的实心元素覆盖」（图示设计模式 §6 F5）。
+
+    ⚠️ **绘制先后用文档序 `i` 近似层叠序**（不解析 z-index）：文档序遍历下**祖先必先于
+    后代**，故「父容器背景盖住子文本」这类必然误报**不会发生**；但靠定位/层叠上下文改变
+    绘制序的版面**不在射程内**。
+    ⚠️ 本判据报出的是**几何事实**（有实心元素覆盖了文本），**是否刻意遮挡（模态框、
+    合法遮罩层）由人审判断** —— 判据不足以区分「缺陷」与「设计」。
+    ⚠️ 三种输入缺失**分开措辞且都不判 PASS**：缺 geom（未检测）／空 nodes（无数据）／
+    缺 `bgAlpha`（**结构性不适用** —— 旧版探针产出的 geom.json 没有该字段）。
+    """
+    nodes = _geom_nodes(ctx)
+    if nodes is None:
+        return "SKIP", "未提供渲染色（--geom）—— 未检测，不是通过"
+    if not nodes:
+        # 空集不得判 PASS：那是「没数据」冒充「没问题」（同族：SKIP 不得并入通过）
+        return "SKIP", "渲染色为空（nodes=[]）—— 未检测，不是通过"
+    _op = params.get("opaque_alpha")
+    opaque = float(0.95 if _op is None else _op)
+    _cv = params.get("cover_ratio")
+    cover = float(0.8 if _cv is None else _cv)
+    # 配置自相矛盾时判 SKIP（同 R1 的 noise ≥ tolerance 处置），不静默变成永不报警
+    if not (0.0 <= opaque <= 1.0):
+        return "SKIP", f"opaque_alpha({opaque}) 越界（须 ∈ [0,1]）—— 判据配置自相矛盾，未检测"
+    if not (0.0 < cover <= 1.0):
+        return "SKIP", f"cover_ratio({cover}) 越界（须 ∈ (0,1]）—— 判据配置自相矛盾，未检测"
+    if not any(n.get("bgAlpha") is not None for n in nodes):
+        return "SKIP", ("渲染色未提供不透明度（bgAlpha 字段缺失）—— **结构性不适用**"
+                        "（旧版 geom-probe.js 未输出该字段）；要启用须用新版探针重取。"
+                        "这是「未检测」，不是通过")
+    geo = []
+    for n in nodes:
+        if not n.get("visible", True):
+            continue
+        r = _rect(n)
+        if r is None or n.get("i") is None:
+            continue
+        geo.append((n.get("i"), n, r))
+    geo.sort(key=lambda t: t[0])
+    texts = [(i, n, r) for (i, n, r) in geo if _text_bearing(n)]
+    if not texts:
+        return "SKIP", "渲染色中无承载文字的可见节点 —— 未检测，不是通过"
+    anc = _geom_ancestors(nodes)
+    hits = []
+    for ti, _tn, tr in texts:
+        for si, sn, sr in geo:
+            if si <= ti:
+                continue                       # 只找「后绘制」的；祖先序更小 ⇒ 一并排除
+            if ti in (anc.get(si) or ()):
+                continue                       # 排除「后代覆盖祖先」这类结构性误报
+            a = sn.get("bgAlpha")
+            if a is None:
+                continue
+            try:
+                a = float(a)
+            except (TypeError, ValueError):
+                continue
+            if a < opaque:
+                continue                       # 非实心
+            cr = _cover_ratio(sr, tr)
+            if cr >= cover:
+                hits.append((ti, si, round(cr, 2)))
+    if hits:
+        head = "; ".join(f"#{ti} 被 #{si} 覆盖 {cr:.0%}" for ti, si, cr in hits[:4])
+        return "FAIL", (f"{len(hits)} 处文本被后绘制的实心元素遮挡"
+                        f"（实心门槛 bgAlpha ≥ {opaque}，覆盖门槛 ≥ {cover:.0%}）：{head}")
+    return "PASS", (f"{len(texts)} 个文本节点未被后绘制的实心元素遮挡"
+                    f"（实心门槛 bgAlpha ≥ {opaque}，覆盖门槛 {cover:.0%}）")
+
+
 # --------------------------------------------------------------------------
 # 五、check 注册表 + 参数契约（v1.2.0 P2-2）
 # --------------------------------------------------------------------------
@@ -1711,6 +1834,7 @@ CHECKS = {
     "near_alignment": ("machine", chk_near_alignment),
     "sibling_consistency": ("machine", chk_sibling_consistency),
     "baseline_rhythm": ("machine", chk_baseline_rhythm),
+    "geometry_occlusion": ("machine", chk_geometry_occlusion),
     "accent_unique": ("spec", chk_accent_unique),
     "memory_point_count": ("spec", chk_memory_point_count),
     "primary_cta_count": ("spec", chk_primary_cta_count),
@@ -1747,6 +1871,8 @@ PARAM_SPEC = {
     "sibling_consistency": {"kind": ("height", "padding"), "max_drift_ratio": _N, "min_group": _N,
                             "row_overlap": _N},
     "baseline_rhythm": {"baseline_px": _N, "tolerance_px": _N},
+    # v1.7.0：R4 几何重叠（geometry_occlusion）的参数。两键均被实现读取（不落悬空）。
+    "geometry_occlusion": {"opaque_alpha": _N, "cover_ratio": _N},
     "accent_unique": {"expected": _N},
     # v1.7.0：`field` 与 `expected` 一样**未被实现读取**（属悬空参数，由 _dangling_params 报出）。
     # ⚠️ 但它**确实被判据 V2 声明**（V2 与 G8 复用同一 check，V2 的 params 写了 expected + field）
@@ -2379,6 +2505,64 @@ def self_test(rubric_path) -> int:
         ("baseline_rhythm/声明8px且离格4px", chk_baseline_rhythm, {"baseline_px": 8}, _base, "FAIL"),
     ]
     for _nm, _fn, _pp, _gg, _want in _T:
+        try:
+            _got, _det = _fn({"geom": _gg}, dict(_pp))
+        except Exception as e:  # noqa: BLE001 —— 自检的作用就是让这类崩栈**当场现形**
+            print(f"[FAIL] {_nm} 抛异常：{type(e).__name__}: {e}")
+            rc = 1
+            continue
+        if _got == _want:
+            print(f"[ OK ] {_nm}: {_got}")
+        else:
+            print(f"[FAIL] {_nm}: 实得 {_got}（期望 {_want}） — {_det}")
+            rc = 1
+
+    # ---- v1.7.0：R4 几何重叠自检（无geom⇒SKIP；空集⇒SKIP；缺bgAlpha⇒SKIP；
+    #      无遮挡⇒PASS；实心完全覆盖⇒FAIL；半透明覆盖⇒PASS；祖先覆盖⇒PASS）----
+    print("=== R4 几何重叠自检（遮挡 / 不遮挡 / 半透明 / 祖先 / 缺字段 / 空集）===")
+    _r4_base = [
+        {"i": 0, "parent": None, "tag": "div", "rect": {"x": 0, "y": 0, "w": 800, "h": 400},
+         "bgAlpha": 0.0, "visible": True},
+        {"i": 1, "parent": "0", "tag": "p", "text": "说明文字",
+         "rect": {"x": 20, "y": 20, "w": 200, "h": 30}, "bgAlpha": None, "visible": True},
+        {"i": 2, "parent": "0", "tag": "div", "rect": {"x": 400, "y": 300, "w": 100, "h": 40},
+         "bgAlpha": 1.0, "visible": True},
+    ]
+
+    def _g4(nodes):
+        return {"version": "3", "source": "selftest", "viewport": {"w": 800, "h": 400}, "nodes": nodes}
+
+    def _m4(fn):
+        ns = json.loads(json.dumps(_r4_base))
+        fn(ns)
+        return _g4(ns)
+
+    _r4_ok = _g4(_r4_base)                                                     # 装饰块不压文本
+    _r4_cover = _m4(lambda ns: ns[2]["rect"].update({"x": 20, "y": 20, "w": 200, "h": 30}))   # 完全盖住 #1
+    _r4_trans = _m4(lambda ns: (ns[2]["rect"].update({"x": 20, "y": 20, "w": 200, "h": 30}),
+                                ns[2].update({"bgAlpha": 0.3})))               # 半透明：非实心
+    _r4_nof = _m4(lambda ns: ([n.pop("bgAlpha", None) for n in ns], ns)[1])    # 缺 bgAlpha 字段
+    # 祖先实心覆盖：opaque 的是文本的**父容器**（序在前），不得误报
+    _r4_anc = _g4([
+        {"i": 0, "parent": None, "tag": "div", "rect": {"x": 0, "y": 0, "w": 400, "h": 200},
+         "bgAlpha": 0.0, "visible": True},
+        {"i": 1, "parent": "0", "tag": "div", "rect": {"x": 10, "y": 10, "w": 300, "h": 100},
+         "bgAlpha": 1.0, "visible": True},
+        {"i": 2, "parent": "1", "tag": "p", "text": "卡片内的文字",
+         "rect": {"x": 20, "y": 20, "w": 200, "h": 30}, "bgAlpha": None, "visible": True},
+    ])
+    _T4 = [
+        ("geometry_occlusion/无geom⇒SKIP", chk_geometry_occlusion, {}, None, "SKIP"),
+        ("geometry_occlusion/空nodes⇒SKIP", chk_geometry_occlusion, {}, _g4([]), "SKIP"),
+        ("geometry_occlusion/缺bgAlpha⇒SKIP", chk_geometry_occlusion, {}, _r4_nof, "SKIP"),
+        ("geometry_occlusion/无遮挡⇒PASS", chk_geometry_occlusion, {}, _r4_ok, "PASS"),
+        ("geometry_occlusion/实心完全覆盖⇒FAIL", chk_geometry_occlusion, {}, _r4_cover, "FAIL"),
+        ("geometry_occlusion/半透明覆盖⇒PASS", chk_geometry_occlusion, {}, _r4_trans, "PASS"),
+        ("geometry_occlusion/祖先实心覆盖⇒PASS", chk_geometry_occlusion, {}, _r4_anc, "PASS"),
+        ("geometry_occlusion/cover_ratio越界⇒SKIP",
+         chk_geometry_occlusion, {"cover_ratio": 2}, _r4_cover, "SKIP"),
+    ]
+    for _nm, _fn, _pp, _gg, _want in _T4:
         try:
             _got, _det = _fn({"geom": _gg}, dict(_pp))
         except Exception as e:  # noqa: BLE001 —— 自检的作用就是让这类崩栈**当场现形**

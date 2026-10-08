@@ -5,7 +5,15 @@
  *   { version, source, space, scale, scope, viewport:{w,h},
  *     nodes:[ {i, parent, tag, cls, text,
  *              rect:{x,y,w,h},            ← 坐标空间见下
- *              fontSize, fontWeight, color, bg, visible} ] }
+ *              fontSize, fontWeight, color, bg, bgAlpha, visible} ] }
+ *
+ * v3（2026-10-07）：新增节点字段 **`bgAlpha`** —— `backgroundColor` 的 alpha（0..1；
+ *   无背景或解析不出写 null）。**向后兼容**：旧字段一字未改，只增不减；旧驱动的
+ *   `--eval` 不受影响。
+ *   由来：判据集 R4（几何重叠 / geometry_occlusion）要判「文本是否被**其后绘制的实心
+ *   元素**覆盖」，需要「**不透明度**」这个量，而原契约的 `bg` 是 rgb 整数三元组、
+ *   **把 alpha 丢了**（同函数里 `toRgb` 只取 r/g/b）。没有它，R4 将永远 SKIP = 死代码。
+ *   `version` 随之由 '2' 升为 '3'（消费侧 `extract_geom` 不校验该字段，仅作留痕）。
  *
  * v2 两处修正（2026-09-26 第二轮，均由「真实 deck 页」实测暴露）：
  *
@@ -58,6 +66,20 @@ window.__geomProbe = function (rootSelector) {
     return null;
   };
 
+  // v3：单独取背景色的 alpha（0..1）。无背景 / 解析不出 ⇒ null（**不猜测**，缺值比编造好）。
+  //   rgb(r,g,b)      ⇒ 1（不透明）
+  //   rgba(r,g,b,a)   ⇒ a
+  //   rgba(r,g,b,a%)  ⇒ a/100
+  //   transparent 在 Chrome 计算样式里即 rgba(0,0,0,0) ⇒ 0
+  var toAlpha = function (s) {
+    if (!s) return null;
+    var m = String(s).match(/rgba?\(\s*[\d.]+[,\s]+[\d.]+[,\s]+[\d.]+(?:[,\s/]+([\d.]+%?))?/i);
+    if (!m) return null;
+    if (m[1] === undefined) return 1;
+    var a = String(m[1]);
+    return a.indexOf('%') >= 0 ? parseFloat(a) / 100 : parseFloat(a);
+  };
+
   var visible = function (el) {
     var cs = getComputedStyle(el);
     if (cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity) === 0) return false;
@@ -72,7 +94,7 @@ window.__geomProbe = function (rootSelector) {
     // 作用域选择器没命中 —— 明确报「找不到」，返回空集。
     // （校验器侧对空节点集判 SKIP，不得当成「没有坏版式」而假绿。）
     return {
-      version: '2', source: location.href, space: 'unknown', scale: null,
+      version: '3', source: location.href, space: 'unknown', scale: null,
       scope: { selector: SEL, found: false },
       viewport: { w: window.innerWidth, h: window.innerHeight },
       nodes: []
@@ -119,12 +141,13 @@ window.__geomProbe = function (rootSelector) {
       fontWeight: cs.fontWeight || null,
       color: toRgb(cs.color),
       bg: toRgb(cs.backgroundColor),
+      bgAlpha: toAlpha(cs.backgroundColor), // v3：供判据集 R4（几何重叠）判「实心」
       visible: visible(el)
     };
   });
 
   return {
-    version: '2',
+    version: '3',
     source: location.href,
     space: space,
     scale: rd(scale),

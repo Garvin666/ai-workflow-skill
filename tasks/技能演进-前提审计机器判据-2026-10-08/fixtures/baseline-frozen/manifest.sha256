@@ -1,0 +1,10 @@
+# 冻结时点: 2026-10-08 基线 = ai-workflow v4.21.0
+# 格式: <sha256>  <字节数>  <相对路径>  <复制自证>
+d8577a12eacbbab45a2c1458267f9871e83ab353ec28f6b2cb7b457b7ee1d420  141347  SKILL.md  OK
+89fefd4de839e6525de349368a2ba99b0c535e92a4be70abaf63afa471c67613  17007  README.md  OK
+e822c60b1a0bf093a8ee85c3c0fd1a310b70dc84cb807d96fa2fe2572fd69a67  35445  assets/plan-template.yaml  OK
+1bd42704616879eba8c5fb45376a12b94b0a13d2fc0cfbe6d9fc20a65762e164  36816  references/thinking-panel.md  OK
+336f2106d7330069d15d7977e32b087f4a25430448b1bfe9f52012a42f28f095  31724  references/data-model.md  OK
+9e6724958a7fc3675b41adb69691fcfd470ee3db140670535c52a0dd31bb1c08  147555  scripts/checks_judges.py  OK
+070420dfdbd42e53e286701d95393f84f9359f1834041cfbcbd4a7885863a1c7  44106  scripts/thinking_model.py  OK
+8ac67fa9281cab272e159cbdd4501a1e8cc82c16f04c26c15cf30a9f673d9446  295455  _archive/changelog.md  OK

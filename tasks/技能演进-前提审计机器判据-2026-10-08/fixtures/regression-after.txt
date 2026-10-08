@@ -1,0 +1,186 @@
+A/B 全量历史 plan 回归（A=冻结的 v4.21.0 实现 / B=本次改后实现）
+============================================================
+[checks.py skill] rc=0
+=== ai-workflow 技能自检 ===
+[ OK ] SKILL.md 存在
+[ OK ] frontmatter 可解析 — 3713 字符 / 6 行（结构化取块，非字符窗口）
+[ OK ] frontmatter 含 name
+[ OK ] frontmatter 含 description
+[ OK ] frontmatter 含 agent_created
+[ OK ] 文档引用完整性 — 检查 138 条引用
+[ OK ] 模板 schema：_示例-数据分析.yaml — 9/9
+[ OK ] 模板 schema：UI组件库搭建.yaml — 9/9
+[ OK ] 模板 schema：作业解题.yaml — 9/9
+[ OK ] 模板 schema：学习资料生成.yaml — 9/9
+[ OK ] 模板 schema：小说写作.yaml — 9/9
+[ OK ] 模板 schema：技术调研.yaml — 9/9
+[ OK ] 模板 schema：文献阅读.yaml — 9/9
+[ OK ] 模板 schema：算法评估升级.yaml — 9/9
+[ OK ] 模板 schema：调研报告.yaml — 9/9
+[ OK ] 模板 schema：选品分析.yaml — 9/9
+[ OK ] 模板 schema：量化分析.yaml — 9/9
+[ OK ] plan-template 必填键 — 齐全
+[ OK ] py_compile：ai_call.py
+[ OK ] py_compile：archive_tasks.py
+[ OK ] py_compile：check_aesthetics.py
+[ OK ] py_compile：checks.py
+[ OK ] py_compile：checks_cmds.py
+[ OK ] py_compile：checks_core.py
+[ OK ] py_compile：checks_judges.py
+[ OK ] py_compile：checks_parity.py
+[ OK ] py_compile：cleanup_task.py
+[ OK ] py_compile：data_query.py
+[ OK ] py_compile：external_skill_lint.py
+[ OK ] py_compile：gate.py
+[ OK ] py_compile：gen_skill_index.py
+[ OK ] py_compile：git_check.py
+[ OK ] py_compile：guard_constants.py
+[ OK ] py_compile：homework_model.py
+[ OK ] py_compile：http_fetch.py
+[ OK ] py_compile：humanize_scan.py
+[ OK ] py_compile：kb_learn.py
+[ OK ] py_compile：laya_client.py
+[ OK ] py_compile：laya_ensure.py
+[ OK ] py_compile：laya_record.py
+[ OK ] py_compile：office_io.py
+[ OK ] py_compile：outbound_scan.py
+[ OK ] py_compile：perf_baseline.py
+[ OK ] py_compile：publish_tools.py
+[ OK ] py_compile：push_ontology.py
+[ OK ] py_compile：push_router.py
+[ OK ] py_compile：thinking_model.py
+[ OK ] py_compile：verify_push.py
+[ OK ] 口径守卫：模型档位 — references/routing-guide.md + references/data-model.md（读得 2 个文件，取并集） ↔ cheap/default/mid/strong（4 项一致）
+[ OK ] 口径守卫：步骤状态 — assets/plan-template.yaml + references/data-model.md（读得 2 个文件，取并集） ↔ 受阻/完成/待办/熔断/进行中（5 项一致）
+[ OK ] 口径守卫：能力类 — references/capability-routing.md + references/data-model.md（读得 2 个文件，取并集） ↔ 事实/手脚/知识/算力（4 项一致）
+[ OK ] 口径守卫：重规划触发 — references/adaptive-planning.md + references/data-model.md（读得 2 个文件，取并集） ↔ R1/R2/R3/R4/R5/R6（6 项一致）
+[ OK ] 口径守卫：熔断状态 — SKILL.md + references/data-model.md（读得 2 个文件，取并集） ↔ 已熔断/正常（2 项一致）
+[ OK ] 口径守卫：反思触发 — references/reflection-retry.md + references/data-model.md（读得 2 个文件，取并集） ↔ T1/T2/T3（3 项一致）
+[ OK ] 口径守卫：终止策略 — references/reflection-retry.md + references/data-model.md（读得 2 个文件，取并集） ↔ 升级用户决策/升级返修复查/触发熔断/重规划R（4 项一致）
+[ OK ] 口径守卫：提交类型 — references/git-conventions.md + references/data-model.md + scripts/git_check.py（读得 3 个文件，取并集） ↔ docs/feat/fix/refactor（4 项一致）
+[ OK ] 口径守卫：作业模式 — references/homework-judge.md + references/data-model.md + scripts/judges.json（读得 3 个文件，取并集） ↔ 作业题/讲解题/非作业（3 项一致）
+[ OK ] 口径守卫：学习类型 — references/learning-judge.md + references/data-model.md + scripts/judges.json（读得 3 个文件，取并集） ↔ 事实/偏好/无/流程坑/领域知识（5 项一致）
+[ OK ] 口径守卫：清理状态 — assets/plan-template.yaml + references/data-model.md（读得 2 个文件，取并集） ↔ 已拒绝/已清理/无待清理项/未完成（4 项一致）
+[ OK ] 口径守卫：恶补状态 — assets/plan-template.yaml + references/data-model.md（读得 2 个文件，取并集） ↔ 已出/已拒绝/无知识点/未完成（4 项一致）
+[ OK ] 口径守卫：思考裁决 — references/thinking-panel.md + references/data-model.md + scripts/judges.json（读得 3 个文件，取并集） ↔ 修正/拒绝/接受/澄清（4 项一致）
+[ OK ] 口径守卫：思考否决轴 — references/thinking-panel.md + references/data-model.md + scripts/judges.json（读得 3 个文件，取并集） ↔ A1/A2/A3/A4/A5/A6（6 项一致）
+[ OK ] 口径守卫：文风判定 — references/humanize-judge.md + references/data-model.md + scripts/judges.json（读得 3 个文件，取并集） ↔ 不适用/只登记/已达标/走去味（4 项一致）
+[ OK ] 跨格式阈值同源（思考） — ambiguity_band=[0.35, 0.65] 与 checks_core.THINKING_NUOL_BAND 逐值相等；4 个 question 均含 type/instructions
+[ OK ] 口径守卫：文风判据同源（rubric ↔ 实现） — `references/humanize-rubric.yaml` 的 machine 档 ↔ `scripts/humanize_scan.py` 实现集合双向一致（判据集↔实现同源: 一致）
+[ OK ] 口径守卫：入口判定主类 — 声明块（self-judge.md，源规格面内须恰 1 处）↔ 代码常量 chat/code/content（3 项一致）
+[ OK ] 口径守卫：入口判定主类扫描（启发式·WARN） — 源集合 39 个文件未见「主类疑似列」含未登记取值（启发式按列裸词占比判定，会漏会误，**不作门禁**）
+[ OK ] 平台门控：行内豁免 — 6 处（checks_core.py:/usr/bin/@357; checks_core.py:/usr/local/@357; checks_core.py:/var/run/@357; checks_core.py:/etc/@357; checks_core.py:/bin/@357…）—— 合法用途仅限判据自身规则表与文档示范
+[ OK ] 平台门控 vs 真实 import — scripts/*.py 无单平台 API 依赖（AST 口径）
+[ OK ] 运行时闸门（gate.py 可用性与同源） — gate.py 就位；INFRA_EXCEPTIONS 由 checks.py 同源加载（未自建副本）；--selftest 退出码 0（13 项对照全绿）
+[ OK ] metrics 幂等：空目录连跑 2 次恒 1 行 — 实测 1 行
+[ OK ] metrics 幂等：预置 2 行收敛为 1 行 — 实测 1 行
+[ OK ] metrics 幂等：预置 1 行时刷新内容且不增行 — 内容={"task": "幂等守卫用例", "level": "L2", "date": "2026-10-08", "revisions": 0, "fused":
+[ OK ] 入口手册体量预算 — SKILL.md 141459 B / 预算 163840 B（86%）；references/ 33 个文件共 666916 B
+=== 结果：通过 74/74，FAIL=0，SKIP=0，WARN=0 ===
+
+[thinking_model selftest] rc=0
+== thinking_model selftest（离线；含阴性对照）==
+[ OK ] 锚点键 == THINKING_DIST_KEYS（不含「拒绝」）  — 锚点=修正/接受/澄清 / 常量=接受/修正/澄清
+[ OK ] 锚点维度键 == judges.json dimensions  — keys=T1/T2/T3/T4
+[ OK ] VETO_HIT == THINKING_NUOL_BAND[1]（恒等决定）  — VETO_HIT=0.65 band=(0.35, 0.65)
+[ OK ] noul=0.90 → triggered=true
+[ OK ] noul=0.50（带内）→ suspect=true 且 triggered=false
+[ OK ] noul=0.10（带外）→ 两者皆 false
+[ OK ] derive rule 1：triggered → 拒绝（优先于修正案）
+[ OK ] derive rule 2：suspect → 澄清（宁严不宽）
+[ OK ] derive rule 3：ambiguity → 澄清
+[ OK ] derive rule 3：confidence<0.70 → 澄清
+[ OK ] derive rule 4：改正案全授权内 → 修正
+[ OK ] derive rule 5：任一触界 → 澄清
+[ OK ] derive rule 5 边界：越线性缺失/未知 → 澄清（宁严不宽）
+[ OK ] derive rule 6：其余 → 接受
+[ OK ] 契约 12 字段齐  — 缺=无
+[ OK ] distribution 键 == 三态（不含「拒绝」）  — ['修正', '接受', '澄清']
+[ OK ] ⭐ D7：`拒绝` 不是 distribution 的键
+[ OK ] ⭐ D9：dimensions 不含 T5  — ['T1', 'T2', 'T3', 'T4']
+[ OK ] distribution 之和 == 1  — 1.000000
+[ OK ] ⭐ D6：confidence == max(distribution)（恒等，非近似）  — conf=0.9558 max=0.9558
+[ OK ] ⭐ D19：band == f(confidence) 同源  — band=高
+[ OK ] ⭐ D15：main_judge 恒 A（判定权不外流）
+[ OK ] ⭐ D17：veto.triggered/suspect 恒为 bool（不缺失/不为 null）
+[ OK ] 全 0.5（无信息）→ band=低 且 verdict=澄清（fail-closed）  — conf=0.6596 band=低
+[ OK ] 高确定锚例 → band=高  — conf=0.9558
+[ OK ] ambiguity=true → band 强制=低 且 verdict=澄清  — band=低
+[ OK ] ⭐ D18：触界修正案 → 澄清 且 needs_human_confirm=true
+[ OK ] 授权内修正案 → 修正 且 needs_human_confirm=false
+[ OK ] 接受概率随证据单调不降  — 0.010 → 0.014 → 0.101 → 0.791 → 0.950
+[ OK ] to_yaml_block 可被 yaml 解析且回读一致（13 键 = 12 派生 + 前提审计）  — verdict=接受 键数=13
+[ OK ] gold set 10/10（可分性证据，非准确率）  — 命中 10/10
+[ OK ] gold 含 ≥2 条过拒高危样本  — 过拒=2
+[ OK ] gold 含 ≥4 条漏拒高危样本  — 漏拒=4
+[ OK ] 重点对照：G05 拒绝 / G09 接受（判目的不判词面）
+[ OK ] ⭐ D12 铁律：anchors_fitted 与人工标样本数自洽  — anchors_fitted=False 人工标=0(需≥3)
+[ OK ] ⭐ D13：n_total/n_comparable/n_excluded/laya_absent 正确  — total=4 comparable=3 excluded=1 absent=1
+[ OK ] ⭐ D12：分母只含人工标 ∩ Laya-ok（=2）  — n_qualified=2
+[ OK ] 一致率 = 1/2（G01 同、G02 异）  — rate=0.5
+[ OK ] ⭐ D12 阴性对照：全 agent_seed → agreement_rate 不可计算（None，非 0.0）  — rate=None
+[ OK ] 锚点阴性对照：破坏锚点 → 至少一条样本 closest/confidence 改变（证明 aggregate 真的消费锚点）  — 受影响样本 G01/G02/G03/G04/G05/G06/G07/G08/G09/G10
+[ OK ] 比对器活性对照：改坏一条期望 → 命中数恰 -1（证明 10/10 非恒真）  — 命中 9/10（原 10/10）
+[ OK ] 缺维度 / 越界 / tau≤0 一律抛 ValueError（不静默）  — 抛出 4/4
+[ OK ] ⭐ C20/D16：laya_client 已钉 multilingual  — pinned=multilingual
+[ OK ] ⭐ C16：B 侧 map_thinking_judge 不产出 verdict  — keys=_laya/aux_probes/laya/verdict_probe
+[ OK ] B 侧原料映射：model_key 保留 + noul 不违规却挂轴 → axis_unfounded 留痕  — axis_unfounded=True
+== 汇总：FAILS=0 ==
+
+============================================================
+AI审美提升方案-2026-09-26                            A=(0, 2, 11, 16, 29)  B=(0, 2, 11, 16, 29)
+Laya三件套-2026-09-28                             A=(0, 0, 4, 17, 21)  B=(0, 0, 4, 17, 21)
+Laya决策服务补证与自启校正-2026-10-08                     A=(6, 4, 2, 23, 35)  B=(6, 4, 2, 23, 35)
+P0建模落地-2026-09-21                              A=(0, 1, 9, 18, 28)  B=(0, 1, 9, 18, 28)
+P1P2建模落地-2026-09-21                            A=(0, 2, 11, 15, 28)  B=(0, 2, 11, 15, 28)
+humanize整合-ai-workflow-2026-09-30              A=(0, 7, 2, 27, 36)  B=(0, 8, 2, 27, 37)
+local-ops技能库整理-实施-2026-09-30                   A=(0, 9, 3, 22, 34)  B=(0, 10, 3, 22, 35)
+local-ops技能库整理-设计-2026-09-30                   A=(0, 9, 3, 22, 34)  B=(0, 10, 3, 22, 35)
+mattpocock整合实施-ai-workflow-2026-09-30          A=(0, 6, 1, 27, 34)  B=(0, 7, 1, 27, 35)
+mattpocock整合设计-ai-workflow-2026-09-30          A=(0, 6, 1, 26, 33)  B=(0, 7, 1, 26, 34)
+作业模式-ai-workflow-v4.7.0-2026-09-23             A=(6, 1, 3, 18, 28)  B=(6, 1, 3, 18, 28)
+作业模式-精简输出-ai-workflow-v4.7.1-2026-09-28        A=(6, 2, 3, 16, 27)  B=(6, 2, 3, 16, 27)
+修复-gitignore同路径撞车-2026-09-17                   A=(8, 2, 4, 13, 27)  B=(8, 2, 4, 13, 27)
+修复Laya根因-2026-09-28                            A=(0, 1, 4, 14, 19)  B=(0, 1, 4, 14, 19)
+写入技能条目-推送-提交-2026-09-30                        A=(0, 6, 2, 26, 34)  B=(0, 7, 2, 26, 35)
+升级-ai-workflow效率-2026-10-07                    A=(0, 5, 2, 26, 33)  B=(0, 6, 2, 26, 34)
+学习模型开源对标与优化-2026-09-25                         A=(7, 2, 3, 16, 28)  B=(7, 2, 3, 16, 28)
+实施-思考板块模块-2026-09-28                           A=(0, 3, 9, 15, 27)  B=(0, 4, 9, 15, 28)
+实施-知识点恶补报告机制-2026-10-07                        A=(0, 8, 1, 26, 35)  B=(0, 9, 1, 26, 36)
+工作流建模分析-2026-09-21                             A=(0, 1, 8, 18, 27)  B=(0, 1, 8, 18, 27)
+思考板块设计-2026-09-28                              A=(0, 3, 9, 18, 30)  B=(0, 4, 9, 18, 31)
+技能优化-ai-workflow-2026-09-21                    A=(0, 4, 8, 17, 29)  B=(0, 4, 8, 17, 29)
+技能增强-ai-workflow-v3.0-2026-09-15               A=(8, 2, 4, 13, 27)  B=(8, 2, 4, 13, 27)
+技能增强-ai-workflow-v4.10.0-2026-09-27            A=(6, 2, 4, 15, 27)  B=(6, 2, 4, 15, 27)
+技能增强-ai-workflow-v4.6.0-2026-09-22             A=(7, 1, 3, 16, 27)  B=(7, 1, 3, 16, 27)
+技能增强-ai-workflow-v4.8.0-2026-09-25             A=(8, 4, 3, 13, 28)  B=(8, 4, 3, 13, 28)
+技能审计-ai-workflow-2026-09-28                    A=(0, 2, 9, 16, 27)  B=(0, 2, 9, 16, 27)
+技能库归并落地-2026-09-30                             A=(0, 6, 4, 24, 34)  B=(0, 7, 4, 24, 35)
+技能库归并评估-2026-09-30                             A=(0, 6, 3, 24, 33)  B=(0, 7, 3, 24, 34)
+技能演进-前提审计机器判据-2026-10-08                       A=(0, 8, 3, 22, 33)  B=(0, 8, 3, 22, 33)
+拆分-local-ops技能分册-2026-09-30                    A=(0, 5, 2, 27, 34)  B=(0, 6, 2, 27, 35)
+推送-新技能与统一短sha契约-2026-10-07                     A=(0, 9, 1, 26, 36)  B=(0, 10, 1, 26, 37)
+撰写-量化与数据分析恶补-2026-10-07                        A=(0, 10, 1, 25, 36)  B=(0, 11, 1, 25, 37)
+收尾设计方案与版本统一-2026-10-08                         A=('NOPARSE rc=3221225477',)  B=(0, 8, 2, 25, 35)
+整理-ai-workflow版本收口-2026-09-28                  A=(0, 1, 9, 18, 28)  B=(0, 1, 9, 18, 28)
+整理-工作区与技能仓-2026-09-30                          A=(0, 6, 2, 26, 34)  B=(0, 7, 2, 26, 35)
+文献阅读模式-ai-workflow-v4.17.0-2026-09-30          A=(0, 8, 3, 22, 33)  B=(0, 9, 3, 22, 34)
+新增条目91-去重判据-2026-09-30                         A=(0, 9, 3, 22, 34)  B=(0, 10, 3, 22, 35)
+方案-ai-workflow逆向拆解模式-2026-10-07                A=(0, 7, 1, 24, 32)  B=(0, 8, 1, 24, 33)
+更新-ai-workflow-README-2026-09-30               A=(0, 6, 2, 26, 34)  B=(0, 7, 2, 26, 35)
+检查修补-文献阅读模式-2026-09-30                         A=(0, 8, 3, 23, 34)  B=(0, 9, 3, 23, 35)
+模式选用模型-ai-workflow-v4.7.0-2026-09-23           A=(6, 1, 3, 18, 28)  B=(6, 1, 3, 18, 28)
+沉淀-迁移与出站与判据契约技能-2026-10-07                     A=(0, 7, 2, 25, 34)  B=(0, 8, 2, 25, 35)
+用上Laya-2026-09-28                              A=(0, 1, 4, 14, 19)  B=(0, 1, 4, 14, 19)
+落地-ai-workflow图示设计模式-2026-10-07                A=(0, 6, 2, 26, 34)  B=(0, 7, 2, 26, 35)
+落地-ai-workflow逆向拆解模式-2026-10-07                A=(0, 7, 2, 25, 34)  B=(0, 8, 2, 25, 35)
+设计-ai-workflow效率升级方案-2026-10-07                A=(0, 6, 3, 25, 34)  B=(0, 7, 3, 25, 35)
+设计-知识点恶补PDF报告机制-2026-10-07                     A=(0, 7, 2, 25, 34)  B=(0, 8, 2, 25, 35)
+设计-评测保护机制-2026-09-30                           A=(0, 8, 3, 21, 32)  B=(0, 9, 3, 21, 33)
+迁移-恶补机制归档入工作区-2026-10-07                       A=(0, 8, 1, 26, 35)  B=(0, 9, 1, 26, 36)
+部署-Laya离线决策服务-2026-09-23                       A=(2, 2, 9, 15, 28)  B=(2, 2, 9, 15, 28)
+重构优化-ai-workflow-2026-09-21                    A=(0, 2, 11, 14, 27)  B=(0, 2, 11, 14, 27)
+重构优化-ai-workflow-BC-2026-09-21                 A=(0, 1, 10, 17, 28)  B=(0, 1, 10, 17, 28)
+门禁-恶补报告登记与补跑-2026-10-07                        A=(0, 6, 2, 26, 34)  B=(0, 7, 2, 26, 35)
+============================================================
+FAIL 增加的任务 = 无

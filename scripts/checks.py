@@ -34,6 +34,7 @@ from checks_judges import (  # noqa: F401
     _check_category_decl,
     _check_cleanup,
     _check_closure,
+    _check_cram,
     _check_entry_verdict,
     _check_fuse,
     _check_gate,
@@ -58,6 +59,8 @@ from checks_judges import (  # noqa: F401
     _check_user_release,
     flush_absent,
     reset_absent,
+    reset_exempt_caches,
+    set_exempt_context,
 )
 from checks_cmds import (  # noqa: F401
     cmd_decide,
@@ -90,6 +93,7 @@ from checks_core import (  # noqa: F401
     result_line,
     results,
     skip,
+    warn,
 )
 
 def _check_metrics_idempotent(skill_dir: Path) -> None:
@@ -156,6 +160,37 @@ def _check_metrics_idempotent(skill_dir: Path) -> None:
             good = good and rec.get("done") == 1 and rec.get("superseded") == 1
             detail = "内容=%s" % (ls[0][:80] if ls else "")
         (ok if good else fail)("metrics 幂等：预置 1 行时刷新内容且不增行", detail)
+
+
+def _check_entry_budget(skill_dir: Path) -> None:
+    """入口手册体量预算（v4.19.0）：**只报 WARN，永不 FAIL**。
+
+    为什么做：`SKILL.md` 是本技能的入口，它的体量直接决定每次加载的固定成本，而它此前
+    **没有任何约束**（落地实测 2026-10-07 为 125 086 B）。参照外部技能 diagram-design 的
+    入口硬上限（40 000 B）做了**本土化取舍**：本仓体量等级不同（3.13 倍），且体量本身不是
+    正确性问题 ⇒ 只取「可见」这一半 —— 超软预算报 WARN，并把 `references/` 的总体量一并
+    报出，便于判断「细则是否已在往 references 外迁」。
+
+    ⚠️ 射程：本项**只量体量**。不判内容质量，不判该不该外迁，不判引用是否合理。
+    ⚠️ 分级：永不 FAIL（理由与阈值取值见 `checks_core.SKILL_MD_BUDGET_BYTES` 的注释）。
+    阴性对照（人工执行、留档）：把 `SKILL_MD_BUDGET_BYTES` 临时改为小于实测值的数 ⇒ 本项
+    必须转 WARN；改回 ⇒ 必须复原为 OK。无此对照的判据不许上线。
+    """
+    skill_md = skill_dir / "SKILL.md"
+    if not skill_md.exists():
+        return  # 存在性由上游判据负责，此处不重复判（重复判会让同一缺陷报两次）
+    n = skill_md.stat().st_size
+    refs = sorted((skill_dir / "references").glob("*.md"))
+    ref_bytes = sum(p.stat().st_size for p in refs)
+    budget = SKILL_MD_BUDGET_BYTES
+    detail = ("SKILL.md %d B / 预算 %d B（%.0f%%）；references/ %d 个文件共 %d B"
+              % (n, budget, 100.0 * n / budget, len(refs), ref_bytes))
+    if n > budget:
+        warn("入口手册体量预算",
+             "%s —— 超出 %d B：优先把细则外迁 references 并更新手册索引表，不要继续往入口堆"
+             "（本项只 WARN，不阻断交付）" % (detail, n - budget))
+    else:
+        ok("入口手册体量预算", detail)
 
 
 def check_skill(skill_dir: Path) -> int:
@@ -265,6 +300,8 @@ def check_skill(skill_dir: Path) -> int:
     _check_gate(skill_dir)
     # v4.10.1：`metrics --finalize` 的幂等**行为**守卫（SKILL.md 六「每任务一行」↔ 实现）
     _check_metrics_idempotent(skill_dir)
+    # v4.19.0：入口手册体量预算（**只报 WARN**，不阻断）—— 补上「入口此前无任何体量约束」这一缺口
+    _check_entry_budget(skill_dir)
     return 0
 
 def check_plan(plan_path: Path, base: Path) -> int:
@@ -322,6 +359,10 @@ def check_plan(plan_path: Path, base: Path) -> int:
     _check_irreversible(meta, steps)
     _check_user_release(meta)
     reset_absent()   # v4.13.0 起：清上一轮残留（本函数可能异常提前返回）
+    # v4.21.0：设置豁免上下文（存量台账按任务名匹配、字段级豁免需读 steps[].验证方式）。
+    #   与 `reset_absent` 并列清缓存 —— **两者都必须在入口调用**，否则上一轮的台账/上下文会串到本轮。
+    set_exempt_context(plan_path.parent.name, steps)
+    reset_exempt_caches()   # v4.21.0：清台账缓存（与上下文成对，同理必须每轮清）
     _check_entry_verdict(meta)
     _check_method_select(meta)
     _check_method_select_sample(meta)
@@ -351,6 +392,11 @@ def check_plan(plan_path: Path, base: Path) -> int:
     # v4.10.0：检查项 23 = 任务产物清理登记（可选字段；缺省 WARN、填写须合法；
     #   登记了 `清单` 却解析不到文件即 FAIL）。与检查项 22 同源口径：可选、填了就不能糊弄。
     _check_cleanup(meta, plan_path)
+    # v4.19.0：检查项 27 = 知识点恶补报告登记（可选字段；**缺省 WARN**、填写须合法；
+    #   状态=已出 时 `报告` 须解析到位且落在 `恶补/` 目录下，否则 FAIL）。
+    #   ⚠️ 刻意**不**沿用 `_check_cleanup` 的「L2 缺省即 FAIL」—— 恶补是条件性产出（确无知识点
+    #   可合法不产出），升 FAIL 会让全工作区 L2 任务回溯判红。理由与边界见 `_check_cram` docstring。
+    _check_cram(meta, plan_path)
     # v4.11.0：检查项 24 = 思考判定结构合法（含 D1–D11、D14–D19 跨字段自洽；D12/D13 的靶面在
     #   报表/gold 而不在 plan.yaml，机器落点是 thinking_model.py 的 selftest/gold）；25 = 抽样人审
     #   指路（只 WARN）。⭐ 独立 try 包裹（设计 §9.2 第 4 条）：check_plan 原仅 1 个 try
