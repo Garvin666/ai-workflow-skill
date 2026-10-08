@@ -1,5 +1,10 @@
 # 文献阅读类任务确认表模板（沉淀自 2026-09-30 ai-workflow v4.17.0「文献阅读模式」新增）
 # 用途：同类文献审阅（同一课程/同一方向的连续多篇）第二次起可走 L1 快速通道 —— 结构仍按 references/literature-reading-mode.md 的 Q1–Q4，但免重复追问
+# ⚠️ v4.23.0 起：本模板对应「文献阅读模式」，该模式**亦为科研模式的 R2「文献精读」子阶段**（双轨）。
+#    - 独立入口（用户只说"读这篇文献/审稿意见"）⇒ 直接用本模板，**不展开 R0–R6**；
+#    - 在科研活动中 ⇒ R2 按本模板，但**整体须走** `research-mode.yaml` 的 R0–R6（本模板仅覆盖其中 R2 一环）。
+#    - **文件名不变**（防既有 plan.yaml 按名引用断裂，见 references/research-mode.md §9）。
+#    - 全链模板见同目录 `research.yaml`；结构规范：R0–R6 见 references/research-mode.md，R2 见 references/literature-reading-mode.md。
 task_type: 文献阅读
 confirmed_at: 2026-09-30
 workspace: ""          # 【必填】本次任务的工作区根目录（绝对路径）；产出只允许落在此目录内
@@ -34,4 +39,4 @@ constraints:
 research:
   - "文献本体获取（用户提供优先；需自行下载时先确认访问范围与版权边界）"
   - "仅当用户要求「与该方向其他工作对比」时才需外部检索，且结果须标为外部来源"
-flow: "文献识别（R1-R3）→ 分层判定（L0 直接答 / L1 命中模板复跑 / L2 全流程）→ 角色契约 P1-P4 → Q1 研究问题（主张层）→ Q2 创新点（主张层）→ Q3 可质疑点（证据层）→ Q4 精读/略读（结构层）→ 证据档标注核对 → 自检清单（references/literature-reading-mode.md §8）→ 交付"
+flow: "文献识别（R1-R3）→ 分层判定（L0 直接答 / L1 命中模板复跑 / L2 全流程）→ 角色契约 P1-P4 → Q1 研究问题（主张层）→ Q2 创新点（主张层）→ Q3 可质疑点（证据层）→ Q4 精读/略读（结构层）→ 证据档标注核对 → 自检清单（references/literature-reading-mode.md §8）→ 交付（在科研模式下即 R2 一环，见 references/research-mode.md）"

@@ -5,6 +5,8 @@ pip_debug.log
 _smoke/
 tasks/*/plan.yaml
 tasks/*/tmp/
+# 工具自身中间产物（推送 dry-run 结果 / 探针落盘等），本地保留不入库
+tmp/
 .venv/
 venv/
 # 历史快照（v4.4.2 目录瘦身）：本地保留归档，不进版本控制
