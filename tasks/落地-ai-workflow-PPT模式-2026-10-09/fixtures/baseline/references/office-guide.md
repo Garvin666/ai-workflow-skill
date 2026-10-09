@@ -2,8 +2,6 @@
 
 openpyxl / python-docx / pypdf 三个库的常见坑。按需 grep 本文件相应小节。
 
-> **PPTX 不在本页**：演示文稿（.pptx）的产出结构与验收契约走 `references/ppt-mode.md`（执行方为第三方技能 `ppt-master`）；本页只管 Excel / Word / PDF 三个库的坑。
-
 ## openpyxl（Excel）
 
 - 读公式文件用 `load_workbook(path, data_only=True)` 才拿到计算值；`data_only=False` 拿到公式串。文件若从未被 Excel 打开计算过，data_only 返回 None
@@ -31,10 +29,3 @@ openpyxl / python-docx / pypdf 三个库的常见坑。按需 grep 本文件相�
 - 所有文本输出/写文件用 UTF-8；写文件加 BOM（`utf-8-sig`）保证 Excel/WPS 双击打开不乱码
 - cmd 控制台默认 GBK：脚本内已 `sys.stdout.reconfigure(encoding="utf-8")`；仍乱码则 `chcp 65001`
 - PowerShell 调用带空格路径必须加引号并用 `&` 运算符
-
-## PPTX（.pptx）
-
-- **不走本页**：生成 / 美化 / 填原生模板 / 改原生 pptx / 造可复用模板工作区 / 导出演示视频 → 叠加 **PPT 模式**（`references/ppt-mode.md`），执行方为 `ppt-master`（自带依赖清单与校验器）。
-- **只改文字与轻排版** → `tencent-local-office-edit`（不动版式时最省，且所见即所得）。
-- **拆解他人 pptx 学结构** → `pptx-authoring` 的拆解向（其反向拆解方法论与拆解脚本）；PPT 内嵌的**图** → `references/diagram-mode.md`。
-- ⚠️ **本仓不另行登记 `python-pptx` 的坑**：那部分统一在 `ppt-master` 内，两处各写一套会形成双口径。

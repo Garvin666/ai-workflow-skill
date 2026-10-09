@@ -1,13 +1,17 @@
-# 外部技能路由与适配（vendored: mattpocock-skills-zh-CN）
+# 外部技能路由与适配（外部技能簇 · 三上游）
 
 > **定位**：装在技能库根、但**不属于 ai-workflow 本体**的第三方技能，本文件是它们的**唯一宿主侧适配层** —— 说明从哪来、什么时候该调、与本体口径怎么对齐。
+> **当前三个上游**：**mattpocock-skills-zh-CN**（24 个，扁平外挂）、**ppt-master**（1 个，目录联接）与 **humanizer**（1 个，扁平外挂）。来源与许可见 §一。
 > **加载口径**：阶段 0 第 3 步「查可用 Skill」命中外部技能簇时读；日常任务不需要（SKILL.md 只留一句指针）。
-> **与「整合方法」的分工**：本文件只讲**装好之后怎么调**（运行时路由）。**怎么把外部技能装进来**（一次性的整合工程 —— 探针目录法、宿主三道门禁实测、接入形态选型、依赖序安装、验收登记）见技能 `external-skill-library-integration`。**做整合翻那份，用已整合的技能翻本份。**
-> **版本**：1（2026-09-30，随 mattpocock 整合任务新增；同日补「与整合方法的分工」一行）
+> **与「整合方法」的分工**：本文件只讲**装好之后怎么调**（运行时路由）与**来源/许可/安装形态/账本**。**怎么把外部技能装进来**（一次性的整合工程 —— 探针目录法、宿主三道门禁实测、接入形态选型、依赖序安装、验收登记）见技能 `external-skill-library-integration`。**做整合翻那份，用已整合的技能翻本份。**
+> **与 `references/ppt-mode.md` 的分工**：本文件记 `ppt-master` 的**来源 / 许可 / 安装形态 / 账本 / 调用口径**；**产出结构与验收契约**（Y0–Y4 / Y-a–Y-d / E1–E6）在 `references/ppt-mode.md`。**同一物理量只写一处**，两侧交叉引用、不重述。
+> **版本**：3（2026-09-30 建；2026-10-09 首次泛化为两上游并登记 ppt-master，同日二次泛化为三上游并登记 humanizer）
 
 ---
 
-## 一、来源与许可
+## 一、三个上游
+
+### 1.1 mattpocock-skills-zh-CN（24 个，扁平外挂）
 
 | 项 | 值 |
 | --- | --- |
@@ -22,6 +26,50 @@
 
 **为什么选扁平外挂而非并入本体**：三条实测约束 —— ① 技能库索引只扫一层目录，上游的三层布局直接装等于隐形；② 本体自检的 frontmatter 判据要求含 `agent_created`；③ 21 个能力折进本体会显著抬高每次任务的固定 token 成本。详见任务 `tasks/mattpocock整合设计-ai-workflow-2026-09-30/`。
 
+### 1.2 ppt-master（1 个，目录联接）
+
+| 项 | 值 |
+| --- | --- |
+| 上游 | hugohe3/ppt-master（AI 演示文稿生成路由工作流） |
+| 许可 | MIT（上游 LICENSE 随库保留） |
+| 本机版本 | **6.6.0**（2026-10-09 落笔坐标；⚠️ **调用时须重读**，见 §七） |
+| 规模 | 12994 文件 / 107 MB（其中 12167 个 svg 模板与 186 个 wav 音效占绝大部分；文本类仅 537） |
+| 安装形态 | **目录联接（零拷贝）**：`~/.workbuddy/skills/ppt-master` → `~/.codex/skills/ppt-master` |
+| 账本 | `.vendor/ppt-master.lock.json`（上游坐标 + 版本 + 许可 + 安装形态 + 内容摘要） |
+| 产物结构与验收契约 | 在 `references/ppt-mode.md`（**本文件不重述**） |
+
+**⚠️ 资产归属**：同为**第三方 MIT 资产，不是自研** —— 不得登记进 `meta.自研工具`，不得随 ai-workflow 本体仓推送。
+
+**⚠️ 与 1.1 的三处关键差别（都是实测出来的，不是设计偏好）**：
+
+1. **零拷贝 + 无补丁**：它自带 fail-closed 完整性门禁（校验自身 frontmatter 元数据精确值与 LICENSE / SPONSORS 摘要），照 1.1 那样「给 frontmatter 加三键」会**直接把它顶停**。故本批**一个字节都不改**。
+2. **体积差三个数量级**：107 MB vs 1.1 的几十 KB ⇒ 复制安装会产生第二份大体量文件树，而它本来就是「一份物理拷贝、多处引用」的形态，故走联接。
+3. **它自己就是一套完整路由工作流**（三顶层路由 + Plan/Do·Check/Act + 自带校验器）⇒ **不适用 §二 的「扁平外挂 + 宿主索引匹配」调用模型**，宿主侧只叠一个契约层（见 §二末段与 §三）。
+
+> **为什么不做成「装进本体的一个模式 + 复制技能」**：① 契约层已能覆盖 ai-workflow 侧的判据（`references/ppt-mode.md`）；② 复制会带来同步负担与 107 MB 冗余，而联接天然跟随上游；③ 改它文件会踩完整性门禁。
+
+### 1.3 humanizer（1 个，扁平外挂）
+
+| 项 | 值 |
+| --- | --- |
+| 上游 | blader/humanizer（去 AI 味技能：AI 写作特征清单 ＋ 语音校准 ＋ 误报清单，基于 Wikipedia「Signs of AI writing」） |
+| 许可 | MIT（上游 LICENSE 随库保留，Copyright (c) 2025 Siqi Chen） |
+| 本机版本 | **2.9.1**（其 frontmatter `metadata.version`；⚠️ **调用时须重读**，同 §1.2 纪律） |
+| 规模 | 9 文件 / 约 50 KB |
+| 安装形态 | **扁平外挂（复制安装）**：`~/.codex/skills/humanizer` → `~/.workbuddy/skills/humanizer`（**独立副本**，非联接） |
+| 账本 | `.vendor/humanizer.lock.json`（上游坐标 + 许可 + 内容摘要 + 9 文件逐文件 sha256） |
+| 宿主侧路由 | **Model-invoked**（frontmatter 无 `disable-model-invocation`）—— 见 §三 第三上游表 |
+
+**⚠️ 资产归属**：同为**第三方 MIT 资产，不是自研** —— 不得登记进 `meta.自研工具`，不得随 ai-workflow 本体仓推送。
+
+**⚠️ 同批落库、形态却与 1.2 相反（三条都是实测结论）**：
+
+1. **它是复制、不是联接**：`ppt-master` 107 MB 且自带 fail-closed 完整性门禁 ⇒ 只能联接 ＋ 零改动；`humanizer` 仅 9 文件 ⇒ **复制**（零拷贝无收益，且其源路径受插件管理、更新常删建目录，联接会断成悬空引用）。
+2. **它没有 fail-closed 自校验**：理论上可打补丁，但**本轮一个字节都没改**（保持与上游逐字节一致，便于同步与漂移检测）。
+3. **它与本仓既有去味能力是「手法 vs 判定」的分工，不是替代关系**：本仓 `scripts/humanize_scan.py` ＋ `references/humanize-judge.md`（第七物理量「文风判定」）是**机器闸门与判定口径**；`humanizer` 提供**改写手法**（模式清单 / 语音校准 / 误报清单）。**判定只有一处**（在本仓）。⚠️ **不得**把它当作「另一套去味判据」接入（违反硬约定第 4 条「同一物理量不写两处」）。
+
+> **为什么不做成本体内置**：① 本仓已有同轴的去味判定（第七物理量），再内置一套改写手法会与 `references/humanize-rubric.yaml` 的 31 条模式口径交叉；② 它是**通用文本**技能、不限于 PPT ⇒ 放外部簇由各模式按需引用（如 `references/ppt-mode.md` §9「文案层」），比折进本体更干净。
+
 ---
 
 ## 二、调用口径（上游两分类 → 宿主语言）
@@ -33,7 +81,13 @@
 | **User-invoked** | frontmatter 含 `disable-model-invocation: true` | 10 | **由主代理按场景显式调用**，不指望自动匹配命中 |
 | **Model-invoked** | 无该字段 | 14 | 可被阶段 0 的索引匹配自动命中，作为阶段内联纪律使用 |
 
+> **上表数量是 1.1 那批（mattpocock）的统计**；`humanizer` 按同一判据归 **Model-invoked**，见 §三 第三上游表。
+
 > **为什么保留 `disable-model-invocation` 而不删**：它是这批技能**唯一机器可读的分类依据**，删掉就只剩推断；且不违反宿主 frontmatter 判据（该判据只要求**含**三键，不禁止额外键）。`argument-hint` 同理保留。
+
+**`ppt-master` 不适用这套两分类**：它自带完整路由与门禁，不靠宿主的索引匹配自动命中；宿主侧的调用口径只有一句 —— **命中「PPT 识别」即叠加 PPT 模式，并按 `references/ppt-mode.md` 的交接契约进它**。它**不改本体 frontmatter**（见 §1.2 第 1 条），故也不进补丁清单。
+
+**`humanizer` 则走 §二 的 Model-invoked 一栏**：阶段 0 的索引匹配可自动命中它；但**在本仓语境下它的定位是「改写手法资源」而非「判定执行者」** —— 命中后**判定仍回本仓文风判定**（见 §1.3 第 3 条与 §五 第 8 条）。
 
 ---
 
@@ -68,6 +122,20 @@
 | 要写叙事片段（**上游标未定稿**） | writing-fragments | User-invoked |
 | 要定叙事整体形状（**上游标未定稿**） | writing-shape | User-invoked |
 
+**第二上游（`ppt-master`，1 个，不按上面两分类）**：
+
+| 场景 | 调哪个 | 说明 |
+| --- | --- | --- |
+| 要出一份演示文稿（生成 / 美化 / 填原生模板 / 改原生 pptx / 造可复用模板 / 导出演示视频） | `ppt-master` | 宿主侧**先叠加 PPT 模式**（识别三判据与交接契约见 `references/ppt-mode.md`），再按其**自身**的路由权威选路；本仓不复刻它的步骤 |
+
+**第三上游（`humanizer`，1 个，按 §二 两分类）**：
+
+| 场景 | 调哪个 | 分类 |
+| --- | --- | --- |
+| 要去 AI 味 / 让文案更像人写的，需要**改写手法**（**判定仍看本仓 `humanize_scan.py`**） | `humanizer` | Model-invoked |
+
+> ⚠️ 这一行**只引手法、不引判定**：本仓的「文风判定」（第七物理量）是判据唯一来源，`humanizer` 不参与判定。
+
 **依赖提示**：`tdd` 正文要求配合 `codebase-design` 使用（后者是 seam、adapter、depth 这些词的唯一定义处）；`grill-with-docs` 依赖 `domain-modeling`。这几个**成组装齐了**，不要单装一个。
 
 ---
@@ -98,12 +166,14 @@
 4. **本地补丁只有一处**：frontmatter 追加 `agent_created: false` / `source` / `upstream_rev` 三键。**正文逐字未改**（补丁清单在 lock 的 `patches`）。
 5. **通用名辨识度低**：research、teach、handoff、code-review、prototype 等是通用词，按簇定位时可能与既有技能混淆。lock 登记了占用名，本手册的路由表提供语义锚。
 6. **状态模型不合并**：上游的每仓持久 domain model（CONTEXT 类文档、ADR）只在**被整合的项目仓**内作为项目文档存在，**不参与宿主留痕**。宿主侧仍是每任务一份 `plan.yaml`。
+7. **`ppt-master` 的边界不列在本节**：它的诚实边界（版本不锁、联接单点依赖、依赖与许可含 AGPL 组件、宿主索引可达性未端到端验证、不代跑业务链路）写在 `references/ppt-mode.md` §10，**本文件不重述**。
+8. **`humanizer` 的边界（手法 ≠ 判定）**：它给的是**改写手法**、不是判定；**不要**把「humanizer 改过了」当成「文风判定已达标」—— 判定唯一在本仓 `scripts/humanize_scan.py`（第七物理量）。其安装形态是**复制**（与 `ppt-master` 的联接相反），故**上游更新不会自动生效**，须按 §7.2 重取。
 
 ---
 
 ## 六、机器检查
 
-**`scripts/external_skill_lint.py`** —— 外部技能的放宽判据，是本体自检在外部技能上的对应物。
+**`scripts/external_skill_lint.py`** —— 外部技能的放宽判据，是本体自检在外部技能上的对应物。**只查 `.vendor/` 下登记过 lock 的技能**；`--lock` 缺省遍历 `.vendor/*.lock.json`（v4.25.0 起改为**多上游**，此前硬编码单一 lock）。
 
 | 判据 | 分级 |
 | --- | --- |
@@ -120,9 +190,10 @@
 用法：
 
 ```
-python scripts/external_skill_lint.py                 # 查 lock 登记的全部外部技能
-python scripts/external_skill_lint.py --verify-lock   # 加做 lock 一致性
-python scripts/external_skill_lint.py --skill tdd     # 只查一个
+python scripts/external_skill_lint.py                    # 查 .vendor/ 下全部 lock 登记的外部技能（三上游）
+python scripts/external_skill_lint.py --verify-lock      # 加做 lock 与磁盘 sha256 一致性
+python scripts/external_skill_lint.py --skill tdd        # 只查一个
+python scripts/external_skill_lint.py --lock <path>      # 只用一个 lock（排障用）
 ```
 
 ---
@@ -137,3 +208,20 @@ python scripts/external_skill_lint.py --skill tdd     # 只查一个
 4. 若上游新增了技能间引用，检查被引目标是否已在库内 —— 断链会让上层技能失效。
 
 **不要**把上游内容并进 ai-workflow 本体仓，也不要把本体内容写进这批技能目录 —— 两边一旦互写，同步时无法区分差异来源。
+
+### 7.1 ppt-master（零拷贝，无补丁）
+
+它**不是复制安装**而是**目录联接**（`~/.workbuddy/skills/ppt-master` → `~/.codex/skills/ppt-master`）⇒ **上游一改，宿主侧立即生效**，不存在「重放补丁」这一步，也**不得**改它任何文件。因此：
+
+1. **不锁版本**：调用时必须**每次实读**其入口 frontmatter 的版本号（§1.2 写的 6.6.0 只是落笔时的坐标，**不得沿用**）。
+2. **漂移检测靠 lock**：`.vendor/ppt-master.lock.json` 记录上游坐标与内容摘要；跑 `scripts/external_skill_lint.py --verify-lock` 即可发现「联接目标被改过」。
+3. **联接断了就是失效**：目标目录被移动或清理 ⇒ 该技能从技能库消失；此时要么重建联接，要么在 `references/ppt-mode.md` §7 的降级通道上退回 `pptx-authoring`。
+
+### 7.2 humanizer（复制安装，无补丁）
+
+它是**复制安装**（`~/.codex/skills/humanizer` → `~/.workbuddy/skills/humanizer`，**独立副本**）⇒ **上游更新不会自动生效**（与 7.1 相反）。同步规程：
+
+1. 取上游新版本，与 lock 的 `declared_version` 比对，确认有更新。
+2. **整体重取**（复制安装的同步是「覆盖式重取」，不是「重放补丁」—— 本轮 `patched` 恒为 false，无补丁可放）。
+3. 逐文件 sha256 重算写回 lock，跑 `scripts/external_skill_lint.py --verify-lock`。
+4. **不要**把它与本仓的去味判据（`scripts/humanize_scan.py` / `references/humanize-rubric.yaml`）互相改写 —— 两边一旦互写，同步时无法区分差异来源。

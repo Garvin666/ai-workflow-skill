@@ -1,0 +1,11 @@
+{"ts": "2026-10-09 06:53", "step": "s1", "action": "冻结 7 文件基线 + 建 ppt-master 目录联接", "cmd": "", "result": "sha256 逐文件相等；isjunction=True；attribution_guard rc=0"}
+{"ts": "2026-10-09 06:53", "step": "s2", "action": "撰写 references/ppt-mode.md 契约手册", "cmd": "", "result": "落盘；编号族 Y/E 与既有不冲突；引用可解析"}
+{"ts": "2026-10-09 06:53", "step": "s3", "action": "接线既有面（external-skills/office-guide/diagram-mode/SKILL 阶段4）", "cmd": "", "result": "四处落盘；PPT 指向唯一"}
+{"ts": "2026-10-09 06:53", "step": "s4", "action": "建 .vendor/ppt-master.lock.json + 泛化 external_skill_lint.py", "cmd": "", "result": "lint 覆盖两 lock（77 通过）；A/B mattpocock 零回归"}
+{"ts": "2026-10-09 06:54", "step": "s5", "action": "SKILL.md 注册与版本 4.24.0→4.25.0；README/changelog", "cmd": "", "result": "checks.py skill 76/76；三处版本同源"}
+{"ts": "2026-10-09 06:54", "step": "s6", "action": "验收对账与交付（变更说明.md）", "cmd": "", "result": "五路复跑全绿；junction rc=0；引用 142 OK"}
+{"ts": "2026-10-09 06:54", "step": "s7", "action": "设计原则 15 条下沉到 ppt-mode.md 新 §9；SKILL/README 同步", "cmd": "", "result": "15 条齐备；§1–§11 引用自洽"}
+{"ts": "2026-10-09 08:16", "step": "s8", "action": "图形技法组由 2 条扩为 8 条（形状语言成套/光影质感/图片处理/空间纵深/色彩体系/画面饱满度）；D 组顺延 ⑲–㉑；§10 加观感复检；计数 15→21、自检 8→9", "cmd": "", "result": "checks.py skill 76/76 FAIL=0；plan FAIL=0；C 组计数=8；D 组编号 ⑲⑳㉑；§10 标题「自检 9 项」；§1–§11 引用逐条可解析"}
+{"ts": "2026-10-09 08:32", "step": "s9", "action": "C 组由 8 条扩为 14 条（视觉层级与视线动线/图形化表达/构图平衡与视觉重量/留白经营/版式节奏与多样性/装饰记号系统化）；D 组顺延 ㉕–㉗；边界 3→5 条；修复 D 组表格空行截断；计数 21→27", "cmd": "", "result": "表格内编号 ⑪–㉗ 连续各一次（27/27）；D 组表头-分隔-数据连续；「21 条」「二十一条」全仓为 0；checks.py skill 76/76 FAIL=0；plan FAIL=0"}
+{"ts": "2026-10-09 08:32", "step": "s10", "action": "humanizer 以扁平外挂（复制安装）接入技能库根（9 文件，独立副本非联接）；external-skills.md 泛化为三上游；ppt-mode.md 加 §7 行/§9 文案层小节/§11 第 9 条；判定仍唯一在本仓文风判定", "cmd": "", "result": "humanizer 目标 isjunction=False 且与源 sha256 全等；lint --verify-lock 覆盖三上游 FAIL=0（humanizer 9 文件对上）；checks.py skill 76/76 FAIL=0；plan FAIL=0"}
+{"ts": "2026-10-09 08:42", "step": "s11", "action": "SKILL.md 等价压缩：163347 B → 153105 B（−10242，6.3%）；24 一级节集合全等、25 锚点齐、熔断表形态不变", "cmd": "python tmp/compress-skill-md-20261009.py", "result": "checks.py skill 76/76 FAIL=0 SKIP=0 WARN=0；plan 25/33 FAIL=0；lint 81 FAIL=0", "elapsed_s": 600.0}

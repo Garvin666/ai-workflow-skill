@@ -31,20 +31,16 @@
 
 ## 用法
 
-    python scripts/external_skill_lint.py                    # 扫描 <技能库根>/.vendor/*.lock.json 并逐一检查
+    python scripts/external_skill_lint.py                    # 用默认技能库根与 lock
     python scripts/external_skill_lint.py --root <技能库根>
-    python scripts/external_skill_lint.py --verify-lock       # 加做 lock 与磁盘 sha256 一致性检查
-    python scripts/external_skill_lint.py --skill tdd         # 只查一个（跨全部 lock 解析归属）
-    python scripts/external_skill_lint.py --lock <path>       # 只用一个 lock（排障用）
+    python scripts/external_skill_lint.py --verify-lock       # 加做 lock 一致性
+    python scripts/external_skill_lint.py --skill tdd         # 只查一个
 
 退出码：0 = 无 FAIL；1 = 有 FAIL；2 = 前置条件不满足（lock 缺失/不可解析）。
 
 ## 诚实边界
 
 - **只查 lock 里登记的技能**，不遍历技能库全量 —— 用户自建技能与宿主本体不在范围内。
-- **多上游（v4.25.0）**：缺省遍历 `.vendor/*.lock.json`（此前硬编码单一 mattpocock lock）。
-  每个 lock 自带 `skills` / `reference_mentions` / `files`，故**豁免与一致性按 lock 分别判定**，
-  不会把 A 上游的登记拿去豁免 B 上游的断链。
 - **不判内容质量**：判据只覆盖结构、引用、密钥、可疑片段四类可枚举特征；
   技能写得对不对、判据讲得好不好，机器没有 oracle。
 - **SKIP 不是通过**：已登记的引用提及是「按约定豁免」，不是「验证过它没问题」。
@@ -193,82 +189,48 @@ def check_lock(root: Path, lock: dict) -> None:
         actual = sha256(p)
         if actual != f["sha256"]:
             bad.append(f"{f['path']} sha256 不一致")
-    label = f"lock 与磁盘一致性（{lock.get('vendor', '?')}）"
     if bad:
-        add("FAIL", label, "；".join(bad[:10]) +
+        add("FAIL", "lock 与磁盘一致性", "；".join(bad[:10]) +
             (f"（共 {len(bad)} 项）" if len(bad) > 10 else ""))
     else:
-        add("OK", label, f"{len(lock.get('files', []))} 个文件逐一对上")
-
-
-def _load_locks(root: Path, pinned: str | None) -> list[dict] | None:
-    """载入待检 lock 列表。pinned 给定时只载入它；否则扫描 <root>/.vendor/*.lock.json。
-
-    多上游（v4.25.0）：每个 lock 自成一个判定域（skills / reference_mentions / files
-    都按 lock 分别取），避免跨上游的豁免串用。
-    """
-    if pinned:
-        paths = [Path(pinned)]
-    else:
-        paths = sorted((root / ".vendor").glob("*.lock.json"))
-        if not paths:
-            print(f"[ERROR] 未找到任何 lock：{root / '.vendor'}/*.lock.json")
-            return None
-    locks: list[dict] = []
-    for p in paths:
-        if not p.is_file():
-            print(f"[ERROR] lock 不存在：{p}")
-            return None
-        try:
-            lock = json.loads(p.read_text(encoding="utf-8"))
-        except json.JSONDecodeError as e:
-            print(f"[ERROR] lock 不可解析：{p} — {e}")
-            return None
-        lock["_lock_path"] = str(p)
-        locks.append(lock)
-    return locks
+        add("OK", "lock 与磁盘一致性", f"{len(lock.get('files', []))} 个文件逐一对上")
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="外部 vendored 技能的放宽判据检查器")
     ap.add_argument("--root", default=str(Path.home() / ".workbuddy" / "skills"),
                     help="技能库根（默认 ~/.workbuddy/skills）")
-    ap.add_argument("--lock", default=None,
-                    help="只用这一个 lock（默认扫描 <root>/.vendor/*.lock.json，多上游逐一检查）")
+    ap.add_argument("--lock", default=None, help="lock 路径（默认 <root>/.vendor/mattpocock.lock.json）")
     ap.add_argument("--skill", default=None, help="只查指定技能")
     ap.add_argument("--verify-lock", action="store_true", help="加做 lock 与磁盘 sha256 一致性检查")
     args = ap.parse_args()
 
     root = Path(args.root)
-    locks = _load_locks(root, args.lock)
-    if locks is None:
+    lock_path = Path(args.lock) if args.lock else root / ".vendor" / "mattpocock.lock.json"
+    if not lock_path.is_file():
+        print(f"[ERROR] lock 不存在：{lock_path}")
+        return 2
+    try:
+        lock = json.loads(lock_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as e:
+        print(f"[ERROR] lock 不可解析：{e}")
         return 2
 
-    # 跨 lock 建立「技能 → 所属 lock」映射；一个技能只允许出现在一个 lock 里
-    skill_to_lock: dict[str, dict] = {}
-    for lock in locks:
-        for n in lock.get("skills", []):
-            skill_to_lock[n] = lock
-
+    names = lock.get("skills", [])
     if args.skill:
-        if args.skill not in skill_to_lock:
-            print(f"[ERROR] 技能 {args.skill} 不在任何 lock 登记范围内")
+        if args.skill not in names:
+            print(f"[ERROR] 技能 {args.skill} 不在 lock 登记范围内")
             return 2
-        order = [args.skill]
-    else:
-        order = list(skill_to_lock.keys())
+        names = [args.skill]
+
+    exempt = {(m["skill"], m["ref"]) for m in lock.get("reference_mentions", [])}
 
     print("=== 外部技能放宽判据检查 ===")
-    for lock in locks:
-        print(f"来源：{lock.get('vendor')} @ {lock.get('upstream_rev_short')}"
-              f"（{lock.get('upstream_date')}）｜许可 {lock.get('license')}"
-              f"｜lock {Path(lock['_lock_path']).name}"
-              f"｜登记 {len(lock.get('skills', []))} 个技能")
-    print(f"范围：{len(order)} 个已登记技能（lock 口径；不含宿主本体与用户自建技能）\n")
+    print(f"来源：{lock.get('vendor')} @ {lock.get('upstream_rev_short')}"
+          f"（{lock.get('upstream_date')}）｜许可 {lock.get('license')}")
+    print(f"范围：{len(names)} 个已登记技能（lock 口径；不含宿主本体与用户自建技能）\n")
 
-    for name in order:
-        lock = skill_to_lock[name]
-        exempt = {(m["skill"], m["ref"]) for m in lock.get("reference_mentions", [])}
+    for name in names:
         d = root / name
         if not d.is_dir():
             add("FAIL", f"{name} · 目录存在", "lock 已登记但磁盘无此目录")
@@ -278,9 +240,8 @@ def main() -> int:
         check_secrets_and_scripts(d, name)
 
     if args.verify_lock:
-        for lock in locks:
-            print()
-            check_lock(root, lock)
+        print()
+        check_lock(root, lock)
 
     n_fail = sum(1 for s, _, _ in results if s == "FAIL")
     n_ok = sum(1 for s, _, _ in results if s == "OK")
