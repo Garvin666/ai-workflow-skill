@@ -301,7 +301,7 @@ try:  # Windows 控制台中文输出
 except Exception:
     pass
 
-VERSION = "1.9.0"
+VERSION = "1.8.0"
 PRODUCTS = ("ui", "ppt", "chart", "image")
 # 覆盖 reason 的占位文本（写了等于没写）
 PLACEHOLDER_REASONS = {
@@ -735,31 +735,6 @@ def extract_css(css: str) -> dict:
             "layer": lm.group(1).strip() if lm else None,
         })
 
-    # v1.9.0（H 层，借自 hairline）：缓动 / 阴影滤镜 / 无限循环 三组取数。
-    #   与既有 motion_decls 同源（都走 _DECL_RE），但**另立三门**：H1 要缓动、H2 要深度效果、H3 要循环性，
-    #   三者都与「有没有时长」正交 —— 混进 motion_decls 会让 M1 的覆盖面被稀释。
-    motion_easings, depth_decls, infinite_decls = [], [], []
-    _EASE_PROPS = _DUR_PROPS | {"transition-timing-function", "animation-timing-function"}
-    for m in _DECL_RE.finditer(css):
-        prop = m.group(1).lower()
-        val = m.group(2).strip()
-        _norm2 = re.sub(r"\s*!important\s*$", "", val, flags=re.I).strip().lower()
-        if _norm2 in _NO_MOTION_KEYWORDS:
-            continue                      # `none` 是「没有」，不是「有但劣化」
-        if prop in _EASE_PROPS:
-            _e = _easing_of(val)
-            if _e:
-                motion_easings.append({
-                    "decl": f"{prop}: {val[:48]}",
-                    "easing": _e,
-                    # v1.9.0：带上**族** —— H1 默认只判 transition 族（见 chk_easing_discipline）
-                    "scope": "animation" if prop.startswith("animation") else "transition",
-                })
-        elif prop in ("box-shadow", "text-shadow", "filter"):
-            depth_decls.append({"prop": prop, "value": val[:64]})
-        if prop in ("animation", "animation-iteration-count") and re.search(r"\binfinite\b", val, re.I):
-            infinite_decls.append(f"{prop}: {val[:48]}")
-
     return {
         "colors": colors,
         "sizes": sizes,
@@ -776,10 +751,6 @@ def extract_css(css: str) -> dict:
         "motion_without_time": motion_without_time,  # v1.6.0：声明了动效却无时长（真缺陷）
         "rhythm_ladders": rhythm_ladders,       # v1.6.0：错峰阶梯（有序）
         "radial_blocks": radial_blocks,         # v1.6.0：含 radial 的块 + 其声明的层
-        "motion_easings": motion_easings,       # v1.9.0：动效缓动（H1 的对象）
-        "depth_decls": depth_decls,             # v1.9.0：box-shadow / text-shadow / filter（H2 的对象）
-        "infinite_decls": infinite_decls,       # v1.9.0：无限循环动画（H3 的对象）
-        "has_reduced_motion": "prefers-reduced-motion" in css,  # v1.9.0：H3 的兜底依据
     }
 
 
@@ -1846,130 +1817,6 @@ def chk_geometry_occlusion(ctx, params):
 
 
 # --------------------------------------------------------------------------
-# 四点五、H 层检查器（v1.9.0 新增 · 借自 lucasmarkes/hairline 的视觉工艺）
-# --------------------------------------------------------------------------
-# 来历：用户 2026-10-09 指定「把 hairline 这个 skill 复用进 ai-workflow 以提高审美」。
-# 提炼口径 = **按 judgeability 分档**：能机器量的走 machine，只有眼睛能看的走 manual。
-# 本节的 helper 由 extract_css 调用，故必须在**模块级**定义（运行时解析，与定义顺序无关）。
-_EASING_KEYWORDS = ("ease-in-out", "step-start", "step-end", "ease-in", "ease-out", "ease", "linear")
-_EASING_FN_RE = re.compile(r"\b(cubic-bezier|steps|linear|spring)\s*\(", re.I)
-
-
-def _easing_of(value: str):
-    """从一条动效声明里取**缓动**标记；取不到返回 None。
-
-    ① 先剔除 `linear-gradient(...)` —— 它是绘色函数，不是缓动（不剔除会把「用了渐变」误判成「用了线性缓动」）；
-    ② 关键字按**最长优先**匹配，否则 `ease-in-out` 会被 `ease-in` 截断（匹配顺序即语义）；
-    ③ `linear(...)` / `cubic-bezier(...)` / `steps(...)` 属函数形态，返回 `<名>(...)`。
-    """
-    v = re.sub(r"linear-gradient\s*\([^)]*\)", " ", value, flags=re.I)
-    for kw in _EASING_KEYWORDS:
-        if re.search(r"(?<![\w.-])" + re.escape(kw) + r"(?![\w.])", v, re.I):
-            return f"{kw}(...)" if re.search(re.escape(kw) + r"\s*\(", v, re.I) else kw
-    m = _EASING_FN_RE.search(v)
-    return f"{m.group(1)}(...)" if m else None
-
-
-def _shadow_blur_px(value: str):
-    """`text-shadow` 的模糊半径（px 口径）：取第 3 个长度；不足 3 个 ⇒ 0。
-
-    相对单位（em/rem）**不折成像素**（同 G12 对 `em` 的处置）⇒ 返回 None，「判不了」不等于「没问题」。
-    含 `var(...)` 的声明会被解析成「长度数不足」⇒ 记 0 —— 该限制写进判据集 note，不假装已覆盖。
-    """
-    cleaned = re.sub(r"#[0-9a-fA-F]{3,8}|rgba?\([^)]*\)|\b(?:none|inset|var\([^)]*\))\b", " ", value, flags=re.I)
-    lens = [(float(n), u or "px") for n, u in re.findall(r"(-?[\d.]+)(px|em|rem|pt)?", cleaned)]
-    if len(lens) < 3:
-        return 0.0
-    n, u = lens[2]
-    if u in ("em", "rem"):
-        return None
-    return n * {"px": 1.0, "pt": 1.3333}.get(u, 1.0)
-
-
-def chk_easing_discipline(ctx, params):
-    """H1（借自 hairline rule 08「两只钟」）：禁线性缓动。
-
-    hairline 原文把「anything is linear」明确列为 rejected。本判据取它可机器化的那一半：
-    扫动效声明，出现**被禁缓动**即 FAIL。
-    ⚠️ **`scope` 默认 `transition`** —— 只判 transition 族（状态切换：hover / 展开 / 淡入淡出）。
-    **`animation` 族默认放行**，理由是**作用域错配**：旋转 / 进度 / 跑马灯用线性**是对的**
-    （匀速旋转的物理语义就是线性的）。实测证据：合成矩阵的「常见合规产物」样本里
-    `.spinner{animation:spin 1.2s linear infinite;}` 被首版无 scope 的判据判 FAIL —— 那是**判据在造信号**。
-    hairline 禁线性，是因为它自己的动效都是「离散选择」与「指针跟随」；原样套到通用产物上就出错。
-    要收紧成「连 animation 也禁」⇒ `params: { scope: all }`（显式，不默认）。
-    ⚠️ 另一条诚实边界：本判据**不判**「该用弹簧却用了 tween」这类**手法归属**问题 ——
-    机器判不出「这个目标是不是每帧都在动」（hairline 的弹簧参数 `k 100 · c 18 · m 1` 因此也未搬）。
-    未提供 CSS ⇒ SKIP；**射程内零动效声明** ⇒ SKIP（无对象，不是通过）。
-    """
-    if not ctx.get("css"):
-        return "SKIP", "未提供 CSS"
-    scope = str(params.get("scope") or "transition").strip().lower()
-    all_decls = ctx["css"].get("motion_easings") or []
-    decls = [d for d in all_decls if scope == "all" or d.get("scope") == scope]
-    if not decls:
-        return "SKIP", (f"射程（{scope}）内零动效声明（本判据**无对象**，不是通过）"
-                        f"；全文件共 {len(all_decls)} 处动效声明在射程外")
-    banned = {x.strip().lower() for x in str(params.get("banned") or "linear").split(",") if x.strip()}
-    bad = [d for d in decls if d["easing"].lower() in banned]
-    if bad:
-        return "FAIL", (f"{len(bad)} 处（射程 {scope}）使用被禁缓动 {sorted(banned)}"
-                        f"（线性 = 匀速，与 hairline『两只钟』相悖）：" + "；".join(d["decl"] for d in bad[:4]))
-    seen = sorted({d["easing"] for d in decls})
-    return "PASS", f"{len(decls)} 处（射程 {scope}）动效声明均未使用被禁缓动；出现的缓动：{seen[:6]}"
-
-
-def chk_no_glow_effects(ctx, params):
-    """H2（借自 hairline rule 04「描边即唯一高亮」）：禁**发光式**效果。
-
-    只判发光，**不判**常规抬升阴影（elevation）—— 后者是功能性的，本判据不越权：
-      ① `filter` 非 none 且含 `drop-shadow(` / `blur(` ⇒ FAIL；
-      ② `text-shadow` 的模糊半径 ≥ `glow_blur_min_px`（默认 16）⇒ FAIL
-         （小半径文字描边是「边缘清晰化」，放行）。
-    未提供 CSS ⇒ SKIP；有 CSS 但**零阴影/滤镜声明** ⇒ SKIP（无对象，不是通过）。
-    """
-    if not ctx.get("css"):
-        return "SKIP", "未提供 CSS"
-    decls = ctx["css"].get("depth_decls") or []
-    if not decls:
-        return "SKIP", "全文件零 box-shadow / text-shadow / filter 声明（本判据**无对象**，不是通过）"
-    thr = float(params.get("glow_blur_min_px") or 16)
-    bad = []
-    for d in decls:
-        p, v = d["prop"], d["value"]
-        if p == "filter" and re.search(r"\b(?:drop-shadow|blur)\s*\(", v, re.I):
-            bad.append(f"filter: {v[:40]}（滤镜式发光）")
-        elif p == "text-shadow":
-            blur = _shadow_blur_px(v)
-            if blur is not None and blur >= thr:
-                bad.append(f"text-shadow: {v[:40]}（模糊 {blur:g}px ≥ {thr:g}px）")
-    if bad:
-        return "FAIL", (f"{len(bad)} 处发光式效果（规则：描边即唯一高亮、颜色即信息）："
-                        + "；".join(bad[:4]))
-    return "PASS", (f"{len(decls)} 处阴影/滤镜声明均未构成发光"
-                    f"（门槛：滤镜 drop-shadow·blur，或文字阴影模糊 ≥ {thr:g}px；"
-                    f"常规抬升阴影**不在**本条射程）")
-
-
-def chk_infinite_motion_guard(ctx, params):
-    """H3（借自 hairline rule 07「loops sleep offscreen」）：无限循环动效须有减动效处置。
-
-    取它可机器化的那一半：声明了 `infinite` 的动画，若**全文件没有任何
-    `prefers-reduced-motion` 处置** ⇒ FAIL（hairline 原文要求 reduced motion 下一次性落位）。
-    ⚠️ **不判「是否真的在屏外休眠」**（机器无从观测）—— 本条只是「减动效兜底缺失」的**代理信号**，
-    边界写进判据集 note。未提供 CSS ⇒ SKIP；**零 infinite 声明** ⇒ SKIP（无对象，不是通过）。
-    """
-    if not ctx.get("css"):
-        return "SKIP", "未提供 CSS"
-    inf = ctx["css"].get("infinite_decls") or []
-    if not inf:
-        return "SKIP", "全文件零 infinite 动画（本判据**无对象**，不是通过）"
-    if ctx["css"].get("has_reduced_motion"):
-        return "PASS", f"{len(inf)} 处 infinite 动画已有 prefers-reduced-motion 处置兜底"
-    return "FAIL", (f"{len(inf)} 处 infinite 循环动效，而全文件无 prefers-reduced-motion 处置："
-                    + "；".join(inf[:4]))
-
-
-# --------------------------------------------------------------------------
 # 五、check 注册表 + 参数契约（v1.2.0 P2-2）
 # --------------------------------------------------------------------------
 CHECKS = {
@@ -1996,10 +1843,6 @@ CHECKS = {
     "interactive_feedback_coverage": ("spec", chk_interactive_feedback_coverage),
     "shot_spec_present": ("spec", chk_shot_spec_present),
     "series_count_max": ("spec", chk_series_count_max),
-    # v1.9.0：H 层（借自 hairline）
-    "easing_discipline": ("machine", chk_easing_discipline),
-    "no_glow_effects": ("machine", chk_no_glow_effects),
-    "infinite_motion_guard": ("machine", chk_infinite_motion_guard),
 }
 
 # params 契约：键 → 允许的取值规格。未知键 / 类型错 / 枚举越界 ⇒ audit FAIL。
@@ -2042,10 +1885,6 @@ PARAM_SPEC = {
     "interactive_feedback_coverage": {"coverage": _N},
     "shot_spec_present": {"elements": _L},
     "series_count_max": {"max": _N},
-    # v1.9.0：H 层。`banned` 用**逗号分隔的字符串**而非列表 —— 判据集解析器是小 YAML 子集，
-    #   内联 map 里再嵌内联 list 不在其支持面内（实测：`{ banned: [linear] }` 会解析失败）。
-    "easing_discipline": {"banned": _S, "scope": ("transition", "all")},
-    "no_glow_effects": {"glow_blur_min_px": _N},
 }
 
 
@@ -2983,90 +2822,6 @@ def self_test(rubric_path) -> int:
     ]
     for _cn, _css, _exp in _w_cases:
         _st, _det = chk_skeleton_no_radial(_css_ctx(_css), {"allowed_in_layers": ["氛围层"]})
-        _ok = (_st == _exp)
-        print(f"{'[ OK ]' if _ok else '[FAIL]'} {_cn} — {_st}")
-        if not _ok:
-            print(f"        实际 detail：{_det}")
-            rc = 1
-
-    # ---- v1.9.0：H 层（借自 hairline）—— 每条配**成对阴性对照**（阳性必 FAIL、阴性必 PASS、
-    #      结构性缺失必 SKIP）；无对照的判据不许上线（技能库卫生第 4 条）----
-    print("=== H 层自检（H1 缓动纪律 / H2 禁发光式 / H3 无限循环须有减动效处置）===")
-
-    # 先做 helper 的**单元断言** —— 夹具只比状态，比不出「匹配顺序」这类语义错误
-    _ease_units = [
-        ("ease-in-out 不得被 ease-in 截断（最长优先）", "ease-in-out", "ease-in-out"),
-        ("linear 关键字", "linear", "linear"),
-        ("linear-gradient 不是缓动 ⇒ 剔除后无缓动", "linear-gradient(#fff,#000)", None),
-        ("cubic-bezier 属函数形态", "cubic-bezier(.32,.72,0,1)", "cubic-bezier(...)"),
-        ("var() 取不到 ⇒ None（判不了 ≠ 没问题）", "var(--ease)", None),
-    ]
-    for _cn, _v, _exp in _ease_units:
-        _got = _easing_of(_v)
-        _ok = (_got == _exp)
-        print(f"{'[ OK ]' if _ok else '[FAIL]'} _easing_of({_v!r}) = {_got!r}（期望 {_exp!r}）")
-        if not _ok:
-            rc = 1
-    _blur_units = [
-        ("0 0 20px #ff0 ⇒ 20", "0 0 20px #ff0", 20.0),
-        ("0 1px 1px #000 ⇒ 1", "0 1px 1px #000", 1.0),
-        ("无模糊（只有两个偏移）⇒ 0", "1px 1px #000", 0.0),
-        ("em 无量纲 ⇒ None（不折成像素）", "0 0 1.5em #000", None),
-    ]
-    for _cn, _v, _exp in _blur_units:
-        _got = _shadow_blur_px(_v)
-        _ok = (_got == _exp)
-        print(f"{'[ OK ]' if _ok else '[FAIL]'} _shadow_blur_px({_v!r}) = {_got!r}（期望 {_exp!r}）")
-        if not _ok:
-            rc = 1
-
-    _h_cases = [
-        (chk_easing_discipline, {"banned": "linear"},
-         "transition 用 linear ⇒ FAIL", ".x{transition:opacity 220ms linear;}", "FAIL"),
-        (chk_easing_discipline, {"banned": "linear"},
-         "animation 用 linear ⇒ **SKIP**（旋转类线性是对的，默认射程只含 transition）",
-         ".x{animation:spin 1s infinite linear;}", "SKIP"),
-        (chk_easing_discipline, {"banned": "linear", "scope": "all"},
-         "同上但显式 scope=all ⇒ FAIL（收紧是显式的，不默认）",
-         ".x{animation:spin 1s infinite linear;}", "FAIL"),
-        (chk_easing_discipline, {"banned": "linear", "scope": "all"},
-         "scope=all 下 compliance 样本仍 PASS",
-         ".x{transition:opacity 220ms ease-out;animation:spin 1s ease-in infinite;}", "PASS"),
-        (chk_easing_discipline, {"banned": "linear"},
-         "linear-gradient + 合规缓动 ⇒ PASS（不得误伤）",
-         ".x{transition:opacity 220ms ease-out;background:linear-gradient(#fff,#000);}", "PASS"),
-        (chk_easing_discipline, {"banned": "linear"},
-         "ease-in-out ⇒ PASS", ".x{transition:all 300ms ease-in-out;}", "PASS"),
-        (chk_easing_discipline, {"banned": "linear"},
-         "零动效声明 ⇒ SKIP（无对象）", ".x{color:#111;}", "SKIP"),
-        (chk_no_glow_effects, {"glow_blur_min_px": 16},
-         "filter: drop-shadow ⇒ FAIL", ".x{filter:drop-shadow(0 0 8px #000);}", "FAIL"),
-        (chk_no_glow_effects, {"glow_blur_min_px": 16},
-         "filter: blur ⇒ FAIL", ".x{filter:blur(6px);}", "FAIL"),
-        (chk_no_glow_effects, {"glow_blur_min_px": 16},
-         "大模糊文字阴影 ⇒ FAIL", ".x{text-shadow:0 0 20px #ff0;}", "FAIL"),
-        (chk_no_glow_effects, {"glow_blur_min_px": 16},
-         "小半径文字描边 ⇒ PASS（边缘清晰化，不是发光）", ".x{text-shadow:0 1px 1px #000;}", "PASS"),
-        (chk_no_glow_effects, {"glow_blur_min_px": 16},
-         "常规抬升阴影 ⇒ PASS（**不在本条射程**）", ".x{box-shadow:0 1px 2px rgba(0,0,0,.1);}", "PASS"),
-        (chk_no_glow_effects, {"glow_blur_min_px": 16},
-         "filter: none ⇒ SKIP（无对象）", ".x{filter:none;}", "SKIP"),
-        (chk_no_glow_effects, {"glow_blur_min_px": 16},
-         "零阴影/滤镜声明 ⇒ SKIP（无对象）", ".x{color:#111;}", "SKIP"),
-        (chk_infinite_motion_guard, {},
-         "infinite + 无 reduced-motion ⇒ FAIL", ".x{animation:spin 1s infinite;}", "FAIL"),
-        (chk_infinite_motion_guard, {},
-         "animation-iteration-count:infinite + 无兜底 ⇒ FAIL",
-         ".x{animation-name:spin;animation-iteration-count:infinite;}", "FAIL"),
-        (chk_infinite_motion_guard, {},
-         "infinite + 有 prefers-reduced-motion ⇒ PASS",
-         ".x{animation:spin 1s infinite;}\n@media (prefers-reduced-motion: reduce){.x{animation:none;}}",
-         "PASS"),
-        (chk_infinite_motion_guard, {},
-         "零 infinite ⇒ SKIP（无对象）", ".x{animation:fade 1s ease-out;}", "SKIP"),
-    ]
-    for _fn, _pa, _cn, _css, _exp in _h_cases:
-        _st, _det = _fn(_css_ctx(_css), _pa)
         _ok = (_st == _exp)
         print(f"{'[ OK ]' if _ok else '[FAIL]'} {_cn} — {_st}")
         if not _ok:

@@ -163,15 +163,9 @@
 #   · projectwallace/css-analyzer + css-design-tokens（CSS→DTCG 反推，含 duration/easing）
 #   · A11yReadTech/ARC + antiflasher/apcach（APCA Lc 阶梯，候选 WCAG 3）
 #   · Material Design 3（15 样式 / 11 档）与 Tailwind v4 默认 theme（13 档字号 / 288 色令牌）
-# 外部依据（2026-10-09 追加，第 4 处）
-#   · lucasmarkes/hairline@a2217852fed6d1a4f20bc7d43d4fad1a3de117b8
-#     skills/hairline-create/rules.md（十条规则）+ look.md（十三项肉眼验收）
-#     —— 用户 2026-10-09 指定「把 hairline 这个 skill 复用进 ai-workflow 以提高审美」；
-#     提炼口径 = **按 judgeability 分档**（能机器量的走 machine，只有眼睛能看的走 manual）。
-#     其来源 / 许可 / 安装形态 / 账本在 references/external-skills.md §1.4（**不在此重述**）。
 
-version: "1.8"
-updated: "2026-10-09"
+version: "1.7"
+updated: "2026-10-07"
 
 judgeability:
   machine: "从产物直接量出，校验器自动判定"
@@ -514,69 +508,3 @@ criteria:
     applies_to: [ui, ppt]
     note: "需渲染。判据：对每个**可见·有 rect·承载文字**的节点，若存在**文档序在其后**、`bgAlpha ≥ opaque_alpha`（实心）、且其 rect 覆盖该文本 rect 的比例 ≥ `cover_ratio` 的节点 ⇒ FAIL（命中项逐条报出）。⚠️ **三种 SKIP 分开措辞**：① 缺渲染色（未提供 `--geom`）⇒「未检测」；② 渲染色为空（`nodes=[]`）⇒「无数据」；③ **缺 `bgAlpha` 字段（旧版 `geom-probe.js` 产出的 geom.json）⇒「结构性不适用」** —— 要启用须用新版探针重取。**空输入与缺字段都不得判 PASS**。⚠️ **诚实边界（三条）**：① 绘制先后用**文档序 `i`** 近似层叠序 —— 文档序遍历下**祖先必先于后代**，故「父容器背景盖住子文本」这类必然误报**不会发生**；但**不解析 `z-index`** ⇒ 靠定位/层叠上下文改变绘制序的版面**不在射程内**。② 本条报出的是**几何事实**（有实心元素覆盖了文本），**是否为刻意遮挡（模态框、合法遮罩层）由人审判断** —— 本判据不足以区分「缺陷」与「设计」。③ 可达性由**阴性/阳性/边界三态对照**证明（实心元素覆盖文本 ⇒ FAIL；无覆盖 ⇒ PASS；半透明覆盖 ⇒ PASS；祖先覆盖 ⇒ PASS），即**判据有牙齿且不误杀**。"
 
-# ============ H 层（v1.8 新增 · 借自 lucasmarkes/hairline 的视觉工艺）============
-# 来历：见文件头「外部依据（2026-10-09 追加，第 4 处）」。
-#
-# ⭐ 分档口径（**这是本层最重要的一条**）：hairline 的十条规则与十三项肉眼验收**绝大多数是判断层** ——
-#   look.md 自己写着「The validator reads text. This is what only eyes can check.」。
-#   故本层**不把它们一律硬配机器判据**（那会制造假绿），而是按 judgeability 分档：
-#     能机器量出 → machine（H1/H2/H3，本轮实跑，各配成对阴性对照）；
-#     只有眼睛能看 → manual（H4/H5，`check: null` ⇒ 产出 SKIP「人审点（机器不判定）」）。
-#
-# ⭐ 重叠已先排除（**不在本层重复造** —— 同一物理量不写两处；重叠会让既有阴性对照恒判假绿）：
-#     rule 02「按距离错峰」        → 既有 **G16 rhythm_ladder**（已覆盖）
-#     rule 06「构造不穿透」        → 既有 **R4 geometry_occlusion**（已覆盖）
-#     rule 04 的「唯一强调色」半面 → 既有 **G2 accent_unique** / **G8 memory_point_count**
-#   本层只补**未被覆盖**的部分：缓动纪律（H1）、发光式效果（H2）、无限循环的减动效兜底（H3）、
-#   静止态构图（H4）、命中区稳定性（H5）。
-#
-# ⚠️ 未迁移（强绑定 isometric 线稿画面，对通用视觉产物**无判别力**，硬搬＝凭空发明契约）：
-#   rule 03「不出框」（依赖 400×320 固定画框与指针极值位形）/ rule 07「屏外休眠」的**屏外半面** /
-#   rule 09「圆角化 + 亮外暗内」（依赖 `prism` 双环实体这一表示法）/ rule 10「图内无文字」（依赖图元即几何）。
-
-  - id: H1
-    dimension: "动效节奏"
-    name: "缓动纪律（禁线性）"
-    judgeability: machine
-    check: easing_discipline
-    params: { banned: linear, scope: transition }
-    source: "lucasmarkes/hairline@a2217852fed6d1a4f20bc7d43d4fad1a3de117b8:skills/hairline-create/rules.md#08『两只钟』—— 离散变化走长缓出 `(.32,.72,0,1)`、连续输入走弹簧，rejected 明列「anything is linear」"
-    applies_to: [ui, ppt]
-    note: "**只取可机器化的那一半**：扫动效声明，出现被禁缓动即 FAIL（`linear-gradient()` 已先剔除，不误伤）。⚠️ **`scope` 默认 `transition`**（只判状态切换族）；**`animation` 族默认放行** —— 旋转 / 进度 / 跑马灯用线性是对的，实测「常见合规产物」样本里 `.spinner{animation:spin 1.2s linear infinite;}` 被首版无 scope 的判据判 FAIL，即**作用域错配**（同 G1/G6/G7/G11 一族）。要连 animation 一起禁 ⇒ 显式 `params: { scope: all }`。⚠️ **不判**「该用弹簧却用了缓动」—— 机器判不出「这个目标是不是每帧都在动」，故 hairline 的弹簧参数 `k 100 · c 18 · m 1` 与 700ms 长缓出**均未搬**（搬了就是凭空发明契约）。未提供 CSS ⇒ SKIP；有 CSS 但**零动效声明** ⇒ SKIP（无对象，不是通过）。要放宽/收紧用 `params.banned`（**逗号分隔字符串**，非列表）。"
-
-  - id: H2
-    dimension: "焦点"
-    name: "禁发光式效果"
-    judgeability: machine
-    check: no_glow_effects
-    params: { glow_blur_min_px: 16 }
-    source: "lucasmarkes/hairline@a2217852fed6d1a4f20bc7d43d4fad1a3de117b8:skills/hairline-create/rules.md#04『描边即唯一高亮』—— No fills, glows or shadows；rejected 明列「sets any colour, fill, opacity trick, gradient, filter, shadow or stroke width of its own」"
-    applies_to: [ui, ppt]
-    note: "**只判发光、不判抬升**（elevation）—— 后者是功能性的，本判据不越权。两条：① `filter` 非 none 且含 `drop-shadow(`/`blur(` ⇒ FAIL；② `text-shadow` 模糊半径 ≥ `glow_blur_min_px`（默认 16）⇒ FAIL（小半径文字描边是「边缘清晰化」，放行）。⚠️ **诚实边界三条**：① **不判 box-shadow 的发光**（颜色/模糊的「发光」判定需要色相+透明度联合阈值，本轮不做，如实登记为未覆盖）；② 含 `var(...)` 的 text-shadow 解析成长度不足 ⇒ 记 0（**漏报**，不假装覆盖）；`em`/`rem` 模糊判 None 不计入。③ 门槛 16px 是**本仓默认档**（可 override），**不是** hairline 的产物数值 —— 它没有这条阈值，本条**只搬规则、不搬阈值**。未提供 CSS ⇒ SKIP；零阴影/滤镜声明 ⇒ SKIP（无对象）。"
-
-  - id: H3
-    dimension: "动效完备性"
-    name: "无限循环须有减动效处置"
-    judgeability: machine
-    check: infinite_motion_guard
-    source: "lucasmarkes/hairline@a2217852fed6d1a4f20bc7d43d4fad1a3de117b8:skills/hairline-create/rules.md#07『loops sleep offscreen』—— 只有环境动效可在无输入下运行，且仅在可见时；reduced motion 下须一次性落位"
-    applies_to: [ui, ppt]
-    note: "**代理信号，非等价判定**：本判据查的是「声明了 infinite 却全文件无 `prefers-reduced-motion` 处置」，而 rule 07 的原文要求是「循环须在屏外休眠」。⚠️ **屏外那一半机器无从观测**，故本条**只作兜底缺失的代理**，不得读成「已实现屏外休眠」。与 M1 的分工：M1 管「有没有写时长」，本条管「无限循环有没有减动效出口」。未提供 CSS ⇒ SKIP；**零 infinite 声明** ⇒ SKIP（无对象，不是通过）。"
-
-  - id: H4
-    dimension: "版式结构"
-    name: "静止态是构图（非空/平/对称）"
-    judgeability: manual
-    check: null
-    source: "lucasmarkes/hairline@a2217852fed6d1a4f20bc7d43d4fad1a3de117b8:skills/hairline-create/rules.md#05『rest is designed, never flat』+ look.md 第 2 项『Rest is a composition』"
-    applies_to: [ui]
-    note: "**人审点（机器不判定）**：hairline 的原话是「The still frame is the thumbnail, so it has to hold up alone」—— 留白/静态帧必须本身是构图，而不是「还没渲染」。人审动作：截一张静止态图，问「这一帧单独拿出去，能不能说清这是什么？」。⚠️ 不给它硬配机器判据（如「非对称度」「亮度熵」）：机器算不出「构图成不成立」，硬配＝制造假绿。与本仓既有手动项的分工：G10 管「贯穿元素复用」，本条管「静止帧自身是否成图」。"
-
-  - id: H5
-    dimension: "交互反馈"
-    name: "命中区不随位形移动"
-    judgeability: manual
-    check: null
-    source: "lucasmarkes/hairline@a2217852fed6d1a4f20bc7d43d4fad1a3de117b8:skills/hairline-create/rules.md#01『hit areas don't move』—— 命中判定须对**静止位形或目标位形**做，不得对屏上现态做，否则产生抖动环"
-    applies_to: [ui]
-    note: "**人审点（机器不判定）**：hairline 描述的失效形态是「指针按住一个会动的元素不动 → 图元抬起 → 焦点丢失 → 图元落回 → 焦点恢复 → 循环抖动」。人审动作：把指针停在一个被选中后会移动的元素上，等 2 秒，看是否稳定。⚠️ **不硬配机器判据**：这需要「随时间的位形序列」，CSS 静态取数与单帧渲染色都拿不到；用单帧几何去判会造出 100% 假绿。"

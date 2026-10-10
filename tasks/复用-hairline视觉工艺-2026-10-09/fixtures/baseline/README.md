@@ -1,6 +1,6 @@
 # AI Workflow（ai-workflow）
 
-AI 标准化多阶段工作方法论 —— 一套「流程编排 + 机器可校验门禁」的自研技能（当前版本 **v4.27.0**）。
+AI 标准化多阶段工作方法论 —— 一套「流程编排 + 机器可校验门禁」的自研技能（当前版本 **v4.25.0**）。
 
 它不只是一个提示词模板：每个阶段都有对应的**机器判据**（自检、口径守卫、出站扫描、独立验收），流程产物（计划、决策、履历）全部落盘留痕，可审计、可回归。
 
@@ -41,13 +41,13 @@ AI 标准化多阶段工作方法论 —— 一套「流程编排 + 机器可校
 - **PPT 模式**（v4.25.0）：面向**演示文稿产出**（生成 / 美化 / 填原生模板 / 改原生 pptx / 造可复用模板 / 导出演示视频）的**产出结构与验收契约** —— **演示作者**角色契约 Y-a–Y-d ＋ **五段结构 Y0–Y4**（定需求 → 选路由 → 定盘 → 出页 → 机器门与交付），核心是**可验层 / 判断层分界**，配产出义务 E1–E6、**设计原则 27 条**（4 组：版式基底 / 信息结构 / **图形技法（14 条 —— 指向「画面更美观更饱满」）** / 演示与交付，判断层工作标准）与自检 9 项；**PPT 文案**走本仓同一去味口径（第七物理量），改写手法可参考外部技能 `humanizer`。⚠️ **它不承担执行过程**：执行整体交第三方技能 `ppt-master`（其自身即完整路由工作流），本仓**逐段映射、不复刻其步骤**；机器验收**借用其自带校验器**（只要求「跑并出示」），**不新增 plan 字段、judge 与机器判据**（识别是启发式）。手册见 `references/ppt-mode.md`；其来源 / 许可 / 安装形态 / 账本见 `references/external-skills.md`（**两侧不重述**）。
 - **知识点恶补报告**（v4.18.1）：阶段 6 收尾**每个 L2 任务都调用****独立技能** `knowledge-cram-report` —— 把本次任务真正学到的东西抽出来、去重、讲人话，渲染成带公式与自测题的 PDF，按项目名归档并排下次复习日（含 FSRS 形状的复习调度与索引台账）。触发边界：L1 / L0 不触发；**每个 L2 收尾都跑一遍抽取**，确无「可迁移 + 可解释」知识点时不产出（**必出 = 必跑这一遍**，不是硬凑）。本技能**不属本体**，源码留痕在 `ai-workflow-tools` 仓 `skills/knowledge-cram-report/`。
 - 项目 Git 开发规范：`main` 只放稳定可运行版，新功能与新增模块走 `dev`，并行实验各建 `exp-xxx`；commit 注释类型取自手册枚举，机器校验 `scripts/git_check.py`。
-- **外部技能簇**（v4.16.0 建；**v4.26.0 起为四上游**）：**上游一** 技能库根下 mattpocock vendored 的 24 个第三方 MIT 技能（扁平外挂、不属本体），其 User-invoked / Model-invoked 分类与「何时该调」见 `references/external-skills.md`；**上游二** `ppt-master`（AI 演示文稿生成路由工作流，**目录联接、零拷贝、不打补丁**）；**上游三** `humanizer`（去 AI 味的**改写手法**资源，**扁平外挂、复制安装**；⚠️ 判定仍在本仓第七物理量，不另立判据）；**上游四** `hairline-create`（等距线稿**风格的产物生成器**，**扁平外挂、复制安装、零补丁**；其**原则侧已分档折进审美判据集的 H 层**，不另立判定）。机器检查用 `scripts/external_skill_lint.py`（缺省遍历 `.vendor/*.lock.json`），不走本体的 `checks.py skill`。
+- **外部技能簇**（v4.16.0 建；**v4.25.0 起为三上游**）：**上游一** 技能库根下 mattpocock vendored 的 24 个第三方 MIT 技能（扁平外挂、不属本体），其 User-invoked / Model-invoked 分类与「何时该调」见 `references/external-skills.md`；**上游二** `ppt-master`（AI 演示文稿生成路由工作流，**目录联接、零拷贝、不打补丁**）；**上游三** `humanizer`（去 AI 味的**改写手法**资源，**扁平外挂、复制安装**；⚠️ 判定仍在本仓第七物理量，不另立判据）。机器检查用 `scripts/external_skill_lint.py`（缺省遍历 `.vendor/*.lock.json`），不走本体的 `checks.py skill`。
 - 机器门禁：
   - `checks.py`：技能自检 / 计划校验 / Anti-drop 对账 / 熔断门禁（内部模块 `checks_core` / `checks_parity` / `checks_judges` / `checks_cmds`）
   - `gate.py`：删改既有文件**之前**的运行时闸门，范围判定与风险判定分离，fail-closed
   - `guard_constants.py`：跨模块常量同源守卫
   - `outbound_scan.py`：外发内容脱敏扫描
-  - `humanize_scan.py` / `check_aesthetics.py`：文风判据（31 条）与审美判据（36 条）的校验器
+  - `humanize_scan.py` / `check_aesthetics.py`：文风判据（31 条）与审美判据（30 条）的校验器
   - `external_skill_lint.py`：外部技能簇检查
   - `cleanup_task.py`：任务产物清理（删前 sha256 快照，删后复核）
 - 双仓推送体系：本体 → `ai-workflow-skill`，自研工具 → `ai-workflow-tools`；`push_router.py` 分流路由（默认 dry-run），`push_ontology.py` 走 Git Data API 增量，`publish_tools.py` 单文件推送，`verify_push.py` 推送后独立验收（与推送通道零代码共享）。
@@ -131,13 +131,13 @@ ai-workflow/
 ├── README.md
 ├── .gitattributes
 ├── .gitignore
-├── scripts/                  # 34 个可执行脚本（31 .py + 1 .js + 2 .ps1）+ 3 个 JSON 数据文件 + fixtures/
+├── scripts/                  # 33 个可执行脚本（30 .py + 1 .js + 2 .ps1）+ 2 个 JSON 数据文件 + fixtures/
 │   ├── checks.py             # 自检入口（内部模块：checks_core / checks_parity / checks_judges / checks_cmds）
 │   ├── gate.py               # 运行时闸门（范围判定 × 风险判定，fail-closed）
 │   ├── guard_constants.py    # 跨模块常量同源守卫
 │   ├── outbound_scan.py      # 出站脱敏扫描（含用户名路径 → FAIL）
 │   ├── humanize_scan.py      # 文风判据校验器（--gate / --diff-fidelity / --selftest）
-│   ├── check_aesthetics.py   # 审美判据校验器（设计类产物，36 条 rubric）
+│   ├── check_aesthetics.py   # 审美判据校验器（设计类产物，30 条 rubric）
 │   ├── external_skill_lint.py# 外部技能簇检查（不走 checks.py skill）
 │   ├── cleanup_task.py       # 任务产物清理（删前 sha256 快照）
 │   ├── kb_learn.py           # 知识库入库（六条门槛）
@@ -157,8 +157,8 @@ ai-workflow/
 │   ├── model_tiers.json      # 模型档位配置（strong / mid / cheap）
 │   ├── fixtures/             # 校验器测试夹具（humanize）
 │   └── setup_env.ps1 / run_stage.ps1
-├── references/               # 38 份下沉手册（= 36 .md + 2 .yaml；judge 契约 / 流程模型 / 门禁口径 / 推送路由…）
-├── assets/                   # 根下 6 份（plan / report / ledger 模板 ＋ .gitignore 模板 ＋ thinking-gold.yaml ＋ 熔断报告模板.md）+ templates/ 项目模板库（12 份 .yaml）
+├── references/               # 33 份下沉手册（= 31 .md + 2 .yaml；judge 契约 / 流程模型 / 门禁口径 / 推送路由…）
+├── assets/                   # 计划 / 报告 / 台账模板（根下 4 份）+ templates/ 项目模板库（11 份 .yaml）+ thinking-gold.yaml + 熔断报告模板.md
 ├── tasks/                    # 活跃任务档案（plan.yaml / 报告 / 交付物）
 │   └── _archive/             # 历史任务归档（仅本地保留，不入版本控制）
 └── _archive/                 # 本地归档
@@ -174,5 +174,5 @@ ai-workflow/
 - **推送三原则**：默认 dry-run、`--apply` 才写远端；删除远端文件必须显式 `--allow-delete`；推送后用 `verify_push.py` 独立验收，不自证。
 - **推送不是 `git push`**：技能仓推的是**文件内容**（`push_ontology.py` 走 `api.github.com` Git Data API + `base_tree` 增量），不是提交历史，故本地 `dev` 与远端 `main` 的历史分叉不构成障碍，也不需要 force push。
 - **分支约定**：`main` 只放稳定可运行版；新功能走 `dev`，并行实验各建 `exp-xxx`；commit 注释类型取自 `references/git-conventions.md` 枚举，机器校验见 `scripts/git_check.py`。
-- **门禁口径**：`checks.py skill` 的计数与阈值是版本相关的状态量，跨版本不可直接相减；改判据须先量影响面，不为消 FAIL 改判据。当前 v4.27.0 基线为 **通过 76/76，FAIL=0，SKIP=0，WARN=0**（v4.25.0 ／ v4.26.0 亦为 76/76）。
+- **门禁口径**：`checks.py skill` 的计数与阈值是版本相关的状态量，跨版本不可直接相减；改判据须先量影响面，不为消 FAIL 改判据。当前 v4.25.0 基线为 **通过 76/76，FAIL=0，SKIP=0，WARN=0**（v4.24.0 亦为 76/76）。
 - **平台限制**：技能面向 Windows / Git Bash 环境；`setup_env.ps1` 依赖 Windows PowerShell 5.1（脚本注释为 ASCII-only，因为 5.1 按 ANSI/cp936 读文件，非 ASCII 注释会吞掉下一行代码）。

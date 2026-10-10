@@ -1,6 +1,6 @@
 # AI Workflow（ai-workflow）
 
-AI 标准化多阶段工作方法论 —— 一套「流程编排 + 机器可校验门禁」的自研技能（当前版本 **v4.27.0**）。
+AI 标准化多阶段工作方法论 —— 一套「流程编排 + 机器可校验门禁」的自研技能（当前版本 **v4.26.0**）。
 
 它不只是一个提示词模板：每个阶段都有对应的**机器判据**（自检、口径守卫、出站扫描、独立验收），流程产物（计划、决策、履历）全部落盘留痕，可审计、可回归。
 
@@ -131,7 +131,7 @@ ai-workflow/
 ├── README.md
 ├── .gitattributes
 ├── .gitignore
-├── scripts/                  # 34 个可执行脚本（31 .py + 1 .js + 2 .ps1）+ 3 个 JSON 数据文件 + fixtures/
+├── scripts/                  # 33 个可执行脚本（30 .py + 1 .js + 2 .ps1）+ 2 个 JSON 数据文件 + fixtures/
 │   ├── checks.py             # 自检入口（内部模块：checks_core / checks_parity / checks_judges / checks_cmds）
 │   ├── gate.py               # 运行时闸门（范围判定 × 风险判定，fail-closed）
 │   ├── guard_constants.py    # 跨模块常量同源守卫
@@ -157,8 +157,8 @@ ai-workflow/
 │   ├── model_tiers.json      # 模型档位配置（strong / mid / cheap）
 │   ├── fixtures/             # 校验器测试夹具（humanize）
 │   └── setup_env.ps1 / run_stage.ps1
-├── references/               # 38 份下沉手册（= 36 .md + 2 .yaml；judge 契约 / 流程模型 / 门禁口径 / 推送路由…）
-├── assets/                   # 根下 6 份（plan / report / ledger 模板 ＋ .gitignore 模板 ＋ thinking-gold.yaml ＋ 熔断报告模板.md）+ templates/ 项目模板库（12 份 .yaml）
+├── references/               # 33 份下沉手册（= 31 .md + 2 .yaml；judge 契约 / 流程模型 / 门禁口径 / 推送路由…）
+├── assets/                   # 计划 / 报告 / 台账模板（根下 4 份）+ templates/ 项目模板库（11 份 .yaml）+ thinking-gold.yaml + 熔断报告模板.md
 ├── tasks/                    # 活跃任务档案（plan.yaml / 报告 / 交付物）
 │   └── _archive/             # 历史任务归档（仅本地保留，不入版本控制）
 └── _archive/                 # 本地归档
@@ -174,5 +174,5 @@ ai-workflow/
 - **推送三原则**：默认 dry-run、`--apply` 才写远端；删除远端文件必须显式 `--allow-delete`；推送后用 `verify_push.py` 独立验收，不自证。
 - **推送不是 `git push`**：技能仓推的是**文件内容**（`push_ontology.py` 走 `api.github.com` Git Data API + `base_tree` 增量），不是提交历史，故本地 `dev` 与远端 `main` 的历史分叉不构成障碍，也不需要 force push。
 - **分支约定**：`main` 只放稳定可运行版；新功能走 `dev`，并行实验各建 `exp-xxx`；commit 注释类型取自 `references/git-conventions.md` 枚举，机器校验见 `scripts/git_check.py`。
-- **门禁口径**：`checks.py skill` 的计数与阈值是版本相关的状态量，跨版本不可直接相减；改判据须先量影响面，不为消 FAIL 改判据。当前 v4.27.0 基线为 **通过 76/76，FAIL=0，SKIP=0，WARN=0**（v4.25.0 ／ v4.26.0 亦为 76/76）。
+- **门禁口径**：`checks.py skill` 的计数与阈值是版本相关的状态量，跨版本不可直接相减；改判据须先量影响面，不为消 FAIL 改判据。当前 v4.26.0 基线为 **通过 76/76，FAIL=0，SKIP=0，WARN=0**（v4.25.0 亦为 76/76）。
 - **平台限制**：技能面向 Windows / Git Bash 环境；`setup_env.ps1` 依赖 Windows PowerShell 5.1（脚本注释为 ASCII-only，因为 5.1 按 ANSI/cp936 读文件，非 ASCII 注释会吞掉下一行代码）。

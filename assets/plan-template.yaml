@@ -98,7 +98,7 @@ meta:
                         #   ⚠️ 检查项 21 是**抽样人审信号**（非门禁）：组合态 / confidence<0.95 / ambiguity 会被列出提示复核
                         #   ⚠️ **本字段不授权写库改本体**：入库须过 kb_learn.py 的六条门槛；改技能本体须用户确认
   审美判据:             # 【可选，v4.9.0 新增】设计类产物（交付物含 `.css`）的机器验收 —— 检查项 22
-                        #   校验器 scripts/check_aesthetics.py ＋ 判据集 references/aesthetic-rubric.yaml（30 条）
+                        #   校验器 scripts/check_aesthetics.py ＋ 判据集 references/aesthetic-rubric.yaml（36 条，v4.26.0 起含 H 层 5 条）
                         #   ⚠️ **与四块快判不同族**：快判做"识别"（模型自报 confidence）；本项做"验收"，
                         #     **没有任何模型自填量** —— checks.py 会把校验器**实跑一遍**，
                         #     跑出 FAIL 即 FAIL。**登记里的数字一概不采信**（自报计数是"静默失真"高发面）

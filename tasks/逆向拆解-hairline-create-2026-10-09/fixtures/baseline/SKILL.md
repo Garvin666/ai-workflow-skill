@@ -4,10 +4,10 @@ description: AI 标准化多阶段工作方法论（自研），适用于量化�
 agent_created: true
 selfbuilt: true
 repo: https://github.com/Garvin666/ai-workflow-skill
-version: 4.27.0
+version: 4.26.0
 ---
 
-# AI 工作流 v4.27.0
+# AI 工作流 v4.26.0
 
 > **[自研技能]** 名称：`ai-workflow` ｜ 用途：为多阶段任务提供标准化流程编排（入口分型／任务分层／计划先行／三项核心原则／自主决策层／独立审核抽查制／熔断）＋ 六个产出结构模式（作业 S0–S2／科研 R0–R6（其 R2 即原文献阅读模式 Q1–Q4）／逆向拆解 D0–D5／图示设计 P0–P4／PPT Y0–Y4）＋ 学习模型 K1–K5，并配一套**机器可校验**的工具与门禁 ｜ 适用场景：产出文件或代码或报告、多步且步骤间有依赖、数据分析、跨文件改造、调研查重、方案评审；纯问答／查询／翻译／单文件读取不适用 ｜ 仓库：https://github.com/Garvin666/ai-workflow-skill
 
@@ -796,7 +796,6 @@ version: 4.27.0
 | `references/routing-table.md` | 路由模型（P2-2）：阶段×档位映射 + category 联动 |
 | `references/skill-hygiene.md` | 技能库卫生**六条**硬约定（**仅改技能本体时读**；第 6 条 v4.19.0：入口手册体量预算，只 WARN） |
 | `references/office-guide.md` | openpyxl / python-docx / pypdf 避坑；**PPTX 已分流**（生成 / 美化 / 填模板 / 改原生 → PPT 模式与 `ppt-master`；轻改文字 → `tencent-local-office-edit`；拆解 → `pptx-authoring`） |
-| `references/artifact-engineering.md` | **产物工程手法**（v4.27.0 建，提炼自第三方技能 hairline 的**工程实现层**）：写机器判据与可交付产物时的 16 条纪律 —— 自校验（内容摘要复算／边界人读可查）、**写判据的五个坑**（黑名单不可能穷举且不得合并风险等级／白名单必配／自写词法剥离是最后一档／**豁免条件必须可核**／借外部 oracle 须区分「产物缺陷」与「环境不可用」）、可测性内建（地址参数即夹具／契约面收窄／代理量一律警告级）、共享单帧循环与异常降级须配可见出口、工具链工程（同源或明确分工／`realpath` CLI 守卫／行尾中央封装／回退目标可查）、三处反面样本与诚实边界｜⚠️ **是纪律不是判据**（不新增判据、不新增脚本）｜按需加载 |
 | `references/aesthetic-rubric.yaml` | **审美判据集**（36 条，判据集 v1.8）：由 `scripts/check_aesthetics.py` 消费；每条含 `judgeability`（machine/spec/manual/external）、`params`、`source`、`applies_to`。含令牌层 G*/M*/W*/P*/C*/V* 与**渲染层 R1–R4**（需 `--geom`，缺则 SKIP；**R4 几何重叠**另需 `bgAlpha` 字段）、**刻度层 G12/G13**（需 `--scale-from`）、**韵律层 G16**（错峰阶梯非递减，无序列则 SKIP）；**v1.8 起另含 H 层 5 条**（提炼自第三方技能 `hairline` 的视觉工艺：H1 缓动纪律／H2 禁发光式效果／H3 无限循环减动效兜底 三条 `machine` 实跑 ＋ H4 静止态构图／H5 命中区稳定 两条 `manual` 人审；出处见 `references/external-skills.md` §1.4）。⚠️ 它是**数据文件不是手册**，改阈值即改判据，须留痕 |
 | `references/humanize-judge.md` | **文风判别契约**（v4.15.0 建）：第七块 System 1 快判（style-judge）的完整契约 —— 四态判定（走去味／只登记／已达标／不适用）、S1–S5 维度、阈值路由与聚合规则、`meta.文风判定` 字段表、集成位置与诚实边界（五条原样）。**取值表与阈值只以该文件为准** |
 | `references/humanize-rubric.yaml` | **去 AI 味判据集**（31 条模式 A–F，来源 `op7418/Humanizer-zh`）：由 `scripts/humanize_scan.py` 消费；每条含 `judgeability`（machine 13／manual 17／spec 1）、`level`（FAIL 8／WARN 5／SKIP 18）、`source`、`params`，另含独立 `fidelity` 段（事实保真 token 类目）。⚠️ 它是**数据文件不是手册**，改判据须同步改校验器并跑 `--selftest` |

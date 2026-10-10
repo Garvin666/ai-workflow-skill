@@ -1,0 +1,23 @@
+# baseline-manifest.sha256  （s1 生成；两段：本体侧 / 被拆对象侧）
+
+## 本体侧（本次将被改动的文件）
+d8b1ac42923f0db213e4ccea60c1752e2841837b2f0b1225c019d1f5f322a552  SKILL.md
+5a0da433f76625b85ee8aeecaed93f918262dfa150d5a040a84dde3d1b6746d4  README.md
+92d92efc4979f594f6116e27b0e08a96a0e6b2a134e88a8d08ccd23933e401e1  references/external-skills.md
+76296f6fa23df1662892162cbf50696a533a2f3aa55ca91d7ff0c141b5c17765  references/ops.md
+a502394f678462240462953d7f7d0c06292ddc841d677f0d4e16d5f90fc2193c  _archive/changelog.md
+
+## 被拆对象侧（Hairline 副本，与 .vendor/hairline.lock.json 对账）
+# file_count=12（取法：rglob+is_file）
+948d56f0bc8c383c04c453136dcfb78407f97de65ff8bb4fabff2b79ddd17f59  hairline-create/LICENSE
+528890cf33862c2b48e5af3b835a0ff5d0d91ce153a70dbc521f743d62542510  hairline-create/SKILL.md
+0870fd54e137be0f7635cd309b48a4703a791cfca5915bf22d46b941ebc33278  hairline-create/bench.html
+7907c722890a9758ed4b479e819f9f8c12b9df3c4a59fa050577b235eee233e7  hairline-create/build.mjs
+af001b0859cb98cfaeb6411dd6a7d815bfde5a9a107954b9aec31b2daeae0d63  hairline-create/concepts.md
+f54ee2de62ac4161291dfd0f4c2cb6646e1289adb286cecad23a7356d97cc4d1  hairline-create/examples/riffle.js
+7755307a1ddb023ed7e119c5c89e549116f1068f0c0a15b96e692fed5e93014b  hairline-create/examples/terrain.js
+2d8be507ceb523581dbfe813f636d1118ca49bf9e62840f66d8ddf55867999ad  hairline-create/kernel.js
+d3bc1ae47e4331d39e8c0c589a2439a25bf9e0a09de7dcc653593e0a77e0743e  hairline-create/look.md
+c7d5c06208ca69982d92df709bf69fd58cbe714b1482d58f5f2ad83ca2612651  hairline-create/look.mjs
+01c7880d75beac8bb222519c10bda4d44151bdfc17d07563b9b8e2d19fc7de09  hairline-create/rules.md
+a60ad12271cdf3faf0ee4b84131d2474481ab9196360956ba8383c17928378ff  hairline-create/validate.mjs

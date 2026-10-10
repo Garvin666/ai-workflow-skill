@@ -5,7 +5,7 @@
 > **加载口径**：阶段 0 第 3 步「查可用 Skill」命中外部技能簇时读；日常任务不需要（SKILL.md 只留一句指针）。
 > **与「整合方法」的分工**：本文件只讲**装好之后怎么调**（运行时路由）与**来源/许可/安装形态/账本**。⚠️ **原则侧不在这里**：上游技能若贡献的是**可迁移的视觉工艺原则**，它们入 `references/aesthetic-rubric.yaml`（判据集）而非本文件 —— 本文件只留出处与本文件不重述的声明（见 §1.4 第 2 条）。**怎么把外部技能装进来**（一次性的整合工程 —— 探针目录法、宿主三道门禁实测、接入形态选型、依赖序安装、验收登记）见技能 `external-skill-library-integration`。**做整合翻那份，用已整合的技能翻本份。**
 > **与 `references/ppt-mode.md` 的分工**：本文件记 `ppt-master` 的**来源 / 许可 / 安装形态 / 账本 / 调用口径**；**产出结构与验收契约**（Y0–Y4 / Y-a–Y-d / E1–E6）在 `references/ppt-mode.md`。**同一物理量只写一处**，两侧交叉引用、不重述。
-> **版本**：4.1（2026-09-30 建；2026-10-09 首次泛化为两上游并登记 ppt-master，同日二次泛化为三上游并登记 humanizer，同日三次泛化为四上游并登记 hairline-create；2026-10-10 四上游**内容补**：§1.4 增第 5 条指向工程手法文档 `references/artifact-engineering.md`，并修正 §1.4 表内许可值 `2025 Lucas Markes` → `2026 Lucas Marques`）
+> **版本**：4（2026-09-30 建；2026-10-09 首次泛化为两上游并登记 ppt-master，同日二次泛化为三上游并登记 humanizer，同日三次泛化为四上游并登记 hairline-create）
 
 ---
 
@@ -78,7 +78,7 @@
 | --- | --- |
 | 上游 | lucasmarkes/hairline（等距线稿组件库；其 `skills/hairline-create/` 是一个「给一个想法就画一张等距线稿图」的**生成器技能**） |
 | 锁定 rev | a2217852fed6d1a4f20bc7d43d4fad1a3de117b8（2026-10-08） |
-| 许可 | MIT（Copyright (c) 2026 Lucas Marques；上游 LICENSE 随库携带为 `hairline-create/LICENSE`） |
+| 许可 | MIT（Copyright (c) 2025 Lucas Markes；上游 LICENSE 随库携带为 `hairline-create/LICENSE`） |
 | 规模 | 11 个上游文件 + 随库携带的 LICENSE = **12 文件 / 约 124 KB** |
 | 安装形态 | **扁平外挂（复制安装）**：`~/.workbuddy/skills/hairline-create`（**真实目录**，`isjunction=False`） |
 | 账本 | `.vendor/hairline.lock.json`（rev + 许可 + 逐文件 sha256 + `content_digest`） |
@@ -92,7 +92,6 @@
 2. ⭐ **原则侧已入本仓判据集，且只入一次**：其 skills/hairline-create/rules.md 的**十条规则**与 skills/hairline-create/look.md 的**十三项肉眼验收**是可迁移的视觉工艺原则，已按 **judgeability 分档**提炼进 `references/aesthetic-rubric.yaml` 的 **H 层**（能机器量的走 `machine` 实跑；只有眼睛能看的走 `manual`，`check: null` ⇒ 登记为人审点），并在该文件表头「外部依据」块登记出处。**故它的原则不在本文件重述**（同一物理量不写两处）。⚠️ **上游文件路径按本仓既有约定用纯文本提及、不加反引号** —— `checks.py skill` 的「文档引用完整性」把反引号内的 `.md`/`.py` 视为**技能内引用**，给上游路径加反引号会产出假断链（与 `references/diagram-mode.md` 首部的同一处置）。
 3. **重叠面已先排除**：十条规则中「按距离错峰」已由既有 `G16 rhythm_ladder` 覆盖、「构造不穿透」已由 `R4 geometry_occlusion` 覆盖、「唯一强调色」半面已由 `G2`/`G8` 覆盖 ⇒ 这三处**不新增判据**，只在判据集写分工。规则 ③⑦⑨⑩（不出框 / 循环屏外休眠 / 圆角化 / 图内无文字）**强绑定等距线稿画面、不迁移**，边界写进判据集 `note`。
 4. **零补丁、逐字节复制**：与 `humanizer` 同法（`patched` 恒为 false）；源是普通 GitHub 仓库，故不用 `ppt-master` 那种目录联接。
-5. ⭐ **工程实现层已另拆一轮并落成参考文档（v4.27.0）**：其 kernel.js / look.mjs / validate.mjs / build.mjs / bench.html 的**手法**（引擎自校验、写机器判据的坑、可测性内建、共享单帧循环与异常降级、工具链工程）已按**逆向拆解模式**提炼为 `references/artifact-engineering.md`（16 条；**主题名文档，不是 vendor 专页**——16 条里 12 条与本 vendor 无关）。**那部分与视觉工艺无关，故不并入 H 层**（H 层承接的是 rules.md / look.md 的原则侧）。**本文件不重述其内容。**
 
 > **为什么不做成本体内置**：① 它的产物是一种**风格**（isometric 线稿），不是通用能力 —— 折进本体会把「一种风格」写成「本仓默认」；② 本仓已有同轴的审美判据集与图示设计模式，再内置一套生成器会与 `diagram-mode` 的 P1「选型只挑一个类型」打架。⇒ **产物外挂、原则入判据集**，各归其位。
 

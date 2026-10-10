@@ -471,7 +471,7 @@ plan 子命令检查项:
     21. 学习判定抽样人审（v4.8.0）：**非门禁，只指路** —— 口径与检查项 15/17/19 逐条相同。
 
     22. 审美判据（v4.9.0）：meta「审美判据」可选 —— 设计类产物（交付物含 `.css`）的机器验收。
-        判据集：`references/aesthetic-rubric.yaml`（36 条）；校验器：`scripts/check_aesthetics.py`。
+        判据集：`references/aesthetic-rubric.yaml`（31 条）；校验器：`scripts/check_aesthetics.py`。
         **触发信号 = 交付物里出现 `.css`**（确定性信号，不看 category）。**整段缺省 → 只 WARN**
         （向后兼容旧 plan、不追认历史计划；且仅在确实有 `.css` 交付物时才提示，非设计类任务判 SKIP）。
         一旦填写须结构合法（`产物类型` ∈ ui/ppt/chart/image、`产物` 为非空的真实存在 `.css` 列表、

@@ -1,15 +1,15 @@
-# 外部技能路由与适配（外部技能簇 · 四上游）
+# 外部技能路由与适配（外部技能簇 · 三上游）
 
 > **定位**：装在技能库根、但**不属于 ai-workflow 本体**的第三方技能，本文件是它们的**唯一宿主侧适配层** —— 说明从哪来、什么时候该调、与本体口径怎么对齐。
-> **当前四个上游**：**mattpocock-skills-zh-CN**（24 个，扁平外挂）、**ppt-master**（1 个，目录联接）、**humanizer**（1 个，扁平外挂）与 **hairline-create**（1 个，扁平外挂）。来源与许可见 §一。
+> **当前三个上游**：**mattpocock-skills-zh-CN**（24 个，扁平外挂）、**ppt-master**（1 个，目录联接）与 **humanizer**（1 个，扁平外挂）。来源与许可见 §一。
 > **加载口径**：阶段 0 第 3 步「查可用 Skill」命中外部技能簇时读；日常任务不需要（SKILL.md 只留一句指针）。
-> **与「整合方法」的分工**：本文件只讲**装好之后怎么调**（运行时路由）与**来源/许可/安装形态/账本**。⚠️ **原则侧不在这里**：上游技能若贡献的是**可迁移的视觉工艺原则**，它们入 `references/aesthetic-rubric.yaml`（判据集）而非本文件 —— 本文件只留出处与本文件不重述的声明（见 §1.4 第 2 条）。**怎么把外部技能装进来**（一次性的整合工程 —— 探针目录法、宿主三道门禁实测、接入形态选型、依赖序安装、验收登记）见技能 `external-skill-library-integration`。**做整合翻那份，用已整合的技能翻本份。**
+> **与「整合方法」的分工**：本文件只讲**装好之后怎么调**（运行时路由）与**来源/许可/安装形态/账本**。**怎么把外部技能装进来**（一次性的整合工程 —— 探针目录法、宿主三道门禁实测、接入形态选型、依赖序安装、验收登记）见技能 `external-skill-library-integration`。**做整合翻那份，用已整合的技能翻本份。**
 > **与 `references/ppt-mode.md` 的分工**：本文件记 `ppt-master` 的**来源 / 许可 / 安装形态 / 账本 / 调用口径**；**产出结构与验收契约**（Y0–Y4 / Y-a–Y-d / E1–E6）在 `references/ppt-mode.md`。**同一物理量只写一处**，两侧交叉引用、不重述。
-> **版本**：4.1（2026-09-30 建；2026-10-09 首次泛化为两上游并登记 ppt-master，同日二次泛化为三上游并登记 humanizer，同日三次泛化为四上游并登记 hairline-create；2026-10-10 四上游**内容补**：§1.4 增第 5 条指向工程手法文档 `references/artifact-engineering.md`，并修正 §1.4 表内许可值 `2025 Lucas Markes` → `2026 Lucas Marques`）
+> **版本**：3（2026-09-30 建；2026-10-09 首次泛化为两上游并登记 ppt-master，同日二次泛化为三上游并登记 humanizer）
 
 ---
 
-## 一、四个上游
+## 一、三个上游
 
 ### 1.1 mattpocock-skills-zh-CN（24 个，扁平外挂）
 
@@ -72,32 +72,6 @@
 
 ---
 
-### 1.4 hairline-create（1 个，扁平外挂）
-
-| 项 | 值 |
-| --- | --- |
-| 上游 | lucasmarkes/hairline（等距线稿组件库；其 `skills/hairline-create/` 是一个「给一个想法就画一张等距线稿图」的**生成器技能**） |
-| 锁定 rev | a2217852fed6d1a4f20bc7d43d4fad1a3de117b8（2026-10-08） |
-| 许可 | MIT（Copyright (c) 2026 Lucas Marques；上游 LICENSE 随库携带为 `hairline-create/LICENSE`） |
-| 规模 | 11 个上游文件 + 随库携带的 LICENSE = **12 文件 / 约 124 KB** |
-| 安装形态 | **扁平外挂（复制安装）**：`~/.workbuddy/skills/hairline-create`（**真实目录**，`isjunction=False`） |
-| 账本 | `.vendor/hairline.lock.json`（rev + 许可 + 逐文件 sha256 + `content_digest`） |
-| 宿主侧路由 | **Model-invoked**（frontmatter 无 `disable-model-invocation`）—— 见 §三 第四上游表 |
-
-**⚠️ 资产归属**：同属**第三方 MIT 资产，不是自研** —— 不得登记进 `meta.自研工具`，不得随 ai-workflow 本体仓推送。
-
-**⚠️ 它与 1.3 的关键差别（这条决定它在本仓怎么用）**：
-
-1. **它是个「产物生成器」，不是「方法论」**：给一个想法就产出一张单文件 HTML（等距线稿图 ＋ 强度滑杆 ＋ 主题切换 ＋ 播放巡游）。故它在宿主侧的价值分两半 —— **产物侧**（外挂复用、按需路由）与**原则侧**。
-2. ⭐ **原则侧已入本仓判据集，且只入一次**：其 skills/hairline-create/rules.md 的**十条规则**与 skills/hairline-create/look.md 的**十三项肉眼验收**是可迁移的视觉工艺原则，已按 **judgeability 分档**提炼进 `references/aesthetic-rubric.yaml` 的 **H 层**（能机器量的走 `machine` 实跑；只有眼睛能看的走 `manual`，`check: null` ⇒ 登记为人审点），并在该文件表头「外部依据」块登记出处。**故它的原则不在本文件重述**（同一物理量不写两处）。⚠️ **上游文件路径按本仓既有约定用纯文本提及、不加反引号** —— `checks.py skill` 的「文档引用完整性」把反引号内的 `.md`/`.py` 视为**技能内引用**，给上游路径加反引号会产出假断链（与 `references/diagram-mode.md` 首部的同一处置）。
-3. **重叠面已先排除**：十条规则中「按距离错峰」已由既有 `G16 rhythm_ladder` 覆盖、「构造不穿透」已由 `R4 geometry_occlusion` 覆盖、「唯一强调色」半面已由 `G2`/`G8` 覆盖 ⇒ 这三处**不新增判据**，只在判据集写分工。规则 ③⑦⑨⑩（不出框 / 循环屏外休眠 / 圆角化 / 图内无文字）**强绑定等距线稿画面、不迁移**，边界写进判据集 `note`。
-4. **零补丁、逐字节复制**：与 `humanizer` 同法（`patched` 恒为 false）；源是普通 GitHub 仓库，故不用 `ppt-master` 那种目录联接。
-5. ⭐ **工程实现层已另拆一轮并落成参考文档（v4.27.0）**：其 kernel.js / look.mjs / validate.mjs / build.mjs / bench.html 的**手法**（引擎自校验、写机器判据的坑、可测性内建、共享单帧循环与异常降级、工具链工程）已按**逆向拆解模式**提炼为 `references/artifact-engineering.md`（16 条；**主题名文档，不是 vendor 专页**——16 条里 12 条与本 vendor 无关）。**那部分与视觉工艺无关，故不并入 H 层**（H 层承接的是 rules.md / look.md 的原则侧）。**本文件不重述其内容。**
-
-> **为什么不做成本体内置**：① 它的产物是一种**风格**（isometric 线稿），不是通用能力 —— 折进本体会把「一种风格」写成「本仓默认」；② 本仓已有同轴的审美判据集与图示设计模式，再内置一套生成器会与 `diagram-mode` 的 P1「选型只挑一个类型」打架。⇒ **产物外挂、原则入判据集**，各归其位。
-
----
-
 ## 二、调用口径（上游两分类 → 宿主语言）
 
 上游按「谁能调用」把技能分两轴，宿主阶段 0 只按目录名与 description 匹配，没有对应机制。**本轮的实测口径是：上游的 `disable-model-invocation: true` 就是 User-invoked 的机器实现** —— 不必靠推断（设计阶段曾推断「宿主无对应」，实施期读 frontmatter 实样后修正）。
@@ -112,8 +86,6 @@
 > **为什么保留 `disable-model-invocation` 而不删**：它是这批技能**唯一机器可读的分类依据**，删掉就只剩推断；且不违反宿主 frontmatter 判据（该判据只要求**含**三键，不禁止额外键）。`argument-hint` 同理保留。
 
 **`ppt-master` 不适用这套两分类**：它自带完整路由与门禁，不靠宿主的索引匹配自动命中；宿主侧的调用口径只有一句 —— **命中「PPT 识别」即叠加 PPT 模式，并按 `references/ppt-mode.md` 的交接契约进它**。它**不改本体 frontmatter**（见 §1.2 第 1 条），故也不进补丁清单。
-
-**`hairline-create` 同样走 §二 的 Model-invoked 一栏**（frontmatter 无 `disable-model-invocation`）⇒ 阶段 0 的索引匹配可自动命中它；但**它的原则侧不在本文件** —— 已入 `references/aesthetic-rubric.yaml` 的 H 层（见 §1.4 第 2 条），本文件只负责「它从哪来、什么形态、怎么同步」。
 
 **`humanizer` 则走 §二 的 Model-invoked 一栏**：阶段 0 的索引匹配可自动命中它；但**在本仓语境下它的定位是「改写手法资源」而非「判定执行者」** —— 命中后**判定仍回本仓文风判定**（见 §1.3 第 3 条与 §五 第 8 条）。
 
@@ -164,14 +136,6 @@
 
 > ⚠️ 这一行**只引手法、不引判定**：本仓的「文风判定」（第七物理量）是判据唯一来源，`humanizer` 不参与判定。
 
-**第四上游（`hairline-create`，1 个，按 §二 两分类）**：
-
-| 场景 | 调哪个 | 分类 |
-| --- | --- | --- |
-| 要生成一张**等距线稿图**（单文件 HTML：图形 ＋ 强度滑杆 ＋ 主题切换 ＋ 播放巡游），或按 hairline 的十条规则改一张 | `hairline-create` | Model-invoked |
-
-> ⚠️ 这一行**只引产物、不引判据**：它的十条规则里可迁移的那部分**已入判据集 H 层**（见 §1.4 第 2 条），本行不重复登记判据。
-
 **依赖提示**：`tdd` 正文要求配合 `codebase-design` 使用（后者是 seam、adapter、depth 这些词的唯一定义处）；`grill-with-docs` 依赖 `domain-modeling`。这几个**成组装齐了**，不要单装一个。
 
 ---
@@ -203,8 +167,7 @@
 5. **通用名辨识度低**：research、teach、handoff、code-review、prototype 等是通用词，按簇定位时可能与既有技能混淆。lock 登记了占用名，本手册的路由表提供语义锚。
 6. **状态模型不合并**：上游的每仓持久 domain model（CONTEXT 类文档、ADR）只在**被整合的项目仓**内作为项目文档存在，**不参与宿主留痕**。宿主侧仍是每任务一份 `plan.yaml`。
 7. **`ppt-master` 的边界不列在本节**：它的诚实边界（版本不锁、联接单点依赖、依赖与许可含 AGPL 组件、宿主索引可达性未端到端验证、不代跑业务链路）写在 `references/ppt-mode.md` §10，**本文件不重述**。
-8. **`hairline-create` 的边界（产物 ≠ 原则）**：它保证「能生成一张符合十条规则的图」，本仓判据集保证「明显劣化会被拦」—— **装了它不等于产物变好看**：判据只拦可枚举的劣化面，判断层（静止态是否是构图、命中区是否发抖）**仍是人审点**。另两条：**复制安装 ⇒ 上游更新不会自动生效**，须按 §7.3 整体重取；其 `look.mjs` 需浏览器与 `playwright-core`（首次运行联网安装），本仓**不代跑**其业务链路。
-9. **`humanizer` 的边界（手法 ≠ 判定）**：它给的是**改写手法**、不是判定；**不要**把「humanizer 改过了」当成「文风判定已达标」—— 判定唯一在本仓 `scripts/humanize_scan.py`（第七物理量）。其安装形态是**复制**（与 `ppt-master` 的联接相反），故**上游更新不会自动生效**，须按 §7.2 重取。
+8. **`humanizer` 的边界（手法 ≠ 判定）**：它给的是**改写手法**、不是判定；**不要**把「humanizer 改过了」当成「文风判定已达标」—— 判定唯一在本仓 `scripts/humanize_scan.py`（第七物理量）。其安装形态是**复制**（与 `ppt-master` 的联接相反），故**上游更新不会自动生效**，须按 §7.2 重取。
 
 ---
 
@@ -227,7 +190,7 @@
 用法：
 
 ```
-python scripts/external_skill_lint.py                    # 查 .vendor/ 下全部 lock 登记的外部技能（四上游）
+python scripts/external_skill_lint.py                    # 查 .vendor/ 下全部 lock 登记的外部技能（三上游）
 python scripts/external_skill_lint.py --verify-lock      # 加做 lock 与磁盘 sha256 一致性
 python scripts/external_skill_lint.py --skill tdd        # 只查一个
 python scripts/external_skill_lint.py --lock <path>      # 只用一个 lock（排障用）
@@ -262,14 +225,3 @@ python scripts/external_skill_lint.py --lock <path>      # 只用一个 lock（�
 2. **整体重取**（复制安装的同步是「覆盖式重取」，不是「重放补丁」—— 本轮 `patched` 恒为 false，无补丁可放）。
 3. 逐文件 sha256 重算写回 lock，跑 `scripts/external_skill_lint.py --verify-lock`。
 4. **不要**把它与本仓的去味判据（`scripts/humanize_scan.py` / `references/humanize-rubric.yaml`）互相改写 —— 两边一旦互写，同步时无法区分差异来源。
-
-
-### 7.3 hairline-create（复制安装，无补丁）
-
-它是**复制安装**（上游 `lucasmarkes/hairline` → `~/.workbuddy/skills/hairline-create`，**独立真实目录**）⇒ **上游更新不会自动生效**（与 7.1 的联接相反、与 7.2 同法）。同步规程：
-
-1. 取上游新 rev，与 lock 的 `upstream_rev` 比对，确认有更新。
-2. **整体重取**（复制安装的同步是「覆盖式重取」，不是「重放补丁」—— `patched` 恒为 false，无补丁可放）。
-3. 逐文件 sha256 重算写回 lock，跑 `scripts/external_skill_lint.py --verify-lock`。
-4. 取数时**必须带 rev**（`?ref=<40 位 sha>`），并逐文件校验 **git blob sha1** 与上游 `contents` 接口返回的 `sha` 相等 —— 这是「确实取自该 rev」的机器证据（`--verify-lock` 只比 sha256，证不了来源）。
-5. ⚠️ **不要**把它的原则搬进本文件、也不要把 H 层判据写进它的目录 —— 两边一旦互写，同步时无法区分差异来源。
