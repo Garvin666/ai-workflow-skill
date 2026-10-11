@@ -1,0 +1,15 @@
+Chrome  : C:\Program Files\Google\Chrome\Application\chrome.exe
+
+=== PNG 通道（批量：单实例逐图截图）===
+[OK  ] chart-01-bar.html → chart-01-bar.png  18927 B  sha=030d285d1ff5
+        ⚠ 离线 浏览器=bundled 2000x1000
+[OK  ] chart-02-line.html → chart-02-line.png  77478 B  sha=c3cd363ce00d
+        ⚠ 离线 浏览器=bundled 2000x1000
+[OK  ] chart-03-heatmap.html → chart-03-heatmap.png  30650 B  sha=65db45a04d99
+        ⚠ 离线 浏览器=bundled 2000x1000
+[OK  ] chart-04-scatter.html → chart-04-scatter.png  50967 B  sha=8df531a210c4
+        ⚠ 离线 浏览器=bundled 2000x1000
+[OK  ] chart-05-bar-motion.html → chart-05-bar-motion.png  18917 B  sha=a8433a453e65
+        ⚠ 离线 浏览器=bundled 2000x1000
+[OK  ] chart-06-bar-reveal.html → chart-06-bar-reveal.png  18917 B  sha=a8433a453e65
+        ⚠ 离线 浏览器=bundled 2000x1000

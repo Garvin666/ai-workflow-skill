@@ -1,0 +1,4 @@
+[ OK ] 已写入 C:\Users\<用户名>\.workbuddy\skills\README.md
+       117 个技能，25370 B ≈ 7123 tok（粗估）
+       全量对照：逐份读 frontmatter ≈ 82299 tok 量级（本表约为其 1/4）
+[ OK ] 新鲜度：内容指纹一致（72bd6c27d327b812），117 个技能目录

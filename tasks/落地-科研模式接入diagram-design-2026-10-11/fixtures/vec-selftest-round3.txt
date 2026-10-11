@@ -1,0 +1,27 @@
+A. 字体分类（零 Type3 / 全嵌入 的唯一判定点）
+  [OK  ] 三个 Type3 ⇒ type3=3: 得 3 期望 3
+  [OK  ] Type0 已嵌入 ⇒ type3=0 且未嵌入=0: 得 [0, 0] 期望 [0, 0]
+  [OK  ] Type1 但 ext 空 ⇒ 未嵌入=1: 得 1 期望 1
+  [OK  ] 空字体表 ⇒ 0/0（不得凭空造 FAIL）: 得 [0, 0, 0] 期望 [0, 0, 0]
+B. judge_pdf 四态（含「未给期望尺寸 ⇒ 未检测」这一支）
+  [OK  ] 合格件 ⇒ PASS: 得 'PASS' 期望 'PASS'
+  [OK  ] 混入 1 个 Type3 ⇒ FAIL: 得 'FAIL' 期望 'FAIL'
+  [OK  ] Type3 是 FAIL 的那个理由: 得 ['零 Type3'] 期望 ['零 Type3']
+  [OK  ] 两页 ⇒ FAIL: 得 'FAIL' 期望 'FAIL'
+  [OK  ] 尺寸不符 ⇒ FAIL: 得 'FAIL' 期望 'FAIL'
+  [OK  ] 无文本 ⇒ FAIL: 得 'FAIL' 期望 'FAIL'
+  [OK  ] 未嵌入 ⇒ FAIL: 得 'FAIL' 期望 'FAIL'
+  [OK  ] 不给 --expect ⇒ 该条为未检测（None）而非 PASS: 得 None 期望 None
+C. SVG 判据
+  [OK  ] 纯矢量 SVG ⇒ PASS: 得 'PASS' 期望 'PASS'
+  [OK  ] 内嵌栅格 ⇒ FAIL（判据造得住信号）: 得 'FAIL' 期望 'FAIL'
+  [OK  ] 坏 XML ⇒ FAIL 且不抛异常（fail-closed）: 得 'FAIL' 期望 'FAIL'
+  [OK  ] 非 PDF 字节 ⇒ 期望 backend 抛错由调用方降级为 FAIL（此处只验不崩）: 得 True 期望 True
+D. parse_expect / to_pt（两消费点单位不同 —— 本条就是为防那次「4 个 SVG 全假 FAIL」）
+  [OK  ] parse_expect 不做换算: 得 (1000.0, 500.0) 期望 (1000.0, 500.0)
+  [OK  ] to_pt(unit=px) → pt: 得 (750.0, 375.0) 期望 (750.0, 375.0)
+  [OK  ] to_pt(unit=pt) → 原值: 得 (1000.0, 500.0) 期望 (1000.0, 500.0)
+  [OK  ] parse_expect(None): 得 None 期望 None
+  [OK  ] to_pt(None) ⇒ None: 得 None 期望 None
+
+自检结论：PASS

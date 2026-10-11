@@ -1,0 +1,3 @@
+Chrome  : C:\Program Files\Google\Chrome\Application\chrome.exe
+
+=== PNG 通道（批量：单实例逐图截图）===

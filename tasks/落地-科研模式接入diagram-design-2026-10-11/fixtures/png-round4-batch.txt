@@ -1,0 +1,14 @@
+Chrome  : C:\Program Files\Google\Chrome\Application\chrome.exe
+
+=== PNG 通道（批量：单实例逐图截图）===
+Traceback (most recent call last):
+  File "C:\Users\<用户名>\.workbuddy\skills\ai-workflow\scripts\diagram_export.py", line 656, in <module>
+  File "C:\Users\<用户名>\.workbuddy\skills\ai-workflow\scripts\diagram_export.py", line 652, in main
+    if not 1 <= a.scale <= 4:
+           ^^^^^^
+  File "C:\Users\<用户名>\.workbuddy\skills\ai-workflow\scripts\diagram_export.py", line 453, in run
+    if "png" in formats:
+                  ^^^^^^
+  File "C:\Users\<用户名>\.workbuddy\skills\ai-workflow\scripts\diagram_export.py", line 391, in export_png_batch
+    # 统一收尾：核对产物、拼出实际尺寸/浏览器（诚实报告的一部分）
+ValueError: not enough values to unpack (expected 3, got 2)

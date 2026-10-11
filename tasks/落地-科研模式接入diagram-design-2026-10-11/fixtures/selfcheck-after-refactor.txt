@@ -1,0 +1,6 @@
+OK output\chart-01-bar.html
+OK output\chart-02-line.html
+OK output\chart-03-heatmap.html
+OK output\chart-04-scatter.html
+OK output\chart-05-bar-motion.html
+OK output\chart-06-bar-reveal.html

@@ -1,0 +1,8 @@
+[OK  ] chart-01-bar.png           2000x1000  mode=RGB  颜色数≈221
+[OK  ] chart-02-line.png          2000x1000  mode=RGB  颜色数≈1191
+[OK  ] chart-03-heatmap.png       2000x1000  mode=RGB  颜色数≈713
+[OK  ] chart-04-scatter.png       2000x1000  mode=RGB  颜色数≈899
+[OK  ] chart-05-bar-motion.png    2000x1000  mode=RGB  颜色数≈216
+[OK  ] chart-06-bar-reveal.png    2000x1000  mode=RGB  颜色数≈216
+
+合格 6/6   （硬判据＝尺寸与内容；alpha 只报不判）

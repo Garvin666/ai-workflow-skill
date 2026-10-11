@@ -2,10 +2,10 @@
 # Usage: powershell -ExecutionPolicy Bypass -File setup_env.ps1
 $ErrorActionPreference = "Stop"
 
-$managedPython = "C:\Users\26717\.workbuddy\binaries\python\versions\3.13.12\python.exe"
-$venvDir       = "C:\Users\26717\.workbuddy\binaries\python\envs\ai-workflow"
+$managedPython = "$env:USERPROFILE\.workbuddy\binaries\python\versions\3.13.12\python.exe"
+$venvDir       = "$env:USERPROFILE\.workbuddy\binaries\python\envs\ai-workflow"
 $venvPython    = Join-Path $venvDir "Scripts\python.exe"
-$deps          = @("requests", "openpyxl", "python-docx", "pypdf", "pyyaml", "duckdb", "ast-grep-cli")
+$deps          = @("requests", "openpyxl", "python-docx", "pypdf", "pyyaml", "duckdb", "ast-grep-cli", "playwright")
 
 # Marker definitions (N8): shared by the "skip pip when deps are present" pre-check below
 # and the final import check, so they are defined only once. ASCII ONLY - Windows PowerShell 5.1
@@ -13,7 +13,10 @@ $deps          = @("requests", "openpyxl", "python-docx", "pypdf", "pyyaml", "du
 $sitePkgs = Join-Path $venvDir "Lib\site-packages"
 # Importable packages: marker is relative to site-packages. CLI-only packages: marker is the
 # executable path relative to the venv root.
-$pkgDir = @{ "requests" = "requests"; "openpyxl" = "openpyxl"; "python-docx" = "docx"; "pypdf" = "pypdf"; "pyyaml" = "yaml"; "duckdb" = "duckdb" }
+# playwright = PNG export channel of scripts/diagram_export.py. The pip package alone is NOT
+# enough: the browser binary lives in %LOCALAPPDATA%\ms-playwright and is checked separately
+# (step 4b, WARN-only) because a missing browser must not fail env setup.
+$pkgDir = @{ "requests" = "requests"; "openpyxl" = "openpyxl"; "python-docx" = "docx"; "pypdf" = "pypdf"; "pyyaml" = "yaml"; "duckdb" = "duckdb"; "playwright" = "playwright" }
 # ast-grep-cli ships Scripts\ast-grep.exe only; a dist-info can survive a partial uninstall,
 # so the executable is the stronger marker.
 $cliDir = @{ "ast-grep-cli" = "Scripts\ast-grep.exe" }
@@ -84,6 +87,19 @@ foreach ($d in $deps) {
     }
 }
 if ($failedList.Count -gt 0) { exit 1 }
+
+# 4b. Playwright browser binary check (WARN only, never blocks env setup).
+#     "package installed" != "channel runnable": PNG export also needs a provisioned Chromium.
+#     The skill must never auto-install runtime deps (upstream export.md is explicit about this),
+#     so this only reports the one-line command to run.
+$pwCache = Join-Path $env:LOCALAPPDATA "ms-playwright"
+if (Test-Path $pwCache) {
+    $chrom = Get-ChildItem -Path $pwCache -Directory -Filter "chromium*" -ErrorAction SilentlyContinue
+    if ($chrom) { Write-Host "[ OK ] playwright browser cache: $pwCache" }
+    else { Write-Host "[WARN] $pwCache exists but has no chromium* dir; run: $venvPython -m playwright install chromium" -ForegroundColor Yellow }
+} else {
+    Write-Host "[WARN] playwright browser cache missing ($pwCache); PNG export will report it as unavailable. Provision with: $venvPython -m playwright install chromium" -ForegroundColor Yellow
+}
 
 # 5. AI key hint
 if ($env:AI_API_KEY) { Write-Host "[INFO] AI_API_KEY is set" } else { Write-Host "[INFO] AI_API_KEY not set (only needed for AI calls)" }

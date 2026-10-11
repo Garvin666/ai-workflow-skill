@@ -1,0 +1,4 @@
+[CTL-1 同图两截] 期望 identical  -> 实得 identical (diff=0)
+[CTL-2 注入1像素] 期望 DIFFERENT  -> 实得 DIFFERENT (diff=1, maxch=81)
+
+阴性对照结论：PASS（判据两态均可区分）

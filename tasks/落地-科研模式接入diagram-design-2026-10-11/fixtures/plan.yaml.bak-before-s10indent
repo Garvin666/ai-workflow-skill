@@ -1,0 +1,224 @@
+meta:
+  任务: 把第三方图表技能 cathrynlavery/diagram-design 接入 ai-workflow 的「科研模式」R5 制图通道（外部技能簇第六上游 ＋ references/research-mode.md 新增 §7.11 科研制图契约 ＋ 既有面接线 ＋ 机器验收）
+  工作区根: C:\Users\<用户名>\.workbuddy\skills\ai-workflow
+  创建时间: "2026-10-11 16:20"
+  任务层级: L2
+  确认表: tasks/落地-科研模式接入diagram-design-2026-10-11/确认表.md
+  验证信号: |
+    1) external_skill_lint.py 改前 84 通过 / FAIL=0 → 改后 87 通过 / FAIL=0 / SKIP=0 / WARN=0（新增 diagram-design 3 项）
+    2) external_skill_lint.py --verify-lock = 93 通过 / FAIL=0，其中 cathrynlavery/diagram-design 280 个文件逐一对上
+    3) 上游 scripts/self_check.py 对示例产物实跑 rc=0（证明装态可用，不只是「装得上」）
+    4) checks.py skill 维持 76/76 / FAIL=0 / SKIP=0 / WARN=0（无回归；SKILL.md 仍在软预算 163840 B 内）
+    5) research-mode.md §7.11 的 8 个小节齐、RF1–RF8 各出现恰 1 次、旧悬空串「外部数据图技能」无残留
+    6) 三项确认落地：① 接入＋落映射（lock ＋ §7.11）② 数据图与示意图都归它（§7.11.1 修订通道归属）③ 复制安装（isjunction=False，与 archify/hairline 同法）
+  复盘沉淀: |
+    收尾按实跑结论改写；预期 ≥1 条（「同一上游先被提炼成契约、后被整体接入」时，两轮的 rev 不同如何钉坐标；以及「新增外部技能必须先跑 lint 才知道链路分档」）。
+  入口判定:
+    category: code
+    distribution: {chat: 0.0, code: 0.7, content: 0.3}
+    confidence: 0.75
+    dimensions: {D1: 0.9, D2: 0.85, D3: 0.85, D4: 0.85, D5: 0.8}
+    ambiguity: false
+    route_hint: 主类 code（技能本体跨文件改造 ＋ 外部技能安装 ＋ 账本/校验）；副类 content（科研制图契约文字）
+    secondary: content
+  方法选用:
+    - gap_class: 事实
+      candidates:
+        - {tool: 实读上游 skills/diagram-design/SKILL.md 与 references/*、ai-workflow 既有五模式手册与 external-skills.md, fit_score: 0.95}
+      needs_tool: true
+      confidence: 0.95
+      route_hint: 契约必须贴着两侧既有接口写（diagram-mode 的 P0–P4／research-mode 的 R0–R6 与 N6／external-skills 的「上游」登记格式），不凭记忆
+    - gap_class: 知识
+      candidates:
+        - {tool: 既有 external-skills.md ＋ .vendor/hairline.lock.json 与 .vendor/archify.lock.json（外部技能簇先例）, fit_score: 0.9}
+      needs_tool: true
+      confidence: 0.9
+      route_hint: 借既有外部技能簇的规格与 lock schema，不另造接入形式
+    - gap_class: 手脚
+      candidates:
+        - {tool: venv 解释器跑 external_skill_lint.py / checks.py / 上游 self_check.py, fit_score: 0.95}
+      needs_tool: true
+      confidence: 0.95
+      route_hint: 回归一律用技能自带工具与解释器；判据输出作证据，不接管道取 rc
+    - gap_class: 算力
+      candidates:
+        - {tool: 无, fit_score: 0.1}
+      needs_tool: false
+      confidence: 0.85
+      route_hint: 单线串行；改动面集中在技能本体与一个新增技能目录
+  检索判定:
+    - source_class: 本地资产
+      candidates:
+        - {source: ai-workflow SKILL.md / references/(research,diagram,external-skills,ops).md / scripts/external_skill_lint.py / .vendor/*.lock.json, fit_score: 0.95}
+      needs_retrieval: true
+      confidence: 0.95
+      route_hint: 两侧接口都实读；不准把记忆当实测
+    - source_class: 联网
+      candidates:
+        - {source: api.github.com ＋ codeload.github.com（取上游 rev 与归档）, fit_score: 0.9}
+      needs_retrieval: true
+      confidence: 0.9
+      route_hint: github.com 不通 ⇒ 走 api 与 codeload；rev 由 commits/main 取，不靠猜
+  作业判定:
+    mode: 非作业
+    distribution: {作业题: 0.0, 讲解题: 0.0, 非作业: 1.0}
+    confidence: 1.0
+    dimensions: {W1: 0.01, W2: 0.01, W3: 0.01, W4: 0.01, W5: 0.01}
+    ambiguity: false
+    route_hint: 技能本体演进任务，非解题
+    needs_homework: false
+  学习判定:
+    kind: 流程坑
+    distribution: {偏好: 0.05, 领域知识: 0.2, 流程坑: 0.6, 事实: 0.15, 无: 0.0}
+    confidence: 0.6
+    dimensions: {V1: 0.8, V2: 0.85, V3: 0.8, V4: 0.85, V5: 0.5}
+    ambiguity: false
+    route_hint: 待收尾按实跑改写（重点：插入型编辑的「旧串必须消失」断言恒假；新增外部技能首轮 lint 必 FAIL，需先跑才知道分档）
+    needs_learning: true
+  文风判定:
+    verdict: 不适用
+    distribution: {走去味: 0.0, 只登记: 0.0, 已达标: 0.0, 不适用: 1.0}
+    confidence: 1.0
+    dimensions: {S1: 0.01, S2: 0.01, S3: 0.01, S4: 0.01, S5: 0.01}
+    ambiguity: false
+    route_hint: 产物为技能契约（Markdown 结构化表格与判据）与脚本，非面向人阅读的散文正文
+    needs_humanize: false
+    适用范围: "契约表格、脚本注释、变更说明"
+    产物: []
+  清理:
+    状态: "无待清理项"
+    回填说明: "中间产物落在 <技能根>/tasks/落地-科研模式接入diagram-design-2026-10-11/（s1–s6d 步骤脚本 ＋ fixtures/）与系统临时区（上游归档解压）；本任务无 tasks/<任务>/tmp/ 中间产物树。"
+  恶补:
+    状态: "已拒绝"
+    理由: "本任务为技能本体演进（契约/安装/账本类）；学习点（外部技能接入的首轮 lint 分档、插入型 vs 替换型断言之别）已按两处留痕：v4.33.0 changelog 条目、本任务《变更说明.md》「复盘沉淀」节。不另出独立学习产物：归档硬约束要求报告落 <工作区根>/恶补/，而本任务工作区根即版本受控的技能本体目录，不宜向其内写入非源码产物（与 v4.25.0 / v4.22.0 同类任务处置一致）。"
+  思考判定:
+    verdict: 修正
+    distribution: {接受: 0.15, 修正: 0.75, 澄清: 0.1}
+    confidence: 0.75
+    dimensions: {T1: 0.9, T2: 0.85, T3: 0.8, T4: 0.8}
+    veto: {triggered: false, suspect: false}
+    amendments:
+      - {项: 引入性质, 原表述: "把 cathrynlavery/diagram-design 引入 ai-workflow", 修正为: "该上游**本仓早已提炼过一次**（diagram-mode v4.20.0 的 P0–P4，钉 rev d137637…）⇒ 本轮不是「首次引入」，而是「**把同一上游的引擎与产物整体接入，并把科研模式的 R5 制图通道接到它上面**」；两轮 rev 不同（提炼轮 d137637… / 接入轮 7a2e2217…），须在坐标里如实区分", 依据: "实读 references/diagram-mode.md 首部「机制来源与坐标」与 internal 引用", 越线性: 授权内}
+      - {项: 数据图通道, 原表述: "科研模式 N6：数据图交外部数据图技能（如 scipilot-figure-skill）", 修正为: "该「外部数据图技能」在本仓**从未安装**（悬空指路）⇒ 改由已接入的 diagram-design 同时承担数据图与示意图，判据统一为「轴编码数值 / 结构编码关系」", 依据: "全仓 grep scipilot 仅出现在指路句中、~/.workbuddy/skills 下无该目录；且 diagram-design 自身覆盖 bar/line/scatter/heatmap/radar/treemap/sankey/gantt 等统计图", 越线性: 授权内}
+      - {项: 与 §9 第 8 条的口径冲突, 原表述: "科研模式 §9 第 8 条：外部技能本模式一个都不安装", 修正为: "改为「本模式只接线、不承担安装」—— 安装由外部技能整合流程完成，本模式自身仍不克隆/不代管", 依据: "不改该条会出现「已安装」与「一个都不安装」并存的矛盾表述", 越线性: 授权内}
+    ambiguity: false
+    band: 中
+    needs_human_confirm: false
+    main_judge: A
+    laya: null
+    route_hint: 按修正案执行；交付说明逐条列出「接入的是什么 / 契约写在哪 / 有哪些边界」
+    前提审计:
+      前提:
+        - {项: "落点=技能本体 ~/.workbuddy/skills/ai-workflow", 判定: "成立", 依据: "技能自身升级属用户级硬规矩第 2 条的例外（无需越界申请）；用户三项选择已确认"}
+        - {项: "上游可获取", 判定: "成立", 依据: "github.com 直连不通，但 api.github.com 与 codeload.github.com 通（已实测取到 19.8 MB 归档）"}
+        - {项: "上游可被本仓 lint 接受", 判定: "成立（需登记豁免）", 依据: "首轮 lint FAIL=1（49 条上游仓根引用）；按 external-skills.md §五 第 1 条登记 reference_mentions 后转绿"}
+      来源核实:
+        需要核实: true
+        已核实:
+          - "上游 = cathrynlavery/diagram-design，MIT，rev 7a2e22170ee838e859d8142ba825d83f8b6375e6（2026-10-10T21:10:13Z），无 release tag（api.github.com 实读）"
+          - "ai-workflow 现行版本 = v4.32.1（SKILL.md frontmatter 实读）"
+          - "baseline：checks.py skill 76/76 FAIL=0 SKIP=0 WARN=0；external_skill_lint.py 84 通过 FAIL=0（本机实跑，落 fixtures/baseline-*.txt）"
+          - "diagram-mode 提炼轮钉的 rev = d1376371965f513d99cc9ec388835d255c5c88d5（其首部实读）"
+          - "交付面 279 文件 / 约 4.9 MB（tree API 统计）"
+        未核实:
+          - {项: "宿主技能索引是否把 diagram-design 识别为可调用技能", 原因: "本机无该加载器可读规格；以「一层布局 ＋ frontmatter 可解析（lint 已验）」为可达性证据，并在诚实边界登记"}
+          - {项: "在本机实际产出一张投稿级 SVG 图", 原因: "本轮不代跑业务链路；只保证装得上、被路由到、self_check 可跑"}
+      遗漏提醒:
+        - {类别: 成本, 内容: "SKILL.md 软预算仅余约 4.5%（156412/163840），科研制图正文必须落 references/，入口只加极短索引"}
+        - {类别: 变量, 内容: "新增技能目录会让技能库索引 STALE ⇒ 重建必须放在所有写入之后（v4.32.1 的序教训）"}
+        - {类别: 认知偏差, 内容: "「装进来 ≠ 用得上」：本轮只保证可路由 ＋ lint 绿 ＋ self_check 可跑，不保证任一具体图表已产出"}
+  字段适用性: {}
+  决策记录:
+    - 决策点: "引入还是接入"
+      能力类: "事实"
+      依据: "上游已被 diagram-mode 提炼过（读 diagram-mode.md 首部坐标）"
+      选择: "本轮做「引擎接入 ＋ 科研通道接线」，不是首次引入；两轮 rev 在坐标里分别登记"
+      时间: "2026-10-11 16:22"
+    - 决策点: "安装形态"
+      能力类: "知识"
+      依据: "本簇先例：普通 GitHub 仓且体积适中 ⇒ 复制安装（humanizer/hairline/archify）；仅 ppt-master 因 107MB ＋ fail-closed 门禁走联接"
+      选择: "复制安装到 ~/.workbuddy/skills/diagram-design（280 文件 / 4.9 MB，独立真实目录）"
+      时间: "2026-10-11 16:25"
+    - 决策点: "新增上游的 lint 首轮 FAIL 怎么处理"
+      能力类: "手脚"
+      依据: "lit 判据 2 分三档：技能内可解析 / 已登记提及 / 真断链"
+      选择: "用与 lint 同源的代码生成 reference_mentions（50 条），不用手工枚举"
+      时间: "2026-10-11 16:35"
+steps:
+  - id: s1
+    做什么: 冻结基线（本次将改动的 6 个文件原件 ＋ 逐文件 sha256），并跑改动前的 checks.py skill 与 external_skill_lint.py 作 A/B 对照基线
+    输入: SKILL.md、README.md、references/{research-mode,diagram-mode,external-skills,ops}.md
+    预期产出: fixtures/baseline/ 下 6 个原件副本 ＋ baseline-manifest.sha256 ＋ baseline-checks-skill.txt ＋ baseline-lint.txt
+    验证方式: 逐文件 sha256 与源文件相等；manifest 回读行数一致
+    状态: 完成
+    交付物: tasks/落地-科研模式接入diagram-design-2026-10-11/fixtures/baseline-manifest.sha256
+  - id: s2
+    做什么: 取上游（codeload 归档 → 只解技能子树 ＋ 根 LICENSE）并复制安装为技能库根的独立技能，同时生成 .vendor/diagram-design.lock.json（rev/许可/逐文件 sha256/content_digest）
+    输入: codeload 归档（rev 7a2e2217…）、.vendor/hairline.lock.json（schema 先例）
+    预期产出: ~/.workbuddy/skills/diagram-design（280 文件）＋ .vendor/diagram-design.lock.json
+    验证方式: 磁盘文件数 = lock 文件数 = 280；回读断言
+    状态: 完成
+    交付物: C:\Users\<用户名>\.workbuddy\skills\.vendor\diagram-design.lock.json
+  - id: s3
+    做什么: 把 lint 首轮报出的 49 条「上游仓根引用」按 external-skills.md §五 第 1 条同法登记为豁免 —— 用与 lint 同源的判据代码生成 reference_mentions，避免手工枚举造成口径漂移
+    输入: scripts/external_skill_lint.py（import 其 REF_PATTERN/resolve/白名单）、~/.workbuddy/skills/diagram-design
+    预期产出: lock 的 reference_mentions（50 条）＋ reference_mentions_note
+    验证方式: 复跑 lint 由 FAIL=1 转 FAIL=0；--verify-lock 通过
+    状态: 完成
+    交付物: C:\Users\<用户名>\.workbuddy\skills\.vendor\diagram-design.lock.json
+  - id: s4
+    做什么: 在 references/research-mode.md 新增 §7.11「科研制图（R5 展开）」（8 小节：通道归属修订 / 场景→类型映射 / 论文配图八条 RF1–RF8 / 输出拨盘 / 机器自检复用 / 与既有面分界 / 诚实边界），并接线 11 处（§2 R5、§6 N6、§7.1 R3/R4/R5 工具行、§7.5 T1/T4、§9 第 5/7/8 条）＋ 标题与变更记录版本 v4.29.0 → v4.30.0
+    输入: references/research-mode.md（基线副本）、上游 SKILL.md、references/diagram-mode.md
+    预期产出: research-mode.md 新增 §7.11 ＋ 11 处接线
+    验证方式: 逐处断言命中恰 1 次；§7.11 的 8 小节齐；RF1–RF8 各一次；旧悬空串无残留；既有节头各一处
+    状态: 完成
+    交付物: references/research-mode.md
+  - id: s5
+    做什么: 接线 references/diagram-mode.md（4 处：首部坐标补接入事实、§1 分界表、§8 重叠处置表加「契约层 ↔ 引擎层」行、§10 第 4 条边界不变声明）与 references/external-skills.md（10 处：六上游化 ＋ 新增 §1.7 ＋ §三 第六上游表 ＋ §五 第 12 条 ＋ §六 计数 ＋ §七 新增 §7.6 同步规程），并修正 research-mode 里的引用编号（§7.5 → §7.6）
+    输入: references/{diagram-mode,external-skills,research-mode}.md（基线副本）
+    预期产出: 两文件接线落盘 ＋ 引用编号一致
+    验证方式: 逐处断言命中恰 1 次；替换型旧串全清；插入型只断「新串在」；既有节未被破坏
+    状态: 完成
+    交付物: references/diagram-mode.md、references/external-skills.md
+  - id: s6
+    做什么: 注册与版本同步 —— SKILL.md（frontmatter/标题 version 4.32.1 → 4.33.0、阶段 0 外部技能簇句、R5 行、N6 句、三处手册索引行）、README.md（5 处）、_archive/changelog.md（追加 v4.33.0 条目）；按各文件自身行尾字节级写入
+    输入: SKILL.md、README.md、_archive/changelog.md（基线副本）
+    预期产出: 三文件落盘，版本号同源
+    验证方式: 逐处断言；写后行尾零 MIXED；替换型/插入型分类核验；SKILL.md 仍在软预算内
+    状态: 完成
+    交付物: SKILL.md、README.md、_archive/changelog.md
+  - id: s7
+    做什么: 机器验收与交付 —— 重建技能库索引（新增技能目录后必做，且必须在所有写入之后）、复跑 checks.py skill / checks.py plan / external_skill_lint.py --verify-lock、复核行尾与残留、出《变更说明.md》
+    输入: 前 6 步全部实跑输出
+    预期产出: 《变更说明.md》＋ 全部实跑证据落盘
+    验证方式: checks.py skill FAIL=0 且 SKIP=0；lint --verify-lock FAIL=0；变更说明里每个数字都能追到某个实跑输出文件
+    状态: 完成
+    交付物: tasks/落地-科研模式接入diagram-design-2026-10-11/变更说明.md
+  - id: s8
+    做什么: 修订 references/ops.md 中 external_skill_lint.py 条目的陈旧表述（原写默认 lock 为 .vendor/mattpocock.lock.json，而实现自 v4.25.0 起已泛化为遍历 .vendor/*.lock.json）：补版本标注「v4.25.0 起多上游」、默认路径改遍历 .vendor/*.lock.json 并把旧值降为历史、补 --lock 参数、明确「每个 lock 自成判定域、豁免不跨上游串用」
+    输入: references/research-mode.md（s1 基线副本）、scripts/external_skill_lint.py（实现即判据源）
+    预期产出: references/ops.md 该条目两处修订落盘（+580 B，77059 → 77639 B）
+    验证方式: 旧串「默认 `~/.workbuddy/skills/.vendor/mattpocock.lock.json`」全仓 0 残留；新串「v4.25.0 起多上游」「每个 lock 自成判定域」各命中 1 次；行尾仍为纯 LF；复跑 checks.py skill / external_skill_lint.py / gen_skill_index.py --check 三绿
+    状态: 完成
+    交付物: references/ops.md
+  - id: s9
+    做什么: 最小实跑 —— 用新装的 diagram-design 产 4 张数据类可视化图（柱状图 / 折线图 / 热力图 / 散点图），程序化生成（不手搓 SVG），并跑上游 self_check.py 与自建几何自检（判坐标是否越出 viewBox）
+    输入: ~/.workbuddy/skills/diagram-design 的 references/style-guide.md、type-{bar,line,heatmap,scatter}.md、assets/example-bar-full.html、scripts/self_check.py
+    预期产出: output/chart-0{1..4}-*.html（4 个自包含 HTML ＋ 内联 SVG）
+    验证方式: 4/4 上游 self_check.py rc=0；自建几何自检 越界坐标=0；几何判据配阴性对照（注入 cx=1180 ⇒ rc=1，证明判据非空）
+    状态: 完成
+    交付物: tasks/落地-科研模式接入diagram-design-2026-10-11/output/chart-01-bar.html、tasks/落地-科研模式接入diagram-design-2026-10-11/output/chart-02-line.html、tasks/落地-科研模式接入diagram-design-2026-10-11/output/chart-03-heatmap.html、tasks/落地-科研模式接入diagram-design-2026-10-11/output/chart-04-scatter.html
+   - id: s10
+    做什么: 跑上游导出通道产投稿级矢量件 —— export_svg.py 出 4 个 SVG（--system-fonts 免联网），再以「仅图示」打印页（页面尺寸 = viewBox 1000×500，零页边距）经 Chrome 无头 --print-to-pdf 出 4 个 PDF；并做字体可嵌入化（Type3 → Type0）修正
+    输入: output/chart-0{1..4}-*.html、~/.workbuddy/skills/diagram-design/scripts/export_svg.py 与 self_check.py
+    预期产出: output/export/ 下 4 个 .svg ＋ 4 个 .pdf
+    验证方式: self_check.py --offline 对 4 个 SVG rc=0；SVG 全部 XML 良构且零脚本/零远程引用；PDF 回读（PyMuPDF）单页、尺寸 750×375pt 与 1000×500px@96dpi 吻合、文本可提取、**Type3=0**、字体全嵌入
+    状态: 完成
+    交付物: tasks/落地-科研模式接入diagram-design-2026-10-11/output/export/chart-01-bar.pdf、tasks/落地-科研模式接入diagram-design-2026-10-11/output/export/chart-02-line.pdf、tasks/落地-科研模式接入diagram-design-2026-10-11/output/export/chart-03-heatmap.pdf、tasks/落地-科研模式接入diagram-design-2026-10-11/output/export/chart-04-scatter.pdf
+   - id: s11
+    做什么: 动效通道最小实跑 —— 把柱状图做成 `step` 模式可播放图（4 步 / 7 项 / 每步 ≤2 项），控制器从 assets/template-motion.html 运行时提取以保证逐字一致
+    输入: ~/.workbuddy/skills/diagram-design/assets/template-motion.html、references/animation.md
+    预期产出: output/chart-05-bar-motion.html
+    验证方式: self_check.py rc=0（含 check_motion 与 check_scripts：控制器归一化后与模板相等）；自证断言「控制器与模板归一化后相等」= True；Chrome 实跑三态 DOM —— 无参 data-frame=start/step=0、?motion=static data-frame=static/step=4、?motion=step&step=2 data-frame=step/step=2；截图比对 static 与 step4 **逐字节相同**（证明静态帧=完整帧）
+    状态: 完成
+    交付物: tasks/落地-科研模式接入diagram-design-2026-10-11/output/chart-05-bar-motion.html

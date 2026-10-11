@@ -5,6 +5,13 @@ pip_debug.log
 _smoke/
 tasks/*/plan.yaml
 tasks/*/tmp/
+# 任务档案产物类（图 / 导出件 / 渲染件）：本地保留、不入库 —— 入库面只收文本（脚本＋证据），
+# 产物可由脚本重建；全仓既有追踪文件零产物（2026-10-11 依此惯例补）
+tasks/*/output/
+tasks/*/fixtures/**/*.png
+tasks/*/fixtures/**/*.html
+tasks/*/fixtures/**/*.pdf
+tasks/*/fixtures/**/*.svg
 # 工具自身中间产物（推送 dry-run 结果 / 探针落盘等），本地保留不入库
 tmp/
 .venv/

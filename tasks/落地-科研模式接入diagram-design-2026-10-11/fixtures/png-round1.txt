@@ -1,0 +1,3 @@
+Chrome  : C:\Program Files\Google\Chrome\Application\chrome.exe
+[OK  ] chart-01-bar.html → chart-01-bar.png  33844 B  sha=766198ad3ec5
+        ⚠ 浏览器=chrome

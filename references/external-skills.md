@@ -1,15 +1,16 @@
-# 外部技能路由与适配（外部技能簇 · 四上游）
+# 外部技能路由与适配（外部技能簇 · 六上游）
 
 > **定位**：装在技能库根、但**不属于 ai-workflow 本体**的第三方技能，本文件是它们的**唯一宿主侧适配层** —— 说明从哪来、什么时候该调、与本体口径怎么对齐。
-> **当前四个上游**：**mattpocock-skills-zh-CN**（24 个，扁平外挂）、**ppt-master**（1 个，目录联接）、**humanizer**（1 个，扁平外挂）与 **hairline-create**（1 个，扁平外挂）。来源与许可见 §一。
+> **当前六个上游**（§1.1–§1.5 ＋ §1.7）：**mattpocock-skills-zh-CN**（24 个，扁平外挂）、**ppt-master**（1 个，目录联接）、**humanizer**（1 个，扁平外挂）、**hairline-create**（1 个，扁平外挂）、**archify**（1 个，扁平外挂——⚠️ 本机**装得进、可调用；产物链「会话内受阻、会话外可绕」**，见 §1.5）与 **diagram-design**（1 个，扁平外挂；⚠️ 编号在 §1.6 之后但**是上游**，见 §1.7）。来源与许可见 §一。
+> **另**：另有五个**本地已装、非 vendored 的能力技能**（reviewed-change-apply-gate 等）—— ⚠️ 它们**不是上游**（不在 `.vendor/` 任何 lock 内、无 source/upstream_rev/LICENSE），故**不并入「上游」计数**，单列 §1.6，来源定性留待用户裁定。
 > **加载口径**：阶段 0 第 3 步「查可用 Skill」命中外部技能簇时读；日常任务不需要（SKILL.md 只留一句指针）。
 > **与「整合方法」的分工**：本文件只讲**装好之后怎么调**（运行时路由）与**来源/许可/安装形态/账本**。⚠️ **原则侧不在这里**：上游技能若贡献的是**可迁移的视觉工艺原则**，它们入 `references/aesthetic-rubric.yaml`（判据集）而非本文件 —— 本文件只留出处与本文件不重述的声明（见 §1.4 第 2 条）。**怎么把外部技能装进来**（一次性的整合工程 —— 探针目录法、宿主三道门禁实测、接入形态选型、依赖序安装、验收登记）见技能 `external-skill-library-integration`。**做整合翻那份，用已整合的技能翻本份。**
 > **与 `references/ppt-mode.md` 的分工**：本文件记 `ppt-master` 的**来源 / 许可 / 安装形态 / 账本 / 调用口径**；**产出结构与验收契约**（Y0–Y4 / Y-a–Y-d / E1–E6）在 `references/ppt-mode.md`。**同一物理量只写一处**，两侧交叉引用、不重述。
-> **版本**：4.1（2026-09-30 建；2026-10-09 首次泛化为两上游并登记 ppt-master，同日二次泛化为三上游并登记 humanizer，同日三次泛化为四上游并登记 hairline-create；2026-10-10 四上游**内容补**：§1.4 增第 5 条指向工程手法文档 `references/artifact-engineering.md`，并修正 §1.4 表内许可值 `2025 Lucas Markes` → `2026 Lucas Marques`）
+> **版本**：4.3（2026-09-30 建；2026-10-09 首次泛化为两上游并登记 ppt-master，同日二次泛化为三上游并登记 humanizer，同日三次泛化为四上游并登记 hairline-create；2026-10-10 四上游**内容补**：§1.4 增第 5 条指向工程手法文档 `references/artifact-engineering.md`，并修正 §1.4 表内许可值 `2025 Lucas Markes` → `2026 Lucas Marques`；2026-10-11 五次泛化为**五上游**并登记 archify；⚠️ 同日**改判并更正**：archify 的本机可用性结论由「系统层 nlink 语义异常 ⇒ 本机不可产出产物」改为「宿主会话把删除重定向为回收站 ⇒ **会话内**受阻、**会话外可绕**」（证据链见 §1.5），并新增 §二 末的「默认豁免（图示例外）」条款；2026-10-11 增 **§1.6**：登记五个**本地已装、非 vendored** 的能力技能，并明确「不是上游」的判据与由此产生的机器检查缺口；2026-10-11 六次泛化为**六上游**并登记 **diagram-design**（新增 §1.7 —— ⚠️ 与 §1.6 的「非上游」区分：本节这个**有 lock、可同步**））
 
 ---
 
-## 一、四个上游
+## 一、六个上游
 
 ### 1.1 mattpocock-skills-zh-CN（24 个，扁平外挂）
 
@@ -96,6 +97,114 @@
 
 > **为什么不做成本体内置**：① 它的产物是一种**风格**（isometric 线稿），不是通用能力 —— 折进本体会把「一种风格」写成「本仓默认」；② 本仓已有同轴的审美判据集与图示设计模式，再内置一套生成器会与 `diagram-mode` 的 P1「选型只挑一个类型」打架。⇒ **产物外挂、原则入判据集**，各归其位。
 
+### 1.5 archify（1 个，扁平外挂）
+
+| 项 | 值 |
+| --- | --- |
+| 上游 | tt-a1i/archify（JSON-IR → 自包含 HTML 图示渲染器：architecture / workflow / sequence / dataflow / lifecycle 五类，内联 SVG ＋ 明暗主题 ＋ 可选轨迹动效 ＋ PNG/JPEG/WebP/SVG/WebM 导出） |
+| 锁定 rev | 58ab0b98d2d0def8e49dced705c7b566936723ec（2026-10-10T11:49:39Z） |
+| 许可 | MIT（Copyright (c) 2026 tt-a1i (Archify) / Copyright (c) 2025 Cocoon AI；上游 LICENSE 随库携带为 archify/LICENSE） |
+| 规模 | **315 文件 / 约 11 MB**（交付面 = 上游 archify/ 子树；其 SKILL.md 位于该子树根，天然满足宿主「技能库根/<目录名>/SKILL.md」的**一层**布局 —— 已用探针实测：嵌套布局 0 命中） |
+| 安装形态 | **扁平外挂（复制安装）**：`~/.workbuddy/skills/archify`（**独立真实目录**） |
+| 账本 | `.vendor/archify.lock.json`（rev ＋ 许可 ＋ 逐文件 sha256 ＋ `content_digest` ＋ **主机前置条件与已知阻塞**） |
+| 宿主侧路由 | **Model-invoked**（frontmatter 无 `disable-model-invocation`）—— 见 §三 第五上游表 |
+| ⚠️ 本机可用性 | **装得进、可调用；产物链「会话内受阻、会话外可绕」**；见下方「产物链受阻」与 §二 末「默认豁免」 |
+
+**⚠️ 资产归属**：第三方 MIT 资产，不是自研 —— 不得登记进 `meta.自研工具`，不得随 ai-workflow 本体仓推送。
+
+**⚠️ 三条实测约束（决定它怎么接，都不是设计偏好）**：
+
+1. **运行期零 npm 依赖**：其 package.json 只有 `devDependencies`、**没有 `dependencies`**，代码纯 `node:` stdlib ⇒ 无需 `npm install` 即可跑。唯一外部二进制是**系统 Chrome**（走 CDP，`--headless=new --remote-debugging-pipe`），供 `doctor` 与四门中的 `browser-check` 用 —— **本机得有 Chrome 才谈得上跑通**。
+2. **它自带 fail-closed 的原子写出与四阶段门禁**（`finalize` = validate → deliver → check → browser-check，**无跳过开关**）⇒ 与 §1.2 的 `ppt-master` 同型：**一个字节都不改**（`patched` 恒为 false）。
+3. ⭐ **它是「产物生成器」，不是「方法论」**（与 §1.4 的 `hairline-create` 同型）⇒ **产物外挂、原则不迁移**：它的设计原则强绑定其 IR 与四阶段门禁，不构成可迁移判据，故**不进** `references/aesthetic-rubric.yaml`。
+
+**⚠️ 产物链受阻（本机环境，fail-closed，不静默降级；2026-10-11 已改判）**：
+
+- **现象**：`doctor` **rc=0 全绿**（20 项 `[ok]` ＋ `Archify is ready.`），但 `demo` 与 `finalize` **rc=1**：前者报 `Temporary output candidate has multiple hard-link names.`（诊断码 `output/target-hardlinked`），后者报 `finalize/receipt-publication`，四项门 validate / deliver / check / browser-check **全部 `not-run`**；两者证据均为 `links: "2"`。
+- ⭐ **定位（首版归因已推翻）**：最小复现（`link` 后 `nlink=2` → `unlink` 源名 → 文件已消失但 `dst.nlink` **仍为 2**，正常应为 1）成立；但首版据「Python 3.13 / Node 22 / Node 24 / PowerShell 中继 × C:/D:/E: 三盘 × **沙箱开与关**」**全部复现**定为「**系统层 nlink 语义异常**」—— **该论据不成立**：那八组宿主**共用同一批被注入的会话进程**，「沙箱开／关」两态也跑在同一批宿主上 ⇒ 等于**用一个候选去排除它自己**（假阴性）。
+- ⭐ **真因（六层证据链，2026-10-11 第二轮取证）**：宿主把 **tsbx.dll（Tencent Sandbox 5.7.10）** 注入**会话进程树**，对 `ntdll!NtSetInformationFile` / `NtCreateFile` / `NtOpenFile` 做 **inline hook**（入口 `48 b8 <imm64> ff e0`，跳转目标落在 tsbx 基址内），把删除操作**重定向为「移入回收站」** ⇒ 删掉硬链接的一个名字时文件对象仍在、link count 不减。四条旁证：① `fsutil hardlink list` 在删除后列出回收站内的目标；② **删除方式矩阵** —— `os.unlink` / `DeleteFileW` / `SetFileInformationByHandle` / `.NET File.Delete` **全进回收站**，唯 `cmd` 内建 `del` 真删；③ **查询类 API 未被 hook**（`NtQueryInformationFile` 等仍是原生序言）；④ 沙箱实现源码内含 `deleteMode: 'trash'`。**注入范围仅会话进程树**（`tasklist /m tsbx.dll` 34 实例；`explorer` / `svchost` / 火绒 / `WorkBuddy.exe` **均不在**）。
+- ⭐ **改判结论**：这**不是**文件系统／内核缺陷（四盘皆 NTFS 3.1，文件系统本身健康），**也不是**「本机不可产出产物」—— 它是**会话级**的进程 API 改写 ⇒ **会话内**跑 archify 的产物链**仍会 rc=1**；**在会话外的独立终端**运行，删除恢复真删、nlink 正常递减 ⇒ **产物链可绕**。
+- **上游侧坐标**：archify/renderers/shared/atomic-output.mjs 的 `captureRegularFileBinding` 在 `nlink > expectedLinks(1)` 时判 `unsupported` ⇒ 产出 `candidate-hardlinked` / `finalize-receipt-hardlinked`。这是**它有意的 fail-closed**（宁可拒写，不静默产出半成品）。
+- ⚠️ **诚实边界**：① 「**会话外可绕**」目前是**机制推论**（注入范围已取证），**尚未端到端实跑** —— 需在会话外终端跑一次 `demo` 确认；② **会话内**调用时**不要承诺当场交付产物**，改承诺「产物需在会话外生成」，或退到 `references/diagram-mode.md` 的本仓流程；③ 该阻塞**不动摇**其 fail-closed 的价值 —— **不得**为绕开而放宽上游判据。
+- **调用前置条件（关闭更新自检，用户 2026-10-11 指令）**：命令前设 `ARCHIFY_UPDATE_CHECK_DISABLED=1`，短路 scripts/check-update.mjs 的联网自检（默认查 tt-a1i.github.io/archify/skill-updates/archify/stable.json）。该开关**不改变产物质量口径**；且 `finalize` 的 `deliver` 阶段**内部已自关**该自检 ⇒ 日常调用负担极小。
+
+**⚠️ 版本号不可作判据（与 §1.2 同纪律的变体）**：其 SKILL.md frontmatter 写 `metadata.version: "3.0"`，而 package.json / skill-release.json / CHANGELOG 均写 **3.0.1** ⇒ **以 `upstream_rev` 为唯一坐标**。
+
+> **为什么不做成本体内置**：① 本仓已有同轴的图示设计模式（`references/diagram-mode.md` 的 P0–P4）与审美判据集 —— 再内置一套渲染器会造成**两套口径**；② 它是**产物生成器**，折进本体会把「一种实现」写成「本仓默认」；③ 它自带 fail-closed 门禁，改它文件会直接把它顶停。⇒ **产物外挂、判定归本仓**。
+
+### 1.6 本地已装·非 vendored 的能力技能（5 个；⚠️ **不是上游**，来源未判定）
+
+> ⚠️ **本节五个不是上游**；本簇的**第六上游** `diagram-design` 编号虽在其后（§1.7），但**性质与它们相反**（有 lock、可同步）。
+
+> ⭐ **与 §1.1–§1.5 的根本区别**：这五个**既不是第三方上游**，**也不在 `.vendor/` 的五个 lock 内**。它们的来源在**本机无机器可核证据** ⇒ 本节**不写**「上游 / 锁定 rev / 许可」（写了就是编造），只登记**可核的事实**与由此产生的边界。
+
+**可核事实（2026-10-11 实测，取法：目录列举 + frontmatter 读取 + `.vendor` 列举 + 使用台账）**：
+
+| 项 | 值 |
+| --- | --- |
+| 名称（5） | reviewed-change-apply-gate · long-job-background-survival · long-job-crash-safety · memory-file-compaction · structured-record-surgical-edit |
+| 位置 | `~/.workbuddy/skills/<名>/` —— **本机独有**：`.codex/skills` 与 `.workbuddy-ai/skills` 两处均无同名目录 |
+| 规模 | 1–3 文件 / 6.8–20 KB（多数仅一个入口文件；reviewed-change-apply-gate 另带一个 scripts 子目录） |
+| frontmatter 键 | 仅 name / description / agent_created / version —— **无** source、**无** upstream_rev |
+| `agent_created` | 五者**均为 true** |
+| LICENSE / README | **均无**（第三方上游的 LICENSE 必随库携带，见 §1.1–§1.5） |
+| `.vendor` 登记 | **均无** |
+| 调用统计 | 使用台账原文：memory-file-compaction「used / 2 次」；其余四个「unused / 0 次 / **A类:装了没用**」 |
+
+⚠️ **来源状态 = 未判定 —— 两个方向都不得写**：本机能证的只有「不在任何上游账本内、无来源元数据、他处无副本」。写成「第三方」会**把来源不明的东西伪装成有出处**（违反 §五 的诚实口径）；写成「自研」会与本仓既有标记体系冲突 —— 自研在索引里由入口文件的 `selfbuilt: true` 标记（如 `ai-workflow` 本身），而这五个**没标**。⇒ 本节按**中性事实**登记，**定性留给用户**。
+
+**它们各解决什么（与本体是「互补」，不是「替代」）**：
+
+| 技能 | 治什么 | 与本体既有面的关系 |
+| --- | --- | --- |
+| reviewed-change-apply-gate | 「出 diff 就当已落地」这类**半截交付**；把已审变更真正写进既有文件时配机器门禁（备份原始字节 / 段外一致性 / 写后 sha256 回读 / 原子替换 / 阴性对照 / 换行风格字节级一致） | 与本体 `scripts/gate.py` **首尾相接**：gate 管「该不该改」，它管「改对了没有」—— 本体此前**没有**「把已审 diff 应用到既有文件」这条路径 |
+| long-job-background-survival | 后台长任务**无堆栈静默死亡**：先用纯心跳探针把「宿主时限」与「任务自身 bug」分开，再换启动方式；并发分块 + 严格按单元序落盘 | 本体的长任务面此前为零覆盖（全库检索 长任务/resume/断点/OOM 零命中） |
+| long-job-crash-safety | 跑几小时的长任务**崩溃安全与判据纪律**：落盘粒度细于失败粒度、判据事前固定（防「崩了再剔」）、分段交付不押在链尾 | 它是把本体的一次事故（修订上限常量 `MAX_REVISIONS = 3`）**通用化**，不是重复 |
+| memory-file-compaction | 常驻注入文件**超限被截断**后的无损压缩 + 结构化拆分：用机器可算的「事实 token 三向差集」证明「压掉的只有表述、没有事实」 | 本体的记忆是**检索侧**（知识库 LSA + 学习引擎 K1–K5），**没有注入面限额治理** |
+| structured-record-surgical-edit | 长单行标量 / 记录性文件（YAML 长标量、JSON 串、表格行）的**定点修改**：锚点必须含结尾引号与后继键、合并必须可逐字检回 | 本体此前只有「同一文件多次编辑必须串行」一句，无具体手改姿势 |
+
+**宿主侧分类（按 §二 两分类）**：五者 frontmatter 均**无** `disable-model-invocation` ⇒ **Model-invoked**（与 §1.3–§1.5 同法）。
+
+**⚠️ 引用即调用 ≠ 盖过本仓判定**：这五个给的是**手法与纪律**，本仓的判据（对账 / 门禁 / 去味 / 审美 / 治理）**仍在本体**。**不得**把它们当作「另一套判据」接入（违反硬约定第 4 条「同一物理量不写两处」）。
+
+**⚠️ 机器检查缺口（如实登记）**：§六 的 `external_skill_lint.py` **只扫 `.vendor/*.lock.json` 登记过的技能** ⇒ 这五个**不在覆盖范围内** ⇒ 它们当前是**未检测**状态，**不是**「已验证合格」。要纳入覆盖，前提是先有 lock —— 而 lock 需要可核的「上游坐标 + 许可」，这五个**没有**。⇒ 该缺口**不会自然消失**，属**结构性未覆盖**。
+
+**⚠️ 无同步规程**：§七 的同步规程对它们**不适用**（没有上游可同步；`.codex` / `.workbuddy-ai` 两处也无副本可对照）⇒ 它们**随本机演进**，无漂移检测。若要引入漂移检测，前提同样是先判定来源。
+
+### 1.7 diagram-design（1 个，扁平外挂；**第六上游**）
+
+> ⚠️ **与 §1.6 的区别（本节最易混）**：本节这个**是上游** —— 第三方 MIT 资产、有 `.vendor` lock、可同步；§1.6 那五个**不是上游** —— 来源未判定、无 lock、无同步。两者编号相邻只是**插入顺序**，**不要混为一类**。
+
+| 项 | 值 |
+| --- | --- |
+| 上游 | cathrynlavery/diagram-design（自包含 HTML ＋ 内联 SVG 的**编辑型图表设计**技能：**44 种图表类型**、语义模式、可蒙皮设计系统、导入 draw.io / Mermaid / Excalidraw、可导出 SVG / PNG） |
+| 锁定 rev | 7a2e22170ee838e859d8142ba825d83f8b6375e6（2026-10-10T21:10:13Z；上游**无 release tag**） |
+| 许可 | MIT（上游根 LICENSE **随库携带**为 diagram-design/LICENSE） |
+| 本机版本 | 2.6（其 SKILL.md frontmatter 的 metadata.version）；⚠️ 插件 manifest 为 **2.6.74** ⇒ **版本号不可作判据**，以 `upstream_rev` 为唯一坐标（与 §1.5 的 archify 同纪律） |
+| 规模 | **280 文件 / 约 4.9 MB**（交付面 = 上游 skills/diagram-design/ 子树的 279 文件 ＋ 随库 LICENSE；其中 references/ 62 ＋ assets/ 211 ＋ scripts/ 5） |
+| 安装形态 | **扁平外挂（复制安装，非联接）**：`~/.workbuddy/skills/diagram-design`（**独立真实目录**） |
+| 账本 | `.vendor/diagram-design.lock.json`（rev ＋ 许可 ＋ 逐文件 sha256 ＋ `content_digest` ＋ **reference_mentions 50 条**） |
+| 宿主侧路由 | **Model-invoked**（frontmatter 无 `disable-model-invocation`）—— 见 §三 第六上游表 |
+
+**⚠️ 资产归属**：第三方 MIT 资产，不是自研 —— 不得登记进 `meta.自研工具`，不得随 ai-workflow 本体仓推送。
+
+**⚠️ 五条实测约束（决定它怎么接，都不是设计偏好）**：
+
+1. **交付面自包含、且有「装态降级」**：其 SKILL.md 与 references/ 的自检条分两路 —— 装态走上游的 self_check.py（**本仓已实跑 rc=0**）；仓根门（verify-geometry / verify-motion / lint-skin 等）只在 "From a repository checkout" 时可用。⇒ 那些仓根路径**不属交付面**，其 **50 条**引用已在 lock 的 `reference_mentions` 登记为**豁免**（**豁免 ≠ 已验证**，lint 对该处给 SKIP 并计数）。
+2. **它已被本仓「提炼」过一次，但那是产出结构侧**：`references/diagram-mode.md`（v4.20.0，钉 rev d1376371965f513d99cc9ec388835d255c5c88d5）提炼的是它的 **P0–P4 产出结构**（README / semantic-patterns / layout-budget / output-spec / self_check.py / 14 份 ADR）；本次接入的是**引擎与产物**（44 类型 ＋ 单文件 HTML/SVG ＋ self_check.py）。两者**不冲突**：**契约层 vs 引擎层**（分界见 `references/diagram-mode.md` §8）。
+3. ⚠️ **默认产物形态是 HTML，但 format 拨盘可取 svg / png** ⇒ 科研 / 投稿场景**不与之冲突**：论文配图默认走 `format=svg`（见 `references/research-mode.md` §7.11）。⚠️ 上游明写**导出是 manual、不得未经要求自行产出导出件**。
+4. ⭐ **导出三条通道：谁实现哪一条必须分清（2026-10-11 实跑划定）**：
+   - **`svg` = 上游真源** —— scripts/export_svg.py（本仓导出一律**转调**它，**不另写一份实现**，避免行为分叉）。
+   - **`png` = 上游规程 ＋ 本机依赖** —— 上游 references/export.md 给了完整规程（透明底、只截 `<svg>` 元素盒、**释放祖先裁剪**、动效页先取 `?motion=static` 并等 `document.fonts.ready`），但**明令不自动装运行时依赖**。
+   - **`pdf` = 上游没有的能力** —— export.md 只定义 svg / png ⇒ PDF 是**本仓扩展**（Chrome/Edge 无头打印），**必须在文档里如实标注为扩展**，否则会被读成上游能力。
+   - ⚠️ **「装得进 ≠ 跑得动」在 PNG 上又应验一次**：`pip install playwright` 成功后，`chromium.launch()` 仍可能报 **`Executable doesn't exist …chromium_headless_shell-<rev>`** —— Playwright 按**自己钉的版本**要浏览器二进制，与机器上已有的 `ms-playwright/chromium-*` 目录**版本号不必相同**。⇒ **包与二进制必须分别 provision、分别探测**（本仓 `scripts/setup_env.ps1` 第 4b 步只 WARN 不阻塞，`scripts/diagram_export.py` 缺件时按上游口径 rc=3 停止）。⭐ **本仓的处置**：`export_png_batch()` 内建**三级回退**（自带 chromium → **系统已装 Chrome** → 系统 Edge，走 Playwright 的 `channel=`）—— 于是「那份 ~150 MB 二进制没下下来」**不再是死路**：本轮正是靠回退先把通道跑通，之后才在后台把二进制装完（约 36 分钟）。⚠️ 但回退**不等于**可以把依赖当免费：三者皆无时仍按上游口径 rc=3 停止。
+5. ⭐ **动效通道：canonical 控制器原生支持 `reveal`，不需要（也不允许）另写脚本** —— `assets/template-motion.html` 的控制器在 `data-motion-mode="reveal"` 分支下自行 `render(0)` → `play()`（自动播放一次后停在完整终态）。⚠️ 因此 reveal 变体与 step 变体**只差一个属性值**；任何「自己写个自动播放脚本」的做法都会被上游 self_check.py 的脚本身份判据拒收。
+   - ⚠️ **`--motion-total` 是一个上游不校验的契约项**：animation.md 要求它等于「步数 × `--motion-hold`」，但**模板里写死 3600ms**（那是模板自己 5 步的值），而 `check_motion` **根本不读这个变量** ⇒ 直接复用模板会得到「4 步图挂着 5 步的时长」且**无判据报警**。本仓在 `chartlib.motion_page()` 里按步数重算。**同理**：上游 animation.md 第 120–123 行引用的 verify-motion.py / lint-skin.py **不随包发行**（scripts/ 下只有 drawio_extract.py / excalidraw_extract.py / export_svg.py / mermaid_extract.py / self_check.py）—— 又一处**「文档写着有、包里没有」**，故运动契约里凡 `check_motion` 未覆盖的项，本仓只能自建判据或如实登记为未检测。
+
+> ⭐ **引用上游文件名的记号约定（本文件全域适用，勿「顺手补反引号」）**：上游 `.py` / `.md` 文件名**一律不带反引号**。原因是机器判据的取值口径 —— `checks.py` 的「文档引用完整性」是**扁平检查**：反引号里的 `xxx.py`/`xxx.md` **一律按「本技能目录内」**去四个位置解析，解析不到即判**断链**；而 diagram-design 的文件在**另一个根**（`~/.workbuddy/skills/diagram-design/`）⇒ 补上反引号会立刻制造**假 FAIL**（本轮实测 19 处 / 五文件）。上游的**安装位置与形态**已在 §一 的六张表里逐上游登记，此处不必重复。**不用「让判据放宽」来消这个 FAIL** —— 判据本身没写错，错的是拿「本技能内引用」的记号去指别人的文件。
+
+> **为什么不做成本体内置、也不并进 diagram-mode.md**：① 本仓 `references/diagram-mode.md` 是**契约层**（该不该画 / 画成什么 / 画到什么密度），把 44 类型的绘制细则折进去会把**契约**写成**手册**；② 它是**产物生成器**（与 §1.4 hairline-create、§1.5 archify 同型）⇒ **产物外挂、契约留本仓**；③ 复制安装便于 `--verify-lock` 漂移检测。
+
 ---
 
 ## 二、调用口径（上游两分类 → 宿主语言）
@@ -116,6 +225,21 @@
 **`hairline-create` 同样走 §二 的 Model-invoked 一栏**（frontmatter 无 `disable-model-invocation`）⇒ 阶段 0 的索引匹配可自动命中它；但**它的原则侧不在本文件** —— 已入 `references/aesthetic-rubric.yaml` 的 H 层（见 §1.4 第 2 条），本文件只负责「它从哪来、什么形态、怎么同步」。
 
 **`humanizer` 则走 §二 的 Model-invoked 一栏**：阶段 0 的索引匹配可自动命中它；但**在本仓语境下它的定位是「改写手法资源」而非「判定执行者」** —— 命中后**判定仍回本仓文风判定**（见 §1.3 第 3 条与 §五 第 8 条）。
+
+**`archify` 同样走 §二 的 Model-invoked 一栏**（frontmatter 无 `disable-model-invocation`）⇒ 阶段 0 的索引匹配可自动命中它。⚠️ **命中即可调用**：其**路由与调用口径正常**，唯一本机约束是**产物链在会话内受阻**（见 §1.5）⇒ 会话内命中它时，**照常调用并把产物落点安排到会话外**，或退到 `references/diagram-mode.md` 的本仓流程，**不要**因此拒调。另：调用前设 `ARCHIFY_UPDATE_CHECK_DISABLED=1` 关掉其更新自检（`finalize` 的 deliver 阶段内部已自关）。
+
+**⭐ 默认豁免 ——「图示例外」（本版新增，与用户级「默认不产出 HTML」硬规则的接口）**
+
+用户级硬规则默认「除用户点名要，不产出 `.html` 文件」，其**靶子是把 HTML 当报告 / 知识整理的载体**。而 `archify` 的产物是**图示载体**（单文件、内联 SVG ＋ 明暗主题），且 `references/diagram-mode.md` 的图示识别判据 ② 本就写明「图类任务的期望形态是 HTML / SVG / PNG」⇒ **任务要出图时，「HTML」就是用户点名要的形态**。故定四条：
+
+- **① 允许**：任务本身要**出图**（架构图 / 工作流图 / 时序图 / 数据流图 / 状态机图），或用户点名要图示、要单文件可交互图 ⇒ 调 `archify`（或 `hairline-create`），其 `.html` 产物**合规**。
+- **② 声明**：交付时**显式声明「这是图示载体，不是网页报告」**（写在回复里即可；产物内不必）。
+- **③ 仍禁止**：拿它当**报告生成器** —— 承载大段说明文字、章节正文、结论叙述；报告 / 知识总结 / 数据分析展示 / 复习资料类交付物**仍走 Markdown / PDF / DOCX / XLSX / PPTX**。
+- **④ 不改记忆**：本条是对既有硬规则的**收窄解释**（把「用户的要求」落到图类任务上），**不修改**用户级记忆条目本身。
+
+⚠️ **它是「豁免」不是「放宽」**：判据只有一条 —— **这份产物的主要功能是不是「图」**。答「否」即不适用（与 `diagram-mode` 的 P0「该不该画」同源）。
+
+**§1.6 那五个本地技能同样走 §二 的 Model-invoked 一栏**（frontmatter 无 `disable-model-invocation`）⇒ 阶段 0 的索引匹配可自动命中它们。⚠️ 但它们的**机器检查是缺口**（不在任何 lock 内，见 §1.6 末）—— 命中后可按其正文当**手法与纪律**使用，**不要**把「它没被 lint 扫过」误读成「它有问题」，也**不要**误读成「它已经过验证」。
 
 ---
 
@@ -172,6 +296,35 @@
 
 > ⚠️ 这一行**只引产物、不引判据**：它的十条规则里可迁移的那部分**已入判据集 H 层**（见 §1.4 第 2 条），本行不重复登记判据。
 
+**第五上游（`archify`，1 个，按 §二 两分类）**：
+
+| 场景 | 调哪个 | 分类 |
+| --- | --- | --- |
+| 要把系统架构、技术工作流、API 调用时序、请求生命周期、数据管道 / 血缘、状态机画成**可探索的单文件 HTML**（或把 Mermaid 流程图/时序图/状态图转成或美化） | `archify` | Model-invoked |
+
+> ⚠️ **两处前置**：① 命令前设 `ARCHIFY_UPDATE_CHECK_DISABLED=1`（关更新自检）；② **产物链会话内受阻、会话外可绕**（宿主会话的 safe-delete 把删除重定向为回收站，见 §1.5）—— 命中后**照常调用**，只把产物落点安排到会话外，或退到 `diagram-mode` 流程；**不要**因本机约束而拒调。
+> ⚠️ **与既有面不重叠**：本仓 `references/diagram-mode.md`（P0–P4）管「选哪个类型 ＋ 怎么组织」、判据在 `references/aesthetic-rubric.yaml`；`archify` 只提供**产物层的一个实现**（与 `hairline-create` 同型），**不引判据**。
+
+**本地已装·非 vendored 的能力技能（§1.6，5 个，按 §二 两分类）**：
+
+> ⚠️ 这一组**不是上游**（见 §1.6）—— 列在这里只为「阶段 0 命中时该调哪个」，**不要**把它们计入上游数量。
+
+| 场景 | 调哪个 | 分类 |
+| --- | --- | --- |
+| 用户已批准一份 diff / 拟改后全文，现在要**真正写进既有文件**，且需要「出 diff ≠ 已落地」的证据 | reviewed-change-apply-gate | Model-invoked |
+| 后台长任务**跑一两分钟就消失**、日志停在完整一行且无 traceback（怀疑宿主时限） | long-job-background-survival | Model-invoked |
+| 跑**几小时**的批量任务，需要增量落盘 / resume / 判据事前固定 / 不要过拟合 | long-job-crash-safety | Model-invoked |
+| 常驻注入文件（记忆 / 索引类）**超限被截断**，要无损压缩并拆分 | memory-file-compaction | Model-invoked |
+| 要改**长单行标量**或记录性文件中的一行（会过机器校验的那种） | structured-record-surgical-edit | Model-invoked |
+
+**第六上游（`diagram-design`，1 个，按 §二 两分类）**：
+
+| 场景 | 调哪个 | 分类 |
+| --- | --- | --- |
+| 要把「组件 ＋ 连接」「时序 / 消息」「流程 / 分支」「状态机」「数据模型 / ER」「数据流」「层级 / 树」「象限」「甘特」「统计图（bar / line / scatter / heatmap / radar / treemap / sankey 等）」画成**单文件 HTML（内联 SVG）**，或把 draw.io / Mermaid / Excalidraw **改绘**成编辑型图表 | `diagram-design` | Model-invoked |
+
+> ⚠️ **与既有面的分界**：本仓 `references/diagram-mode.md`（P0–P4）是**契约层**，本节这个技能是**引擎层** —— 示意图**先过 P0–P4、再交它绘制**；**数据图不经 P0–P4**（直接用，见 `references/research-mode.md` §7.11）。⚠️ 它的 style-guide 阈值是**它自己的设计系统** ⇒ 承 `diagram-mode` §10 第 4 条**只搬规则、不搬阈值**。
+
 **依赖提示**：`tdd` 正文要求配合 `codebase-design` 使用（后者是 seam、adapter、depth 这些词的唯一定义处）；`grill-with-docs` 依赖 `domain-modeling`。这几个**成组装齐了**，不要单装一个。
 
 ---
@@ -205,6 +358,11 @@
 7. **`ppt-master` 的边界不列在本节**：它的诚实边界（版本不锁、联接单点依赖、依赖与许可含 AGPL 组件、宿主索引可达性未端到端验证、不代跑业务链路）写在 `references/ppt-mode.md` §10，**本文件不重述**。
 8. **`hairline-create` 的边界（产物 ≠ 原则）**：它保证「能生成一张符合十条规则的图」，本仓判据集保证「明显劣化会被拦」—— **装了它不等于产物变好看**：判据只拦可枚举的劣化面，判断层（静止态是否是构图、命中区是否发抖）**仍是人审点**。另两条：**复制安装 ⇒ 上游更新不会自动生效**，须按 §7.3 整体重取；其 `look.mjs` 需浏览器与 `playwright-core`（首次运行联网安装），本仓**不代跑**其业务链路。
 9. **`humanizer` 的边界（手法 ≠ 判定）**：它给的是**改写手法**、不是判定；**不要**把「humanizer 改过了」当成「文风判定已达标」—— 判定唯一在本仓 `scripts/humanize_scan.py`（第七物理量）。其安装形态是**复制**（与 `ppt-master` 的联接相反），故**上游更新不会自动生效**，须按 §7.2 重取。
+10. **`archify` 的边界（装得进 ≠ 会话内跑得动；会话外可绕）**：① **产物链会话内受阻、会话外可绕** —— 其原子写要求 `nlink === 1`，而宿主会话的 safe-delete 把删除重定向到回收站 ⇒ 会话内实测恒为 2 ⇒ `demo`/`finalize` rc=1（详见 §1.5）；⚠️ **`doctor` 全绿不代表能产出**（该路径不写产物）。② **复制安装 ⇒ 上游更新不自动生效**，须按 §7.4 整体重取。③ **它的原则不迁移**：设计原则强绑定其 IR 与四阶段门禁，**不入** `references/aesthetic-rubric.yaml`（与 §1.4 的 `hairline-create` 相反 —— 那个有可迁移的视觉工艺）。④ **版本号不可作判据**：frontmatter 3.0 ↔ package.json 3.0.1，只认 `upstream_rev`。⑤ **`browser-check` 门依赖系统 Chrome**；本仓**不代跑**其业务链路。
+
+11. **§1.6 那五个的技能「来源未判定」**：本机能证的只有「不在任何上游账本内、无来源元数据、他处无副本」—— **不是**第三方，也**不是**已被 `selfbuilt` 标记的自研。由此派生两条**结构性缺口**：① **机器检查未覆盖**（§六 的 lint 只扫 lock 登记者）；② **无同步与漂移检测**（§七 不适用）。两条都**不会自然消失**，须先由人判定来源才能补。
+
+12. **`diagram-design` 的边界（引擎 ≠ 契约；装态降级；默认 HTML）**：① **它只给引擎与产物、不给判据** —— 「该不该画」与像素级审美仍归本仓（`references/diagram-mode.md` ＋ `references/aesthetic-rubric.yaml`），**不得**把它当「另一套图示判据」接入（违反硬约定第 4 条「同一物理量不写两处」）；② **装态降级** —— 仓根门（verify-* 一族 / lint-skin）在本机不可用，只剩 self_check.py ＋ 手动自检，该缺口由 lock 的 `reference_mentions` 登记为**豁免**（≠ 已验证）；③ **默认产物是 HTML**，但 format 拨盘可取 svg / png，且上游明写**导出是 manual、不得自行产出导出件**；④ **复制安装 ⇒ 上游更新不自动生效**，须按 §7.6 整体重取；⑤ **版本号不可作判据**：frontmatter 2.6 ↔ 插件 manifest 2.6.74，只认 `upstream_rev`。
 
 ---
 
@@ -227,11 +385,13 @@
 用法：
 
 ```
-python scripts/external_skill_lint.py                    # 查 .vendor/ 下全部 lock 登记的外部技能（四上游）
+python scripts/external_skill_lint.py                    # 查 .vendor/ 下全部 lock 登记的外部技能（六上游）
 python scripts/external_skill_lint.py --verify-lock      # 加做 lock 与磁盘 sha256 一致性
 python scripts/external_skill_lint.py --skill tdd        # 只查一个
 python scripts/external_skill_lint.py --lock <path>      # 只用一个 lock（排障用）
 ```
+
+⚠️ **覆盖边界（2026-10-11 实测补充）**：本节的检查**只覆盖 `.vendor/*.lock.json` 登记过的技能**（当前 5 个上游）。**§1.6 那五个本地技能不在覆盖内** ⇒ 对它们而言本节输出的是**沉默**，而**沉默不等于通过** —— 读本表时不要把「lint 没报它」当成「它没问题」。
 
 ---
 
@@ -273,3 +433,32 @@ python scripts/external_skill_lint.py --lock <path>      # 只用一个 lock（�
 3. 逐文件 sha256 重算写回 lock，跑 `scripts/external_skill_lint.py --verify-lock`。
 4. 取数时**必须带 rev**（`?ref=<40 位 sha>`），并逐文件校验 **git blob sha1** 与上游 `contents` 接口返回的 `sha` 相等 —— 这是「确实取自该 rev」的机器证据（`--verify-lock` 只比 sha256，证不了来源）。
 5. ⚠️ **不要**把它的原则搬进本文件、也不要把 H 层判据写进它的目录 —— 两边一旦互写，同步时无法区分差异来源。
+
+### 7.4 archify（复制安装，无补丁）
+
+它是**复制安装**（上游 `tt-a1i/archify` 的 archify/ 子树 → `~/.workbuddy/skills/archify`，**独立真实目录**）⇒ **上游更新不会自动生效**（与 7.1 的联接相反、与 7.2 / 7.3 同法）。同步规程：
+
+1. 取上游新 rev，与 lock 的 `upstream_rev` 比对，确认有更新（⚠️ **不要**用版本号判 —— 其 frontmatter 3.0 与 package.json 3.0.1 本就不一致，见 §1.5）。
+2. **整体重取**（`patched` 恒为 false，无补丁可放）。⚠️ **只取上游 archify/ 子树那 315 个文件**，不要把仓库根的 README / CHANGELOG / scripts / docs 一并搬进来。
+3. 逐文件 sha256 重算写回 lock，跑 `scripts/external_skill_lint.py --verify-lock`。
+4. 取数时**必须带 rev**（`?ref=<40 位 sha>`），并逐文件校验 **git blob sha1** 与上游 `contents` 接口返回的 `sha` 相等 —— 这是「确实取自该 rev」的机器证据（`--verify-lock` 只比 sha256，证不了来源）。
+5. ⚠️ **不要**改它任何文件（其原子写出与四阶段门禁是 fail-closed 的，改任一文件即拒写）；也不要把本仓判据写进它的目录 —— 两边一旦互写，同步时无法区分差异来源。
+
+### 7.6 diagram-design（复制安装，无补丁）
+
+它是**复制安装**（上游 `cathrynlavery/diagram-design` 的 skills/diagram-design/ 子树 ＋ 随库 LICENSE → `~/.workbuddy/skills/diagram-design`，**独立真实目录**，280 文件）⇒ **上游更新不会自动生效**（与 7.1 的联接相反、与 7.2–7.4 同法）。同步规程：
+
+1. 取上游新 rev，与 lock 的 `upstream_rev` 比对，确认有更新（⚠️ **不要**用版本号判 —— frontmatter 2.6 与插件 manifest 2.6.74 本就不一致，见 §1.7）。
+2. **整体重取**（`patched` 恒为 false，无补丁可放）。⚠️ **只取上游 skills/diagram-design/ 子树 ＋ 根 LICENSE**，不要把仓库根的 scripts/（verify-* 一族）、commands/、prompts/、docs/、.github/ 一并搬进来 —— 它们**不属于交付面**。
+3. 逐文件 sha256 重算写回 lock，跑 `scripts/external_skill_lint.py --verify-lock`。
+4. 取数时**必须带 rev**（`?ref=<40 位 sha>`），并逐文件校验 **git blob sha1** 与上游 `contents` 接口返回的 `sha` 相等 —— 这是「确实取自该 rev」的机器证据（`--verify-lock` 只比 sha256，证不了来源）。
+5. ⚠️ **不要**改它任何文件；也不要把本仓判据写进它的目录 —— 两边一旦互写，同步时无法区分差异来源。
+6. ⚠️ **重取后可能新报 FAIL**：若上游 references 新增了指向**仓根**的引用（verify-* 等），须补进 lock 的 `reference_mentions`，否则会被「引用完整性」判为**未登记断链**。
+
+### 7.5 §1.6 的五个本地技能（**不适用本节**）
+
+它们**没有上游可同步**：`.vendor` 无 lock、`.codex` / `.workbuddy-ai` 无副本、正文内无 source / upstream_rev 元数据。
+
+⇒ **本节全部规程（比对 rev、重放补丁、重算 sha256、`--verify-lock`）对它们不可执行**。它们**随本机演进**，且**当前无漂移检测**。
+
+⚠️ 要补上漂移检测，前提是**先判定来源**（若判定为第三方 ⇒ 先取回上游坐标与许可再建 lock；若判定为自研 ⇒ 走本体的版本与卫生约定）。**在来源判定之前，不得为它们写 lock** —— 那会把编造的出处固化进账本。

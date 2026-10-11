@@ -1,0 +1,27 @@
+== 分段计时 ==
+  sync_playwright 进入        1.77s
+  launch(channel=chrome)    0.96s
+  new_page                  0.46s
+  route 安装                  0.01s
+  goto                      0.06s
+  networkidle               0.66s
+  fonts.status              0.08s
+  rect       = [1150, 575]
+  display    = block
+  border     = 0px
+  padding    = 0px
+  margin     = 0px
+  box        = border-box
+  radius     = 0px
+  shadow     = none
+  w          = None
+  h          = None
+  vb         = 0 0 1000 500
+  count      = 1
+  evaluate 取盒               0.02s
+  钉尺寸                       0.19s
+  bounding_box = {'x': 65, 'y': 238.59375, 'width': 1000, 'height': 500}
+  screenshot                0.38s
+  browser.close            46.62s
+  总 0.04s(尾)
+  产物 = (2000, 1002) RGB

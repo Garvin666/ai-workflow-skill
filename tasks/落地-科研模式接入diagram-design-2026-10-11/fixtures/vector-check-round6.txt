@@ -1,0 +1,81 @@
+后端 = pymupdf
+[OK  ] output\export\chart-01-bar.pdf
+          · 单页: PASS
+          · 页面尺寸符合图幅: PASS
+          · 文本可提取: PASS
+          · 零 Type3: PASS
+          · 字体全部嵌入: PASS
+          页面 1 页 · 750.0x375.12pt · 可提取字符 119 · 字体 4 个（Type3=0 未嵌入=0）
+[OK  ] output\export\chart-02-line.pdf
+          · 单页: PASS
+          · 页面尺寸符合图幅: PASS
+          · 文本可提取: PASS
+          · 零 Type3: PASS
+          · 字体全部嵌入: PASS
+          页面 1 页 · 750.0x375.12pt · 可提取字符 98 · 字体 4 个（Type3=0 未嵌入=0）
+[OK  ] output\export\chart-03-heatmap.pdf
+          · 单页: PASS
+          · 页面尺寸符合图幅: PASS
+          · 文本可提取: PASS
+          · 零 Type3: PASS
+          · 字体全部嵌入: PASS
+          页面 1 页 · 750.0x375.12pt · 可提取字符 238 · 字体 2 个（Type3=0 未嵌入=0）
+[OK  ] output\export\chart-04-scatter.pdf
+          · 单页: PASS
+          · 页面尺寸符合图幅: PASS
+          · 文本可提取: PASS
+          · 零 Type3: PASS
+          · 字体全部嵌入: PASS
+          页面 1 页 · 750.0x375.12pt · 可提取字符 88 · 字体 4 个（Type3=0 未嵌入=0）
+[OK  ] output\export\chart-05-bar-motion.pdf
+          · 单页: PASS
+          · 页面尺寸符合图幅: PASS
+          · 文本可提取: PASS
+          · 零 Type3: PASS
+          · 字体全部嵌入: PASS
+          页面 1 页 · 750.0x375.12pt · 可提取字符 119 · 字体 4 个（Type3=0 未嵌入=0）
+[OK  ] output\export\chart-06-bar-reveal.pdf
+          · 单页: PASS
+          · 页面尺寸符合图幅: PASS
+          · 文本可提取: PASS
+          · 零 Type3: PASS
+          · 字体全部嵌入: PASS
+          页面 1 页 · 750.0x375.12pt · 可提取字符 119 · 字体 4 个（Type3=0 未嵌入=0）
+[OK  ] output\export\chart-01-bar.svg
+          · XML 可解析: PASS
+          · 根元素是 svg: PASS
+          · 含 viewBox: PASS
+          · 纯矢量（无内嵌栅格）: PASS
+          · viewBox 与声明图幅一致: PASS
+[OK  ] output\export\chart-02-line.svg
+          · XML 可解析: PASS
+          · 根元素是 svg: PASS
+          · 含 viewBox: PASS
+          · 纯矢量（无内嵌栅格）: PASS
+          · viewBox 与声明图幅一致: PASS
+[OK  ] output\export\chart-03-heatmap.svg
+          · XML 可解析: PASS
+          · 根元素是 svg: PASS
+          · 含 viewBox: PASS
+          · 纯矢量（无内嵌栅格）: PASS
+          · viewBox 与声明图幅一致: PASS
+[OK  ] output\export\chart-04-scatter.svg
+          · XML 可解析: PASS
+          · 根元素是 svg: PASS
+          · 含 viewBox: PASS
+          · 纯矢量（无内嵌栅格）: PASS
+          · viewBox 与声明图幅一致: PASS
+[OK  ] output\export\chart-05-bar-motion.svg
+          · XML 可解析: PASS
+          · 根元素是 svg: PASS
+          · 含 viewBox: PASS
+          · 纯矢量（无内嵌栅格）: PASS
+          · viewBox 与声明图幅一致: PASS
+[OK  ] output\export\chart-06-bar-reveal.svg
+          · XML 可解析: PASS
+          · 根元素是 svg: PASS
+          · 含 viewBox: PASS
+          · 纯矢量（无内嵌栅格）: PASS
+          · viewBox 与声明图幅一致: PASS
+
+汇总：PASS=12 FAIL=0 SKIP=0（SKIP 一律计为**未检测**，不得并入通过率）

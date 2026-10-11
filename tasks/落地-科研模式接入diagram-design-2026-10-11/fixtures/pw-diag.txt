@@ -1,0 +1,24 @@
+ms-playwright = C:\Users\<用户名>\AppData\Local\ms-playwright
+  .links                             age=   17.0min  0.0 MB
+  __dirlock                          age=    0.1min  0.0 MB
+  chromium-1228                      age=88053.0min  435.6 MB
+  chromium-1234                      age=99296.9min  464.3 MB
+  chromium_headless_shell-1228       age=88053.0min  282.8 MB
+  chromium_headless_shell-1234       age=99296.9min  284.2 MB
+  ffmpeg-1011                        age=99296.9min  3.5 MB
+  winldd-1007                        age=99296.9min  0.3 MB
+
+TEMP = C:\Users\<用户名>\AppData\Local\Temp
+  C:\Users\<用户名>\AppData\Local\Temp\playwright-download-h3UvGE\playwright-download-chromium-win64-1243.zip  119.4 MB  age=-0.0min
+  C:\Users\<用户名>\AppData\Local\Temp\nsqDFC9.tmp\7z-out\LICENSES.chromium.html  15.3 MB  age=10116.7min
+  C:\Users\<用户名>\AppData\Local\Temp\nspCF58.tmp\7z-out\LICENSES.chromium.html  15.3 MB  age=4036.9min
+  C:\Users\<用户名>\AppData\Local\Temp\nsb17F4.tmp\7z-out\LICENSES.chromium.html  9.2 MB  age=285.1min
+  C:\Users\<用户名>\AppData\Local\Temp\codebuddy-marketplace-install-OExJUY\extract\plugins\playwright-cli\playwright-cli.js  0.0 MB  age=1946.6min
+  C:\Users\<用户名>\AppData\Local\Temp\codebuddy-marketplace-install-BqSPs3\extract\plugins\playwright-cli\playwright-cli.js  0.0 MB  age=1086.6min
+  （命中 6 个）
+
+playwright 包目录 = C:\Users\<用户名>\.workbuddy\binaries\python\envs\ai-workflow\Lib\site-packages\playwright
+  driver/LICENSE
+  driver/node.exe
+  driver/package
+  driver/README.md

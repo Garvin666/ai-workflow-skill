@@ -1,0 +1,17 @@
+{"ts": "2026-10-11 16:33", "step": "s1", "action": "冻结基线", "cmd": "", "result": "6 文件 sha256 清单 + checks 76/76 与 lint 84 对照基线落盘"}
+{"ts": "2026-10-11 16:33", "step": "s2", "action": "取上游并复制安装", "cmd": "", "result": "codeload 归档 -> 280 文件（279+LICENSE），content_digest db41f868"}
+{"ts": "2026-10-11 16:33", "step": "s3", "action": "登记引用豁免", "cmd": "", "result": "reference_mentions 50 条，lint 由 FAIL=1 转 FAIL=0"}
+{"ts": "2026-10-11 16:33", "step": "s4", "action": "科研模式新增 §7.11 并接线 11 处", "cmd": "", "result": "8 小节齐、RF1-RF8 各一次、旧悬空串无残留"}
+{"ts": "2026-10-11 16:33", "step": "s5", "action": "diagram-mode 4 处 + external-skills 六上游化 10 处", "cmd": "", "result": "引用编号 §7.5 改 §7.6；既有节未被破坏"}
+{"ts": "2026-10-11 16:33", "step": "s6", "action": "注册与版本同步", "cmd": "", "result": "SKILL/README/changelog；v4.33.0 同源；写后零 MIXED"}
+{"ts": "2026-10-11 16:33", "step": "s7", "action": "机器验收与交付", "cmd": "", "result": "skill 76/76、lint --verify-lock 93、plan FAIL=0"}
+{"ts": "2026-10-11 16:40", "step": "s8", "action": "修订 ops.md 陈旧 lock 表述（mattpocock 单一 → .vendor/*.lock.json 多上游）", "cmd": "", "result": "ops.md 77059→77639 B；旧串 0 残留；skill 76/76、lint 87、index rc=0 三绿"}
+{"ts": "2026-10-11 16:48", "step": "s9", "action": "diagram-design 最小实跑：产 4 张数据图（柱/折线/热力/散点）", "cmd": "s9_gen_charts.py ; s9b_geom_check.py", "result": "4 文件落 output/；self_check 4/4 rc=0；几何越界=0；阴性对照 rc=1 证明判据非空"}
+{"ts": "2026-10-11 17:02", "step": "s10", "action": "导出投稿级 SVG/PDF（export_svg.py + Chrome 无头打印）", "cmd": "export_svg.py --system-fonts ; s10_export_pdf.py", "result": "4 SVG self_check --offline rc=0；4 PDF 单页 750x375pt、Type3=0、字体全嵌入"}
+{"ts": "2026-10-11 17:02", "step": "s11", "action": "动效通道 step 模式实跑（控制器取自模板，逐字一致）", "cmd": "s11_gen_motion.py ; chrome --dump-dom/screenshot", "result": "self_check rc=0；三态 DOM 合契约；static 与 step4 截图 md5 相同"}
+{"ts": "2026-10-11 17:15", "step": "s12", "action": "共享图表库重构 ＋ 像素等同验证（含双向阴性对照）", "cmd": "pxcompare.py fixtures/before-refactor output --negctl ; pxcompare.py …", "result": "阴性对照 2/2 PASS；line/scatter/motion 差异=0；bar 332px=真缺陷修正（6正1负→5正2负）；heatmap 5311px=色带 60rect→gradient"}
+{"ts": "2026-10-11 17:35", "step": "s13", "action": "reveal 自动播放变体（复用 canonical 控制器，修正 --motion-total 契约缺口）", "cmd": "s13_gen_reveal.py ; self_check.py", "result": "四条硬断言全 True；--motion-total 2880ms；与 step 版仅差 7 行；self_check rc=0"}
+{"ts": "2026-10-11 17:45", "step": "s14", "action": "PNG 栅格化通道 ＋ 三通道导出器收口（并装 Playwright 浏览器二进制）", "cmd": "playwright install chromium ; diagram_export.py out/*.html --formats svg,pdf,png --scale 2", "result": "selftest 22/22；6 图 × 3 通道；修掉「旧产物冒充新产物」fail-open 与「相对路径传 Chrome」两个真缺陷"}
+{"ts": "2026-10-11 17:50", "step": "s15", "action": "零 Type3 判据落地为通用矢量件检查器并回灌科研 R5", "cmd": "check_vector_export.py --selftest ; check_vector_export.py output/export/*.pdf output/export/*.svg --expect 1000x500", "result": "selftest 18/18；真实矢量件 PASS=8 FAIL=0 SKIP=0；修掉「解析处统一换算单位」造成的 4 个 SVG 全假 FAIL"}
+{"ts": "2026-10-11 17:55", "step": "s16", "action": "一键入口 build_charts.py ＋ 边界加固 ＋ 留痕（changelog/SKILL/README 版本同源）", "cmd": "build_charts.py ; checks.py skill ; checks.py plan ; external_skill_lint.py ; gen_skill_index.py --check", "result": "汇总表全通过；四道门禁 FAIL=0"}
+{"ts": "2026-10-11 18:05", "step": "s17", "action": "门禁收口：文档引用记号修正（19 处假 FAIL）＋ 自检项数改为脚本自报 ＋ pymupdf 兼容 ＋ PATH 浏览器探测", "cmd": "s17_docref_fix.py ; checks.py skill ; diagram_export.py --selftest ; check_vector_export.py --selftest", "result": "checks.py skill 76/78 FAIL=2 → 78/78 FAIL=0；两脚本自报「断言 17/21 项」且 PASS；未改任何判据"}

@@ -1,0 +1,38 @@
+Chrome  : C:\Program Files\Google\Chrome\Application\chrome.exe
+[OK  ] chart-01-bar.html → chart-01-bar.svg  10185 B
+        ⚠ output\export\chart-01-bar.svg
+[OK  ] chart-01-bar.html → chart-01-bar.pdf  88853 B
+        ⚠ 1000x500px rc=0
+[FAIL] chart-01-bar.html → chart-01-bar.png  ▸ Error: BrowserType.launch: Executable doesn't exist at C:\Users\<用户名>\AppData\Local\ms-playwright\chromium_headless_shell-1243\chrome-headless-shell-win64\chrome-headless-shell.exe
+╔══════════════════
+[OK  ] chart-02-line.html → chart-02-line.svg  10182 B
+        ⚠ output\export\chart-02-line.svg
+[OK  ] chart-02-line.html → chart-02-line.pdf  93416 B
+        ⚠ 1000x500px rc=0
+[FAIL] chart-02-line.html → chart-02-line.png  ▸ Error: BrowserType.launch: Executable doesn't exist at C:\Users\<用户名>\AppData\Local\ms-playwright\chromium_headless_shell-1243\chrome-headless-shell-win64\chrome-headless-shell.exe
+╔══════════════════
+[OK  ] chart-03-heatmap.html → chart-03-heatmap.svg  19056 B
+        ⚠ output\export\chart-03-heatmap.svg
+[OK  ] chart-03-heatmap.html → chart-03-heatmap.pdf  90021 B
+        ⚠ 1000x500px rc=0
+[FAIL] chart-03-heatmap.html → chart-03-heatmap.png  ▸ Error: BrowserType.launch: Executable doesn't exist at C:\Users\<用户名>\AppData\Local\ms-playwright\chromium_headless_shell-1243\chrome-headless-shell-win64\chrome-headless-shell.exe
+╔══════════════════
+[OK  ] chart-04-scatter.html → chart-04-scatter.svg  10469 B
+        ⚠ output\export\chart-04-scatter.svg
+[OK  ] chart-04-scatter.html → chart-04-scatter.pdf  111616 B
+        ⚠ 1000x500px rc=0
+[FAIL] chart-04-scatter.html → chart-04-scatter.png  ▸ Error: BrowserType.launch: Executable doesn't exist at C:\Users\<用户名>\AppData\Local\ms-playwright\chromium_headless_shell-1243\chrome-headless-shell-win64\chrome-headless-shell.exe
+╔══════════════════
+[OK  ] chart-05-bar-motion.html → chart-05-bar-motion.svg  15343 B
+        ⚠ output\export\chart-05-bar-motion.svg
+[FAIL] chart-05-bar-motion.html → chart-05-bar-motion.pdf  ▸ [53300:60712:1011/172940.039:ERROR:components\headless\command_handler\headless_command_handler.cc:266] Failed to write file output\export\chart-05-bar-motion.pdf: 系统找不到指定的路径。 (0x3)
+
+[FAIL] chart-05-bar-motion.html → chart-05-bar-motion.png  ▸ Error: BrowserType.launch: Executable doesn't exist at C:\Users\<用户名>\AppData\Local\ms-playwright\chromium_headless_shell-1243\chrome-headless-shell-win64\chrome-headless-shell.exe
+╔══════════════════
+[OK  ] chart-06-bar-reveal.html → chart-06-bar-reveal.svg  15370 B
+        ⚠ output\export\chart-06-bar-reveal.svg
+[FAIL] chart-06-bar-reveal.html → chart-06-bar-reveal.pdf  ▸ [66144:33724:1011/172944.259:ERROR:components\headless\command_handler\headless_command_handler.cc:266] Failed to write file output\export\chart-06-bar-reveal.pdf: 系统找不到指定的路径。 (0x3)
+
+[FAIL] chart-06-bar-reveal.html → chart-06-bar-reveal.png  ▸ Error: BrowserType.launch: Executable doesn't exist at C:\Users\<用户名>\AppData\Local\ms-playwright\chromium_headless_shell-1243\chrome-headless-shell-win64\chrome-headless-shell.exe
+╔══════════════════
+rc=1

@@ -1,0 +1,8 @@
+[OK  ] chart-01-bar.html         viewBox=1000×500（**取自文件**）  坐标全部在范围内
+[OK  ] chart-02-line.html        viewBox=1000×500（**取自文件**）  坐标全部在范围内
+[OK  ] chart-03-heatmap.html     viewBox=1000×500（**取自文件**）  坐标全部在范围内
+[OK  ] chart-04-scatter.html     viewBox=1000×500（**取自文件**）  坐标全部在范围内
+[OK  ] chart-05-bar-motion.html  viewBox=1000×500（**取自文件**）  坐标全部在范围内
+[OK  ] chart-06-bar-reveal.html  viewBox=1000×500（**取自文件**）  坐标全部在范围内
+
+越界坐标合计 = 0   （扫 6 个文件；用兜底值的 0 个）

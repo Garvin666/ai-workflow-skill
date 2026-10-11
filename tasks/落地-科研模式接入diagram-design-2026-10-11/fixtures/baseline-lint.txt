@@ -1,0 +1,94 @@
+=== 外部技能放宽判据检查 ===
+来源：tt-a1i/archify @ 58ab0b98（2026-10-10T11:49:39Z（该 rev 的提交日；本地时间 2026-10-10 19:49））｜许可 MIT｜lock archify.lock.json｜登记 1 个技能
+来源：lucasmarkes/hairline @ a2217852（2026-10-08（该 rev 的提交日））｜许可 MIT｜lock hairline.lock.json｜登记 1 个技能
+来源：blader/humanizer @ n/a（2026-10-09（本机落库日期））｜许可 MIT｜lock humanizer.lock.json｜登记 1 个技能
+来源：mattpocock-skills-zh-CN @ 3f92a83（2026-09-28T07:50:41Z）｜许可 MIT｜lock mattpocock.lock.json｜登记 24 个技能
+来源：hugohe3/ppt-master @ n/a（2026-10-09（本机落库日期））｜许可 MIT｜lock ppt-master.lock.json｜登记 1 个技能
+范围：28 个已登记技能（lock 口径；不含宿主本体与用户自建技能）
+
+[ OK ] archify · frontmatter 可解析
+[ OK ] archify · 引用完整性 — 技能内可解析 3 条；按约定豁免 0 条（豁免 ≠ 已验证）
+[ OK ] archify · 无硬编码密钥
+[ OK ] hairline-create · frontmatter 可解析
+[ OK ] hairline-create · 引用完整性 — 技能内可解析 3 条；按约定豁免 0 条（豁免 ≠ 已验证）
+[ OK ] hairline-create · 无硬编码密钥
+[ OK ] humanizer · frontmatter 可解析
+[ OK ] humanizer · 引用完整性 — 技能内可解析 3 条；按约定豁免 0 条（豁免 ≠ 已验证）
+[ OK ] humanizer · 无硬编码密钥
+[ OK ] tdd · frontmatter 可解析
+[ OK ] tdd · 引用完整性 — 技能内可解析 0 条；按约定豁免 1 条（豁免 ≠ 已验证）
+[ OK ] tdd · 无硬编码密钥
+[ OK ] codebase-design · frontmatter 可解析
+[ OK ] codebase-design · 引用完整性 — 技能内可解析 0 条；按约定豁免 1 条（豁免 ≠ 已验证）
+[ OK ] codebase-design · 无硬编码密钥
+[ OK ] domain-modeling · frontmatter 可解析
+[ OK ] domain-modeling · 引用完整性 — 技能内可解析 0 条；按约定豁免 4 条（豁免 ≠ 已验证）
+[ OK ] domain-modeling · 无硬编码密钥
+[ OK ] prototype · frontmatter 可解析
+[ OK ] prototype · 引用完整性 — 技能内可解析 0 条；按约定豁免 0 条（豁免 ≠ 已验证）
+[ OK ] prototype · 无硬编码密钥
+[ OK ] diagnosing-bugs · frontmatter 可解析
+[ OK ] diagnosing-bugs · 引用完整性 — 技能内可解析 0 条；按约定豁免 1 条（豁免 ≠ 已验证）
+[ OK ] diagnosing-bugs · 无硬编码密钥
+[ OK ] code-review · frontmatter 可解析
+[ OK ] code-review · 引用完整性 — 技能内可解析 0 条；按约定豁免 3 条（豁免 ≠ 已验证）
+[ OK ] code-review · 无硬编码密钥
+[ OK ] resolving-merge-conflicts · frontmatter 可解析
+[ OK ] resolving-merge-conflicts · 引用完整性 — 技能内可解析 0 条；按约定豁免 0 条（豁免 ≠ 已验证）
+[ OK ] resolving-merge-conflicts · 无硬编码密钥
+[ OK ] research · frontmatter 可解析
+[ OK ] research · 引用完整性 — 技能内可解析 0 条；按约定豁免 0 条（豁免 ≠ 已验证）
+[ OK ] research · 无硬编码密钥
+[ OK ] wizard · frontmatter 可解析
+[ OK ] wizard · 引用完整性 — 技能内可解析 0 条；按约定豁免 0 条（豁免 ≠ 已验证）
+[ OK ] wizard · 无硬编码密钥
+[ OK ] improve-codebase-architecture · frontmatter 可解析
+[ OK ] improve-codebase-architecture · 引用完整性 — 技能内可解析 0 条；按约定豁免 1 条（豁免 ≠ 已验证）
+[ OK ] improve-codebase-architecture · 无硬编码密钥
+[ OK ] grill-with-docs · frontmatter 可解析
+[ OK ] grill-with-docs · 引用完整性 — 技能内可解析 0 条；按约定豁免 0 条（豁免 ≠ 已验证）
+[ OK ] grill-with-docs · 无硬编码密钥
+[ OK ] grill-me · frontmatter 可解析
+[ OK ] grill-me · 引用完整性 — 技能内可解析 0 条；按约定豁免 0 条（豁免 ≠ 已验证）
+[ OK ] grill-me · 无硬编码密钥
+[ OK ] grilling · frontmatter 可解析
+[ OK ] grilling · 引用完整性 — 技能内可解析 0 条；按约定豁免 0 条（豁免 ≠ 已验证）
+[ OK ] grilling · 无硬编码密钥
+[ OK ] teach · frontmatter 可解析
+[ OK ] teach · 引用完整性 — 技能内可解析 0 条；按约定豁免 6 条（豁免 ≠ 已验证）
+[ OK ] teach · 无硬编码密钥
+[ OK ] handoff · frontmatter 可解析
+[ OK ] handoff · 引用完整性 — 技能内可解析 0 条；按约定豁免 0 条（豁免 ≠ 已验证）
+[ OK ] handoff · 无硬编码密钥
+[ OK ] wait-what · frontmatter 可解析
+[ OK ] wait-what · 引用完整性 — 技能内可解析 0 条；按约定豁免 2 条（豁免 ≠ 已验证）
+[ OK ] wait-what · 无硬编码密钥
+[ OK ] to-questionnaire · frontmatter 可解析
+[ OK ] to-questionnaire · 引用完整性 — 技能内可解析 0 条；按约定豁免 0 条（豁免 ≠ 已验证）
+[ OK ] to-questionnaire · 无硬编码密钥
+[ OK ] writing-for-agents · frontmatter 可解析
+[ OK ] writing-for-agents · 引用完整性 — 技能内可解析 2 条；按约定豁免 2 条（豁免 ≠ 已验证）
+[ OK ] writing-for-agents · 无硬编码密钥
+[ OK ] git-guardrails-claude-code · frontmatter 可解析
+[ OK ] git-guardrails-claude-code · 引用完整性 — 技能内可解析 0 条；按约定豁免 0 条（豁免 ≠ 已验证）
+[ OK ] git-guardrails-claude-code · 无硬编码密钥
+[ OK ] setup-pre-commit · frontmatter 可解析
+[ OK ] setup-pre-commit · 引用完整性 — 技能内可解析 0 条；按约定豁免 1 条（豁免 ≠ 已验证）
+[ OK ] setup-pre-commit · 无硬编码密钥
+[ OK ] scaffold-exercises · frontmatter 可解析
+[ OK ] scaffold-exercises · 引用完整性 — 技能内可解析 0 条；按约定豁免 2 条（豁免 ≠ 已验证）
+[ OK ] scaffold-exercises · 无硬编码密钥
+[ OK ] writing-beats · frontmatter 可解析
+[ OK ] writing-beats · 引用完整性 — 技能内可解析 0 条；按约定豁免 0 条（豁免 ≠ 已验证）
+[ OK ] writing-beats · 无硬编码密钥
+[ OK ] writing-fragments · frontmatter 可解析
+[ OK ] writing-fragments · 引用完整性 — 技能内可解析 0 条；按约定豁免 0 条（豁免 ≠ 已验证）
+[ OK ] writing-fragments · 无硬编码密钥
+[ OK ] writing-shape · frontmatter 可解析
+[ OK ] writing-shape · 引用完整性 — 技能内可解析 0 条；按约定豁免 0 条（豁免 ≠ 已验证）
+[ OK ] writing-shape · 无硬编码密钥
+[ OK ] ppt-master · frontmatter 可解析
+[ OK ] ppt-master · 引用完整性 — 技能内可解析 149 条；按约定豁免 89 条（豁免 ≠ 已验证）
+[ OK ] ppt-master · 无硬编码密钥
+
+=== 结果：通过 84，FAIL=0，SKIP=0，WARN=0 ===

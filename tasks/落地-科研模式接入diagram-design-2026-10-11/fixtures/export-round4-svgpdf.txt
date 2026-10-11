@@ -1,0 +1,7 @@
+Chrome  : C:\Program Files\Google\Chrome\Application\chrome.exe
+[OK  ] chart-05-bar-motion.html → chart-05-bar-motion.svg  14982 B  sha=f064b2c09fd5
+[OK  ] chart-05-bar-motion.html → chart-05-bar-motion.pdf  88945 B  sha=9793a9d5df18
+        ⚠ 1000x500px 单页
+[OK  ] chart-06-bar-reveal.html → chart-06-bar-reveal.svg  15009 B  sha=e366588d8a0b
+[OK  ] chart-06-bar-reveal.html → chart-06-bar-reveal.pdf  88989 B  sha=46269d4392db
+        ⚠ 1000x500px 单页

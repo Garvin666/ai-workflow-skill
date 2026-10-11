@@ -1,0 +1,19 @@
+Chrome  : C:\Program Files\Google\Chrome\Application\chrome.exe
+[OK  ] chart-01-bar.html → chart-01-bar.svg  9824 B  sha=30b66872fd08
+[OK  ] chart-01-bar.html → chart-01-bar.pdf  88850 B  sha=c149f6fc8424
+        ⚠ 1000x500px 单页
+[OK  ] chart-02-line.html → chart-02-line.svg  9821 B  sha=a22c571a7cb3
+[OK  ] chart-02-line.html → chart-02-line.pdf  93408 B  sha=f4d5c87fc5bd
+        ⚠ 1000x500px 单页
+[OK  ] chart-03-heatmap.html → chart-03-heatmap.svg  18695 B  sha=f4f9e4368737
+[OK  ] chart-03-heatmap.html → chart-03-heatmap.pdf  91221 B  sha=200f073916ad
+        ⚠ 1000x500px 单页
+[OK  ] chart-04-scatter.html → chart-04-scatter.svg  10108 B  sha=ad3c0e974e91
+[OK  ] chart-04-scatter.html → chart-04-scatter.pdf  111616 B  sha=4137cbbc9970
+        ⚠ 1000x500px 单页
+[OK  ] chart-05-bar-motion.html → chart-05-bar-motion.svg  14982 B  sha=f064b2c09fd5
+[OK  ] chart-05-bar-motion.html → chart-05-bar-motion.pdf  88945 B  sha=194481088761
+        ⚠ 1000x500px 单页
+[OK  ] chart-06-bar-reveal.html → chart-06-bar-reveal.svg  15009 B  sha=e366588d8a0b
+[OK  ] chart-06-bar-reveal.html → chart-06-bar-reveal.pdf  88989 B  sha=7f7b7fb5079c
+        ⚠ 1000x500px 单页

@@ -1,0 +1,18 @@
+warning: The `fitz` API is deprecated and will be removed in future. Use `import pymupdf` instead.
+后端 = pymupdf
+[OK  ] output\export\chart-05-bar-motion.pdf
+          · 单页: PASS
+          · 页面尺寸符合图幅: PASS
+          · 文本可提取: PASS
+          · 零 Type3: PASS
+          · 字体全部嵌入: PASS
+          页面 1 页 · 750.0x375.12pt · 可提取字符 119 · 字体 4 个（Type3=0 未嵌入=0）
+[OK  ] output\export\chart-06-bar-reveal.pdf
+          · 单页: PASS
+          · 页面尺寸符合图幅: PASS
+          · 文本可提取: PASS
+          · 零 Type3: PASS
+          · 字体全部嵌入: PASS
+          页面 1 页 · 750.0x375.12pt · 可提取字符 119 · 字体 4 个（Type3=0 未嵌入=0）
+
+汇总：PASS=2 FAIL=0 SKIP=0（SKIP 一律计为**未检测**，不得并入通过率）

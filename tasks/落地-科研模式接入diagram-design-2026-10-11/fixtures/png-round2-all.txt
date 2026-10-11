@@ -1,0 +1,13 @@
+Chrome  : C:\Program Files\Google\Chrome\Application\chrome.exe
+[OK  ] chart-01-bar.html → chart-01-bar.png  33844 B  sha=766198ad3ec5
+        ⚠ 浏览器=chrome
+[OK  ] chart-02-line.html → chart-02-line.png  100160 B  sha=2eae1e41515f
+        ⚠ 浏览器=chrome
+[OK  ] chart-03-heatmap.html → chart-03-heatmap.png  49660 B  sha=9b04cb87f646
+        ⚠ 浏览器=chrome
+[OK  ] chart-04-scatter.html → chart-04-scatter.png  73670 B  sha=b8d6d4e1eb15
+        ⚠ 浏览器=chrome
+[OK  ] chart-05-bar-motion.html → chart-05-bar-motion.png  18823 B  sha=b781e0076872
+        ⚠ 浏览器=chrome
+[OK  ] chart-06-bar-reveal.html → chart-06-bar-reveal.png  18823 B  sha=b781e0076872
+        ⚠ 浏览器=chrome

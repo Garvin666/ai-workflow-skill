@@ -1,0 +1,17 @@
+[       DIFFERENT] chart-01-bar.html
+                    画布 1400x1500  差异像素 332/2100000 (0.0158%)  最大通道差 210  平均 210.00
+                    差异包围盒 (633, 910, 1069, 922)  位图 md5 before=beb904708dc2 after=c18c973c23fa
+[       identical] chart-02-line.html
+                    画布 1400x1500  差异像素 0/2100000 (0.0000%)  最大通道差 0  平均 0.00
+                    差异包围盒 None  位图 md5 before=7844a1ee7254 after=7844a1ee7254
+[       DIFFERENT] chart-03-heatmap.html
+                    画布 1400x1500  差异像素 5311/2100000 (0.2529%)  最大通道差 104  平均 6.43
+                    差异包围盒 (309, 760, 701, 775)  位图 md5 before=cf9d4c1a69dc after=db4543a95cb6
+[       identical] chart-04-scatter.html
+                    画布 1400x1500  差异像素 0/2100000 (0.0000%)  最大通道差 0  平均 0.00
+                    差异包围盒 None  位图 md5 before=0feb9a3c0199 after=0feb9a3c0199
+[       identical] chart-05-bar-motion.html
+                    画布 1400x1500  差异像素 0/2100000 (0.0000%)  最大通道差 0  平均 0.00
+                    差异包围盒 None  位图 md5 before=dbabf10b56d9 after=dbabf10b56d9
+
+结论：DIFFERENT（files=5 tol=0）
