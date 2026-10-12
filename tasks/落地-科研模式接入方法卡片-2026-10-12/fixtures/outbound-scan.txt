@@ -1,0 +1,82 @@
+  [跳过·git 忽略] tasks\落地-科研模式接入方法卡片-2026-10-12\fixtures\probe-gmm-eq0.svg
+  [跳过·git 忽略] tasks\落地-科研模式接入方法卡片-2026-10-12\fixtures\probe-gmm-eq1.svg
+  [跳过·git 忽略] tasks\落地-科研模式接入方法卡片-2026-10-12\fixtures\probe-gmm-eq2.svg
+  [跳过·git 忽略] tasks\落地-科研模式接入方法卡片-2026-10-12\fixtures\ziamath-probe.svg
+  [跳过·git 忽略] tasks\落地-科研模式接入方法卡片-2026-10-12\plan.yaml
+
+扫描面 41 个文件 → tasks\落地-科研模式接入方法卡片-2026-10-12\fixtures\outbound-list.txt
+    tasks\落地-科研模式接入方法卡片-2026-10-12\cards\gmm_card.py
+    tasks\落地-科研模式接入方法卡片-2026-10-12\cards\ridge_card.py
+    tasks\落地-科研模式接入方法卡片-2026-10-12\fixtures\after-s8-checks-skill.txt
+    tasks\落地-科研模式接入方法卡片-2026-10-12\fixtures\baseline-checks-skill.txt
+    tasks\落地-科研模式接入方法卡片-2026-10-12\fixtures\baseline-fonts.txt
+    tasks\落地-科研模式接入方法卡片-2026-10-12\fixtures\baseline-lint.txt
+    tasks\落地-科研模式接入方法卡片-2026-10-12\fixtures\checks-plan-before-fix.txt
+    tasks\落地-科研模式接入方法卡片-2026-10-12\fixtures\outbound-list.txt
+    tasks\落地-科研模式接入方法卡片-2026-10-12\fixtures\outbound-scan.txt
+    tasks\落地-科研模式接入方法卡片-2026-10-12\fixtures\token-samples.txt
+    tasks\落地-科研模式接入方法卡片-2026-10-12\fixtures\verify-exports.txt
+    tasks\落地-科研模式接入方法卡片-2026-10-12\s1_baseline.py
+    tasks\落地-科研模式接入方法卡片-2026-10-12\s2_sample.py
+    tasks\落地-科研模式接入方法卡片-2026-10-12\s5_crop.py
+    tasks\落地-科研模式接入方法卡片-2026-10-12\s5_render.py
+    tasks\落地-科研模式接入方法卡片-2026-10-12\s6_crop.py
+    tasks\落地-科研模式接入方法卡片-2026-10-12\s7_export.py
+    tasks\落地-科研模式接入方法卡片-2026-10-12\s7_verify.py
+    tasks\落地-科研模式接入方法卡片-2026-10-12\s9_outbound_check.py
+    tasks\落地-科研模式接入方法卡片-2026-10-12\tmp_diag_type3.py
+    tasks\落地-科研模式接入方法卡片-2026-10-12\tmp_diff_probe.py
+    tasks\落地-科研模式接入方法卡片-2026-10-12\tmp_fix_plan_deliverables.py
+    tasks\落地-科研模式接入方法卡片-2026-10-12\tmp_font_compare.py
+    tasks\落地-科研模式接入方法卡片-2026-10-12\tmp_font_probe.py
+    tasks\落地-科研模式接入方法卡片-2026-10-12\tmp_font_probe2.py
+    tasks\落地-科研模式接入方法卡片-2026-10-12\tmp_font_probe3.py
+    tasks\落地-科研模式接入方法卡片-2026-10-12\tmp_move_crops.py
+    tasks\落地-科研模式接入方法卡片-2026-10-12\tmp_playfair_probe.py
+    tasks\落地-科研模式接入方法卡片-2026-10-12\tmp_probe_gmm_eq.py
+    tasks\落地-科研模式接入方法卡片-2026-10-12\tmp_s9_hygiene.py
+    tasks\落地-科研模式接入方法卡片-2026-10-12\确认表.md
+    SKILL.md
+    README.md
+    references/ops.md
+    references/method-card-mode.md
+    references/research-mode.md
+    references/diagram-mode.md
+    scripts/methodcard_lib.py
+    scripts/methodcard_build.py
+    scripts/methodcard_check.py
+    _archive/changelog.md
+
+========================================================================
+[WARN] tasks\落地-科研模式接入方法卡片-2026-10-12\s1_baseline.py:39  fonts_dir = pathlib.Path(os.environ.get("WINDIR") or "C:/Windows") / "Fonts"
+[WARN] tasks\落地-科研模式接入方法卡片-2026-10-12\tmp_font_probe.py:9  CHROME = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+[WARN] tasks\落地-科研模式接入方法卡片-2026-10-12\tmp_font_probe3.py:8  CHROME = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+[WARN] tasks\落地-科研模式接入方法卡片-2026-10-12\tmp_font_probe3.py:11  fonts_dir = pathlib.Path(r"C:\Windows\Fonts")
+[WARN] tasks\落地-科研模式接入方法卡片-2026-10-12\tmp_playfair_probe.py:10  CHROME = r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+[WARN] tasks\落地-科研模式接入方法卡片-2026-10-12\tmp_s9_hygiene.py:68  ('fonts_dir = pathlib.Path(r"C:\\Windows\\Fonts")',
+[WARN] tasks\落地-科研模式接入方法卡片-2026-10-12\tmp_s9_hygiene.py:69  'fonts_dir = pathlib.Path(os.environ.get("WINDIR") or "C:/Windows") / "Fonts"'),
+[WARN] SKILL.md:100  - 用户显式给出的其他路径（如「去 E:\X 读数据」）= 该路径临时纳入本任务范围，但仍不扩展到其上级或兄弟目录。
+[WARN] references\ops.md:23  …s` 子树**并不存在两份** —— `E:\WBHomes\A\.workbuddy\skills` 与 `E:\WBHomes\B\.workbuddy\skills` **都是目录联接（junc…
+[WARN] references\ops.md:29  …x/plan.yaml --base "E:/ChatGPT/工作流"`<br>`checks.py decide tasks/x/plan.yaml --point "缺外部事实" --basis …
+[WARN] references\ops.md:39  …dex.py --workspace "E:/ChatGPT/工作流"` |…
+[WARN] references\ops.md:45  …ush.py --skill-dir "E:/ChatGPT/工作流" --rev <工作区 rev> --expect-version <v> --prev-remote X` |…
+[WARN] references\ops.md:55  …— 本机 `Path.home()`=`E:\WBHomes\B` 而真实 KB 在 `~/.workbuddy/kb`，只认前者会让管线**永远"KB 不可用"**（不报错、只是永不入库）。⚠️ 阈…
+[WARN] scripts\methodcard_build.py:221  r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+[WARN] scripts\methodcard_build.py:222  r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+[WARN] scripts\methodcard_build.py:223  r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+[WARN] scripts\methodcard_build.py:224  r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+[WARN] _archive\changelog.md:75  …/ PowerShell 中继 × C:/D:/E: 三盘 × 沙箱开与关」**八组对照共用同一批被注入的会话进程** ⇒ 等于**用一个候选去排除它自己**。**真因（第二轮六层证据链）**：宿主把…
+[WARN] _archive\changelog.md:117  …实测 **0 个**，真实语料在 `E:/ChatGPT/ui库`（工作区根之外、本次**未申请授权**）⇒ 改用**合成矩阵**（5 样本），结论**只作区分度证据、不得读成「存量零影响」**；计划…
+[WARN] _archive\changelog.md:245  …` 多 home 段）**：实测 `E:\WBHomes\A|B\.workbuddy\skills` **皆为 junction** → `\\?\C:\Users\<用户名>\.workbuddy…
+[WARN] _archive\changelog.md:339  …定位副本 —— 本机沙箱下它指向 `E:\WBHomes\A`（非真实用户目录）⇒ 找不到目标 → 打印"仅技能内一份"→ **把真实漂移盖掉且不报错**。改为**从技能根反推用户目录**（`HERE…
+[WARN] _archive\changelog.md:473  …9-20.md（**三份都在工作区根 `E:\ChatGPT\工作流\`，不在技能仓 —— 故此处刻意不加反引号**：按本领的「文档引用完整性」判据，反引号包裹的 `*.md` 会被按技能内文件校验，…
+[WARN] _archive\changelog.md:569  - **任务档案**：`E:\ChatGPT\工作流\tasks\技能增强-ai-workflow-v4.2.0-2026-09-20\`（含 plan.yaml、独立复核与两轮回归报告、三态夹具与回归输出）。
+[WARN] _archive\changelog.md:732  - **决策依据**：每任务对每个关键产出另起干净上下文送审，是稳定发生的双倍人力税（见工作区 E:\ChatGPT\工作流\工作流瓶颈分析与优化方案-2026-09-11.md（工作区根，非技能内部文件） B3）。
+[WARN] _archive\changelog.md:737  … 修复前后原始输出 + 跨工作区（`E:\ChatGPT\工作流`，⚠ 分支被真实触发）对照见该任务目录 `tasks/技能增强-ai-workflow-v2.5.3-2026-09-11/改动对照表…
+[WARN] _archive\changelog.md:763  …"相对技能目录"的历史写法（全在 `E:\ChatGPT\工作流` 的历史任务里），旧 PASS → 新 FAIL —— 属应然行为（它们的交付物确实不在各自工作区根内）。**注意口径陷阱**：改动生…
+[WARN] _archive\changelog.md:800  …cy-skip`）复现**。实测（`E:\ChatGPT\量化分析与数据分析`，≥1MB）：旧口径 488 个（其中 115 行来自 `.venv`）→ 新口径 **328 个**；旧口径复现**逐字…
+=== 出站扫描：FAIL=0，WARN=27，豁免行=0（扫描 41 个文件）===
+    ⚠️ WARN 级属出站清单第 3 项（内部目录结构），本版只提示不阻断 —— 边界已如实登记。
+
+outbound_scan rc=0
+rc=0

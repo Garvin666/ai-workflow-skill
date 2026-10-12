@@ -1,0 +1,37 @@
+ai-workflow version: version: 4.34.0
+python: 3.13.14
+ziamath: 0.13
+ziamath dist: 0.13 / latex2mathml: 3.81.1 / ziafont: 0.11
+probe svg: len=13096, <path>=12, <use>=18, <text>=0, <image>=0, font-face=False, remote-ref=False
+
+== fonts ==
+  微软雅黑 Regular: OK (msyh.ttc)
+  微软雅黑 Bold: OK (msyhbd.ttc)
+  微软雅黑 Light: OK (msyhl.ttc)
+  宋体: OK (simsun.ttc)
+  黑体: OK (simhei.ttf)
+  等线 Light: OK (Deng.ttf)
+  等线 Bold: OK (Dengb.ttf)
+  Georgia: OK (georgia.ttf)
+  Georgia Bold: OK (georgiab.ttf)
+  Georgia Italic: OK (georgiai.ttf)
+  Cambria: OK (cambria.ttc)
+  Times New Roman: OK (times.ttf)
+  Consolas: OK (consola.ttf)
+  Consolas Bold: OK (consolab.ttf)
+  Segoe UI: OK (segoeui.ttf)
+  Segoe UI Semibold: OK (seguisb.ttf)
+  Cascadia Mono: OK (CascadiaMono.ttf)
+  Cascadia Code: OK (CascadiaCode.ttf)
+  TH Sarabun: (预设无)
+  Source Serif: (预设无)
+  思源宋体: (预设无)
+
+== fonts dir total: 379 files ==
+  [georgia] georgia.ttf, georgiab.ttf, georgiai.ttf, georgiaz.ttf
+  [cambria] cambria.ttc, cambriab.ttf, cambriai.ttf, cambriaz.ttf
+  [book] bookos.ttf, bookosb.ttf, bookosbi.ttf, bookosi.ttf
+  [serif] notoserifsc-vf.ttf, sansserifcollection.ttf, source han serif sc heavy (truetype).ttf
+  [deng] deng.ttf, dengb.ttf, dengl.ttf, oldengl.ttf
+  [song] stsong.ttf
+  [hei] simhei.ttf, stxihei.ttf

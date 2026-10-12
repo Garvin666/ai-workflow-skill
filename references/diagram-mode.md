@@ -141,6 +141,7 @@
 | **`geo-map-compliance-guard`** | 不重叠 | 那是地图合规；本模式若遇地图类图，须**先过该守卫** |
 | **`outbound-publish-guard`** | 不重叠 | 若图要出站，先过该守卫 |
 | **外部技能 `diagram-design`**（v4.33.0 起已整体接入，见 `references/external-skills.md` §1.7） | **上下游（契约层 ↔ 引擎层）** | 本模块管**该不该画、画成什么、画到什么密度**（P0–P4 契约层）；它是**引擎层**（44 类型 ＋ 单文件 HTML/SVG 产物 ＋ self_check.py）。**分界**：示意图先过本模块 P0–P4、再交它绘制；**数据图不经本模块**（直接用它，见 `references/research-mode.md` §7.11）。⚠️ 它的 style-guide 阈值是**它自己的设计系统** ⇒ 按 §10 第 4 条**只搬规则、不搬阈值** |
+| **方法原理卡片**（`references/method-card-mode.md`，v4.35.0 增） | **相邻但不相交** | 那是「**一页讲解**」的图文复合版面（含公式、步骤、结论；本仓自建 `methodcard` 引擎），**不是图**。分界：卡片内**子图**仍归本模块与 `diagram-design` 的规则（示意性子图须在图注标明）；卡片**整体**走 method-card-mode 的产出结构（五区）与验收链 |
 
 ---
 

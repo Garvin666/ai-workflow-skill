@@ -1,0 +1,62 @@
+========================================================================
+[1] check_vector_export.py —— 两张 PDF（零 Type3／字体嵌入／单页／图幅／文本可提取）
+$ ~\.workbuddy\binaries\python\envs\ai-workflow\Scripts\python.exe -X utf8 scripts/check_vector_export.py tasks/落地-科研模式接入方法卡片-2026-10-12/output/export/card-ridge.pdf tasks/落地-科研模式接入方法卡片-2026-10-12/output/export/card-gmm.pdf --expect 1200x1600
+(rc=0)
+后端 = pymupdf
+[OK  ] tasks\落地-科研模式接入方法卡片-2026-10-12\output\export\card-ridge.pdf
+          · 单页: PASS
+          · 页面尺寸符合图幅: PASS
+          · 文本可提取: PASS
+          · 零 Type3: PASS
+          · 字体全部嵌入: PASS
+          页面 1 页 · 900.0x1200.0pt · 可提取字符 442 · 字体 7 个（Type3=0 未嵌入=0）
+[OK  ] tasks\落地-科研模式接入方法卡片-2026-10-12\output\export\card-gmm.pdf
+          · 单页: PASS
+          · 页面尺寸符合图幅: PASS
+          · 文本可提取: PASS
+          · 零 Type3: PASS
+          · 字体全部嵌入: PASS
+          页面 1 页 · 900.0x1200.0pt · 可提取字符 501 · 字体 6 个（Type3=0 未嵌入=0）
+
+汇总：PASS=2 FAIL=0 SKIP=0（SKIP 一律计为**未检测**，不得并入通过率）
+
+========================================================================
+[2] methodcard_check.py —— Ridge 几何自检（SVG 图元 + 版面溢出 + PNG 尺寸）
+$ ~\.workbuddy\binaries\python\envs\ai-workflow\Scripts\python.exe -X utf8 scripts/methodcard_check.py tasks/落地-科研模式接入方法卡片-2026-10-12/output/card-ridge.html --png tasks/落地-科研模式接入方法卡片-2026-10-12/output/export/card-ridge.png
+(rc=0)
+== card-ridge.html ==
+  SVG 片段 10 个：FAIL=0 WARN=0（path 元素 36 个未检——诚实边界）
+  PNG 尺寸：2400x3200 == 1200x1600 × 2 ✓
+  版面溢出：PASS —— 卡面之下无内容溢出
+  结果：FAIL=0 WARN=0（未检测项已标注）
+
+========================================================================
+[3] methodcard_check.py —— GMM 几何自检
+$ ~\.workbuddy\binaries\python\envs\ai-workflow\Scripts\python.exe -X utf8 scripts/methodcard_check.py tasks/落地-科研模式接入方法卡片-2026-10-12/output/card-gmm.html --png tasks/落地-科研模式接入方法卡片-2026-10-12/output/export/card-gmm.png
+(rc=0)
+== card-gmm.html ==
+  SVG 片段 9 个：FAIL=0 WARN=0（path 元素 21 个未检——诚实边界）
+  PNG 尺寸：2400x3200 == 1200x1600 × 2 ✓
+  版面溢出：PASS —— 卡面之下无内容溢出
+  结果：FAIL=0 WARN=0（未检测项已标注）
+
+========================================================================
+[4] methodcard_lib.py --selftest
+$ ~\.workbuddy\binaries\python\envs\ai-workflow\Scripts\python.exe -X utf8 scripts/methodcard_lib.py --selftest
+(rc=0)
+[selftest] methodcard_lib OK：10 组件冒烟 + 公式/工具断言全过
+
+========================================================================
+[5] methodcard_build.py --selftest
+$ ~\.workbuddy\binaries\python\envs\ai-workflow\Scripts\python.exe -X utf8 scripts/methodcard_build.py --selftest
+(rc=0)
+[selftest] card_html OK；无远程引用 OK；font_faces OK（2 个 @font-face 内嵌）
+
+========================================================================
+[6] methodcard_check.py --selftest
+$ ~\.workbuddy\binaries\python\envs\ai-workflow\Scripts\python.exe -X utf8 scripts/methodcard_check.py --selftest
+(rc=0)
+[selftest] SVG 用例 5 个（1 正 4 反）全过；像素对照：白/脏两对照过
+
+========================================================================
+汇总：6 组命令，rc 全零 = True（rcs=[0, 0, 0, 0, 0, 0]）

@@ -1,0 +1,3 @@
+[STALE] 索引不可用：源集合已变化（存 efc1dd06cce04c66 / 现 432ef828a32ab2d0）｜根集来源：索引机器标记 <!-- roots: … -->
+[HINT] 重跑：python scripts/gen_skill_index.py
+rc=1
