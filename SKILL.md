@@ -4,10 +4,10 @@ description: AI 标准化多阶段工作方法论（自研），适用于量化�
 agent_created: true
 selfbuilt: true
 repo: https://github.com/Garvin666/ai-workflow-skill
-version: 4.35.0
+version: 4.37.0
 ---
 
-# AI 工作流 v4.35.0
+# AI 工作流 v4.37.0
 
 > **[自研技能]** 名称：`ai-workflow` ｜ 用途：为多阶段任务提供标准化流程编排（入口分型／任务分层／计划先行／三项核心原则／自主决策层／独立审核抽查制／熔断）＋ 六个产出结构模式（作业 S0–S2／科研 R0–R6（其 R2 即原文献阅读模式 Q1–Q4）／逆向拆解 D0–D5／图示设计 P0–P4／PPT Y0–Y4）＋ 学习模型 K1–K5，并配一套**机器可校验**的工具与门禁 ｜ 适用场景：产出文件或代码或报告、多步且步骤间有依赖、数据分析、跨文件改造、调研查重、方案评审；纯问答／查询／翻译／单文件读取不适用 ｜ 仓库：https://github.com/Garvin666/ai-workflow-skill
 
@@ -156,7 +156,7 @@ version: 4.35.0
      ⚠️ 跳过第 ② 步会**静默漏掉**只在未启用区里的技能 —— 那 84 个只是「本机还没被调用过」，**不是**「不可用」。
    - **STALE / 缺失** → 先 `python scripts/gen_skill_index.py` 重建（项目级技能要一并纳入时加 `--workspace <工作区根>`），再按上一条走；重建失败则**回落全量扫描，并在回复里如实说明索引不可用**（不静默降级）。⚠️ **根集一致性（v4.32.1 起由生成器自己兜住）**：索引头部会写下生成时用的扫描根，**未显式传根时 `--check` 就按索引记录的根集校验**，故「重建带 `--workspace`、校检不带」不再误判；显式传根仍以指定为准，与记录不一致时会打 WARN。口径见 `references/ops.md` 的 `gen_skill_index.py` 条目。
    - **为什么先索引**：消除「全量 Glob + 逐个读 description」的每任务固定成本。索引带**内容指纹**（`--check` 用 SHA-1 比对内容、**不含 mtime**，故不受时钟偏移影响）。
-   - **外部技能簇**（技能库根下六上游：mattpocock 24 个 ＋ ppt-master ＋ humanizer ＋ hairline-create ＋ archify ＋ diagram-design）命中时，读 `references/external-skills.md` 取路由表与调用口径 —— 那批技能**不属本体**，其分类（User-invoked / Model-invoked，机器依据是 frontmatter 的 `disable-model-invocation`）与「何时该调」都在该手册；查它们的机器检查用 `scripts/external_skill_lint.py`，不用本体的 `checks.py skill`（后者是为本体设计的）。⚠️ **命中即可调用** —— 不因某技能在本机有已知约束就先拒调（如 archify 的产物链约束见该手册 §1.5，图类任务产 HTML 走该手册 §二「默认豁免（图示例外）」）。
+   - **外部技能簇**（技能库根下七上游 ＋ 一个素材库：mattpocock 24 个 ＋ ppt-master ＋ humanizer ＋ hairline-create ＋ archify ＋ diagram-design ＋ impeccable ＋ 素材库 awesome-design-md；**命中判据＝任务实质涉 UI／网页／设计／风格或产物含前端件，不要求用户点名技能名**）命中时，读 `references/external-skills.md` 取路由表与调用口径 —— 那批技能**不属本体**，其分类（User-invoked / Model-invoked，机器依据是 frontmatter 的 `disable-model-invocation`）与「何时该调」都在该手册；查它们的机器检查用 `scripts/external_skill_lint.py`，不用本体的 `checks.py skill`（后者是为本体设计的）。⚠️ **命中即可调用** —— 不因某技能在本机有已知约束就先拒调（如 archify 的产物链约束见该手册 §1.5，图类任务产 HTML 走该手册 §二「默认豁免（图示例外）」）。
    - 无匹配则调用 **`find-skills` skill**，或用推荐市场检索。
 4. 判定：匹配 → 复用；部分匹配 → 复用可复用部分；无匹配 → 全新执行。
 5. 查 `assets/templates/`（字段规范见 `assets/templates/README.md`）→ 命中走 L1。
@@ -403,6 +403,8 @@ version: 4.35.0
    - **日结**（会话内主动写，不建自动化）：四问 —— 今日做了什么 / 完成什么 / 遇到什么问题 / 明天做什么；**追加**到 `.workbuddy/memory/YYYY-MM-DD.md`。不抄 Ledger 的结果态、不重复跑本节指标。
    - **周汇总**（自动化，每周日 22:00）：把本周日志合并提炼，滚动进 `MEMORY.md`（收敛旧条目、保留判据、剔除时点数据）。
    - **分界**：本节管「这个任务做得对不对」，日结管「这一天做了什么」 —— 两者载体不同、不重复记录。
+
+9. **记忆写入与交接（v4.37.0，L2 必跑）**：把本次留痕整理成**交接文档**（三段：内容 / 结果 / 后续事项）与会话记忆（五段式），经 `scripts/memory_handoff.py place` 落知识库 40-记忆 的对应项目子目录（**常态授权**，写入面限 40-记忆 区）；随后 `index` 重建索引、`stats` 出自升级统计（**两段式**：低风险自动、结构类提案）。L1/L0 不触发；细则见 `references/memory-handoff.md`。
 
 ## 自研工具与技能：标注与公开留痕（贯穿阶段 3–6）
 
@@ -768,6 +770,7 @@ version: 4.35.0
 | `references/ppt-mode.md` | **PPT 模式**：演示识别三判据、演示作者角色契约 Y-a–Y-d、**五段结构 Y0–Y4（逐段映射到第三方技能 `ppt-master` 的现行机制，本仓不复刻其步骤）**、**可验层/判断层分界**（可验层由 `ppt-master` 自带校验器承担、本仓不新造判据）、产出义务 E1–E6（E6 含「不碰第三方本体」）、设计原则 27 条（4 组，含**图形技法 14 条**：让画面更美观更饱满）、文案层去味口径、与既有面的让渡与降级通道、交接契约、自检 9 项与诚实边界｜命中 PPT 识别后按需加载 |
 | `references/learning-model.md` | **学习模型**：K1–K5 持续优化回路、四类知识、六条门槛、两段式入库、累积池与诚实边界｜阶段 6 收尾时按需加载 |
 | `references/learning-judge.md` | **学习信号 · 快判**（learning-judge）：判「这次有什么值得学」，kind 五态 + V1–V5 维度 + 阈值路由｜阶段 6 收尾时加载 |
+| `references/memory-handoff.md` | **记忆管理与交接**（v4.37.0）：任务收尾把留痕归档成交接文档（三段）与会话记忆（五段），经 `scripts/memory_handoff.py` 落知识库 40-记忆 按项目分层（常态授权）；两段式自升级（低风险自动 / 结构类提案）｜阶段 6 收尾时加载 |
 | `references/orchestration.md` | 子代理编排、Handoff 模板（含 `must_keep`）、并行与升级路径 |
 | `references/capability-routing.md` | 能力路由：四类能力判据、决策三步、反合理化表 |
 | `references/adaptive-planning.md` | 自适应计划：拆解四规则、R1–R6 触发、执行期六动作 |
@@ -789,7 +792,7 @@ version: 4.35.0
 | `references/aesthetic-rubric.yaml` | **审美判据集**（36 条，判据集 v1.8）：由 `scripts/check_aesthetics.py` 消费；每条含 `judgeability`（machine/spec/manual/external）、`params`、`source`、`applies_to`。含令牌层 G*/M*/W*/P*/C*/V* 与**渲染层 R1–R4**（需 `--geom`，缺则 SKIP；**R4 几何重叠**另需 `bgAlpha` 字段）、**刻度层 G12/G13**（需 `--scale-from`）、**韵律层 G16**（错峰阶梯非递减，无序列则 SKIP）；**v1.8 起另含 H 层 5 条**（提炼自第三方技能 `hairline` 的视觉工艺：H1 缓动纪律／H2 禁发光式效果／H3 无限循环减动效兜底 三条 `machine` 实跑 ＋ H4 静止态构图／H5 命中区稳定 两条 `manual` 人审；出处见 `references/external-skills.md` §1.4）。⚠️ 它是**数据文件不是手册**，改阈值即改判据，须留痕 |
 | `references/humanize-judge.md` | **文风判别契约**（v4.15.0 建）：第七块 System 1 快判（style-judge）的完整契约 —— 四态判定（走去味／只登记／已达标／不适用）、S1–S5 维度、阈值路由与聚合规则、`meta.文风判定` 字段表、集成位置与诚实边界（五条原样）。**取值表与阈值只以该文件为准** |
 | `references/humanize-rubric.yaml` | **去 AI 味判据集**（31 条模式 A–F，来源 `op7418/Humanizer-zh`）：由 `scripts/humanize_scan.py` 消费；每条含 `judgeability`（machine 13／manual 17／spec 1）、`level`（FAIL 8／WARN 5／SKIP 18）、`source`、`params`，另含独立 `fidelity` 段（事实保真 token 类目）。⚠️ 它是**数据文件不是手册**，改判据须同步改校验器并跑 `--selftest` |
-| `references/external-skills.md` | **外部技能路由与适配**（v4.16.0 建；**v4.26.0 起「四上游」、v4.30.0 起「五上游」、v4.33.0 起「六上游」**）：**上游一** mattpocock 的 **24 个第三方 MIT 技能**（扁平外挂）—— 来源与许可、**User-invoked／Model-invoked 的机器判据**（frontmatter 的 `disable-model-invocation`）、24 行路由表、只取机制的 7 个技能与折进落点、十条已知边界；**上游二** `ppt-master`（**目录联接、零拷贝、不打补丁**，自带 fail-closed 完整性门禁）—— 来源与许可、账本与漂移检测、同步规程（含「不锁版本」）；**上游三** `humanizer`（**扁平外挂、复制安装**）—— 去 AI 味的**改写手法**资源（**判定仍在第七物理量，不另立判据**）；**上游四** `hairline-create`（**扁平外挂、复制安装、零补丁**）—— 等距线稿**风格的产物生成器**，其**原则侧已按 judgeability 分档折进 `references/aesthetic-rubric.yaml` 的 H 层、不另立判定**，结构侧与 `diagram-mode` 的分界见 §1.4；**上游五** `archify`（**扁平外挂、复制安装、零补丁**）—— 单文件 HTML **图示渲染器**（架构／工作流／时序／数据流／状态机五类），**只作产物层的一个实现、不引判据**，与既有 `diagram-mode` 的分界见该手册 §1.5；**上游六** `diagram-design`（**扁平外挂、复制安装、零补丁**）—— 自包含 HTML ＋ 内联 SVG 的**编辑型图表技能**（44 类型 ＋ 可导出 SVG / PNG），**只作产物层的实现、不引判据**，与既有 `diagram-mode` 的「**契约层 ↔ 引擎层**」分界见该手册 §1.7（其导出产物要做**投稿级**验收时，见 `scripts/diagram_export.py`（svg 走上游真源、pdf 是本器扩展、png 按上游规程）与 `scripts/check_vector_export.py`（零 Type3 / 字体全嵌入 / 图幅 / 单页））；⚠️ 其产物链在本机**会话内受阻、会话外可绕**，且图类任务产 HTML 属该手册 §二「**默认豁免（图示例外）**」。机器检查 `scripts/external_skill_lint.py`（缺省遍历 `.vendor/*.lock.json`）。⚠️ **六批技能都不属本体**，本文件是它们唯一的宿主侧适配层；产出结构侧另见 `references/ppt-mode.md`（**不重述**）｜阶段 0 命中外部技能簇时加载 |
+| `references/external-skills.md` | **外部技能路由与适配**（v4.16.0 建；v4.36.0 起「七上游 ＋ 一个素材库」）：**上游一** mattpocock 24 个 MIT 第三方技能（扁平外挂）—— 来源与许可、User／Model-invoked 机器判据（`disable-model-invocation`）、24 行路由表、只取机制的 7 个与折进落点、十条边界；**上游二** `ppt-master`（**目录联接、零拷贝、零补丁**，自带 fail-closed 门禁）—— 来源与许可、账本与漂移检测、同步规程（含「不锁版本」）；**上游三–七**（**扁平外挂、复制安装、零补丁**）：`humanizer` 去 AI 味**改写手法**资源（**判定仍在第七物理量**）；`hairline-create` 等距线稿**风格生成器**（**原则侧折进 `aesthetic-rubric.yaml` H 层、不另立判定**，结构侧分界 §1.4）；`archify` 单文件 HTML **图示渲染器**（五类，**只作产物层实现、不引判据**，§1.5）；`diagram-design` 自包含 HTML＋内联 SVG **编辑型图表技能**（44 类型，可导出 SVG / PNG；「**契约层 ↔ 引擎层**」分界见 §1.7，**投稿级**验收走 `diagram_export.py` ＋ `check_vector_export.py`；⚠️ 产物链本机**会话内受阻、会话外可绕**，图类产 HTML 属 §二「**默认豁免**」）；`impeccable` pbakaus **AI 前端设计品味 skill**（反模式＋18＋命令＋自带 CLI；**页面级 UI 归它、图归图示通道**（§1.8／§三），**手法归它、判定归本仓**（同 humanizer 口径），context／doctor 实测可用）；**素材库** `awesome-design-md`（**非技能**，lock 仅 sha256 对账）—— 84 品牌 DESIGN.md，UI 任务**按需取单文件**（§1.9）。机器检查 `scripts/external_skill_lint.py`（缺省遍历 `.vendor/*.lock.json`）。⚠️ **七批资产都不属本体**，本文件是唯一宿主侧适配层；产出结构侧另见 `references/ppt-mode.md`（**不重述**）｜阶段 0 命中外部技能簇时加载 |
 | `scripts/humanize_scan.py` | **去 AI 味校验器**（纯标准库）：`--text <产物> [--gate]` 跑 machine 档判据；`--diff-fidelity <前> <后>` 做事实保真比对（数字/否定/限定/归因多重集）；`--audit` 判据集↔实现同源自检；`--selftest` 阴性对照夹具。**PASS/FAIL/SKIP 严格分开，SKIP 不计入通过率**；挂阶段 3 文风质检与阶段 5（检查项 26） |
 | `scripts/geom-probe.js` | **渲染色取数器**（页面侧，只读 DOM）：由任一 CDP 驱动注入，产出 `check_aesthetics.py --geom` 消费的契约 JSON；校验器内**不**重复实现 CDP。⚠️ 三个真页面踩出的要点：① **限定作用域** —— `__geomProbe('.ui-deck__slide--active')`，整文档取数会把缩略图条等算成兄弟；② 缩放画布（`transform:scale`）下 **rect 已是设计像素且以作用域根为原点** —— 直接比 8px 网格会整片假红；③ v3 起新增节点字段 `bgAlpha`（供判据集 R4 判「实心」；缺则 R4 判 SKIP）—— 旧字段一字未改、向后兼容 |
 | `scripts/diagram_export.py` | **图表三通道导出器**（svg / pdf / png）：**三条通道谁实现哪条是本条的要点** —— `svg` 转调**上游真源** diagram-design/scripts/export_svg.py（本器不另写实现，避免行为分叉）；`pdf` 是**本器扩展**（⚠️ 不是上游能力）—— 无头打印，尺寸 = viewBox、零边距，且**打印前把字体栈换成可嵌入 TrueType**（否则缺 CJK 字形的 mono 栈会把中文落成 **Type3**，部分期刊拒收）；`png` 按上游 export.md 规程（透明底、只截 `<svg>` 元素盒、**释放祖先裁剪**、动效页先 `?motion=static` 并**断言 `data-frame=static`**、`--scale` 限 1..4）—— ⭐ 实跑修正：**批量**跑（单实例，因 `browser.close()` 单次 ≈47s）、截图**按 viewBox 钉尺寸 ＋ `clip` ＋ `full_page`**（否则会被页面 CSS 放大或被视口裁掉，且**不报错**）、**尺寸当场断言**；`--offline` 中止非 `file:` 请求（治远程字体导致的慢与不可复现）。**缺 Playwright 即原样透出上游指引并停止**（上游明令不自动装运行时依赖），退出码 3；`--verify` 接矢量件检查；`--selftest`（A–F 六组，**断言数由脚本自报**，不在文档里写死）。**纯标准库** |

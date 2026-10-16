@@ -1,16 +1,16 @@
-# 外部技能路由与适配（外部技能簇 · 六上游）
+# 外部技能路由与适配（外部技能簇 · 七上游 ＋ 一个素材库）
 
 > **定位**：装在技能库根、但**不属于 ai-workflow 本体**的第三方技能，本文件是它们的**唯一宿主侧适配层** —— 说明从哪来、什么时候该调、与本体口径怎么对齐。
-> **当前六个上游**（§1.1–§1.5 ＋ §1.7）：**mattpocock-skills-zh-CN**（24 个，扁平外挂）、**ppt-master**（1 个，目录联接）、**humanizer**（1 个，扁平外挂）、**hairline-create**（1 个，扁平外挂）、**archify**（1 个，扁平外挂——⚠️ 本机**装得进、可调用；产物链「会话内受阻、会话外可绕」**，见 §1.5）与 **diagram-design**（1 个，扁平外挂；⚠️ 编号在 §1.6 之后但**是上游**，见 §1.7）。来源与许可见 §一。
+> **当前七个上游 ＋ 一个素材库**（§1.1–§1.5 ＋ §1.7–§1.8）：**mattpocock-skills-zh-CN**（24 个，扁平外挂）、**ppt-master**（1 个，目录联接）、**humanizer**（1 个，扁平外挂）、**hairline-create**（1 个，扁平外挂）、**archify**（1 个，扁平外挂——⚠️ 本机**装得进、可调用；产物链「会话内受阻、会话外可绕」**，见 §1.5）、**diagram-design**（1 个，扁平外挂；⚠️ 编号在 §1.6 之后但**是上游**，见 §1.7）与 **impeccable**（1 个，扁平外挂——AI 前端设计品味 skill，本机**双命令实测可用**，见 §1.8）；另有**素材库** **awesome-design-md**（84 品牌 DESIGN.md 合集，**非技能**、lock 仅作 sha256 对账，见 §1.9）。来源与许可见 §一。
 > **另**：另有五个**本地已装、非 vendored 的能力技能**（reviewed-change-apply-gate 等）—— ⚠️ 它们**不是上游**（不在 `.vendor/` 任何 lock 内、无 source/upstream_rev/LICENSE），故**不并入「上游」计数**，单列 §1.6，来源定性留待用户裁定。
 > **加载口径**：阶段 0 第 3 步「查可用 Skill」命中外部技能簇时读；日常任务不需要（SKILL.md 只留一句指针）。
 > **与「整合方法」的分工**：本文件只讲**装好之后怎么调**（运行时路由）与**来源/许可/安装形态/账本**。⚠️ **原则侧不在这里**：上游技能若贡献的是**可迁移的视觉工艺原则**，它们入 `references/aesthetic-rubric.yaml`（判据集）而非本文件 —— 本文件只留出处与本文件不重述的声明（见 §1.4 第 2 条）。**怎么把外部技能装进来**（一次性的整合工程 —— 探针目录法、宿主三道门禁实测、接入形态选型、依赖序安装、验收登记）见技能 `external-skill-library-integration`。**做整合翻那份，用已整合的技能翻本份。**
 > **与 `references/ppt-mode.md` 的分工**：本文件记 `ppt-master` 的**来源 / 许可 / 安装形态 / 账本 / 调用口径**；**产出结构与验收契约**（Y0–Y4 / Y-a–Y-d / E1–E6）在 `references/ppt-mode.md`。**同一物理量只写一处**，两侧交叉引用、不重述。
-> **版本**：4.3（2026-09-30 建；2026-10-09 首次泛化为两上游并登记 ppt-master，同日二次泛化为三上游并登记 humanizer，同日三次泛化为四上游并登记 hairline-create；2026-10-10 四上游**内容补**：§1.4 增第 5 条指向工程手法文档 `references/artifact-engineering.md`，并修正 §1.4 表内许可值 `2025 Lucas Markes` → `2026 Lucas Marques`；2026-10-11 五次泛化为**五上游**并登记 archify；⚠️ 同日**改判并更正**：archify 的本机可用性结论由「系统层 nlink 语义异常 ⇒ 本机不可产出产物」改为「宿主会话把删除重定向为回收站 ⇒ **会话内**受阻、**会话外可绕**」（证据链见 §1.5），并新增 §二 末的「默认豁免（图示例外）」条款；2026-10-11 增 **§1.6**：登记五个**本地已装、非 vendored** 的能力技能，并明确「不是上游」的判据与由此产生的机器检查缺口；2026-10-11 六次泛化为**六上游**并登记 **diagram-design**（新增 §1.7 —— ⚠️ 与 §1.6 的「非上游」区分：本节这个**有 lock、可同步**））
+> **版本**：4.3（2026-09-30 建；2026-10-09 首次泛化为两上游并登记 ppt-master，同日二次泛化为三上游并登记 humanizer，同日三次泛化为四上游并登记 hairline-create；2026-10-10 四上游**内容补**：§1.4 增第 5 条指向工程手法文档 `references/artifact-engineering.md`，并修正 §1.4 表内许可值 `2025 Lucas Markes` → `2026 Lucas Marques`；2026-10-11 五次泛化为**五上游**并登记 archify；⚠️ 同日**改判并更正**：archify 的本机可用性结论由「系统层 nlink 语义异常 ⇒ 本机不可产出产物」改为「宿主会话把删除重定向为回收站 ⇒ **会话内**受阻、**会话外可绕**」（证据链见 §1.5），并新增 §二 末的「默认豁免（图示例外）」条款；2026-10-11 增 **§1.6**：登记五个**本地已装、非 vendored** 的能力技能，并明确「不是上游」的判据与由此产生的机器检查缺口；2026-10-11 六次泛化为**六上游**并登记 **diagram-design**（新增 §1.7 —— ⚠️ 与 §1.6 的「非上游」区分：本节这个**有 lock、可同步**）；2026-10-16 七次泛化为**七上游**并登记 **impeccable**（新增 §1.8，AI 前端设计品味 skill，本机 context/doctor 双命令实测 rc=0）＋ 同日新增 **§1.9 素材库 awesome-design-md**（84 品牌 DESIGN.md，非技能，lock 仅作对账））
 
 ---
 
-## 一、六个上游
+## 一、七个上游 ＋ 一个素材库
 
 ### 1.1 mattpocock-skills-zh-CN（24 个，扁平外挂）
 
@@ -205,6 +205,46 @@
 
 > **为什么不做成本体内置、也不并进 diagram-mode.md**：① 本仓 `references/diagram-mode.md` 是**契约层**（该不该画 / 画成什么 / 画到什么密度），把 44 类型的绘制细则折进去会把**契约**写成**手册**；② 它是**产物生成器**（与 §1.4 hairline-create、§1.5 archify 同型）⇒ **产物外挂、契约留本仓**；③ 复制安装便于 `--verify-lock` 漂移检测。
 
+### 1.8 impeccable（1 个，扁平外挂；**第七上游**）
+
+| 项 | 值 |
+| --- | --- |
+| 上游 | pbakaus/impeccable（**AI 前端设计品味 skill**：SKILL.md ＋ reference/ 45 份剧本 ＋ 自带 CLI 引擎 —— 反模式清单、18＋ 设计命令（craft / audit / critique / polish / distill / animate / typeset 等）、PRODUCT.md／DESIGN.md 双档案法；81.8k★，**今天仍在推送**） |
+| 锁定 rev | 6af45ac9a5eb8792f033d3242f52e99812fd91fa（2026-10-16T07:19:47Z） |
+| 许可 | Apache-2.0（仓库根 **LICENSE ＋ NOTICE.md 均以 carried_along 带入** impeccable/ 下） |
+| 本机版本 | skill frontmatter **4.6.0**；scripts/VERSION（引擎）**0.1.15** —— 两层版本号口径不同，**以 `upstream_rev` 为唯一坐标**（与 §1.5 / §1.7 同纪律） |
+| 规模 | **59 文件**（交付面 = 上游 .claude/skills/impeccable/ 子树 ＋ 随库 LICENSE/NOTICE；⚠️ .claude/agents/×4 与 .claude/settings.json 为 **Claude Code 宿主装配面**（子代理与权限配置），本宿主不消费，**不取**） |
+| 安装形态 | **扁平外挂（复制安装，非联接）**：`~/.workbuddy/skills/impeccable`（**独立真实目录**） |
+| 账本 | `.vendor/impeccable.lock.json`（rev ＋ 许可 ＋ 逐文件 sha256 ＋ `content_digest`） |
+| 宿主侧路由 | **Model-invoked**（frontmatter `user-invocable: true`、无 `disable-model-invocation`）—— 见 §三 第七上游表 |
+| ⚠️ 本机可用性 | **装得进、跑得动**：launcher（scripts/impeccable.cmd，自包含二进制随包）**context 与 doctor 双命令实测 rc=0**（doctor 报 No drift found）；⚠️ bash 下经 cmd 调用时**首行会打一条 GBK 乱码的 cmd label 副作用**（「找不到驱动器标签 - discard_staging」），rc 与后续输出不受影响 —— 如实登记为**噪声**，不是缺陷 |
+
+**⚠️ 资产归属**：第三方 Apache-2.0 资产，不是自研 —— 不得登记进 `meta.自研工具`，不得随 ai-workflow 本体仓推送。
+
+**⚠️ 三条实测约束（决定它怎么接，都不是设计偏好）**：
+
+1. **与既有面的分界（最易混）**：它管**页面级 UI**（网站 / 落地页 / 仪表盘 / 产品界面 / 组件 / 表单 / 设置页 / onboarding 的设计品味与产出流程）；本仓 `references/diagram-mode.md` ＋ `diagram-design` / `archify` 管**图**（架构图 / 流程图 / 示意图 / 数据图）。**做网页 UI → impeccable；画图 → 图示通道**。UI 里**内嵌**一张图时，图那部分仍走图示通道。
+2. **不引其判据进 `references/aesthetic-rubric.yaml`**（与 §1.4 hairline「原则可折」**不同型**）：它的 craft-floor（质量底线）与 61 条检测规则**绑定其自身「剧本 ＋ 引擎」工作流**（命令 → reference 剧本 → 引擎校验），搬单条规则出来会与本仓判据形成**两套口径**；其反模式清单（灰字压彩底、卡片套卡片、紫渐变等）已内建于其工作流，按其剧本调用即可吃到。⇒ **手法归它、判定归本仓既有物理量**（与 humanizer「改写手法 vs 文风判定」同构）。
+3. **PRODUCT.md／DESIGN.md 双档案法是它的核心机制**：产品事实（受众 / 目的 / 约束）与视觉方向分档存放 —— 与本仓「同一物理量只写一处」的纪律**同型不冲突**；其 init 流程会**产出** DESIGN.md，而素材库 §1.9 的 DESIGN.md 可作**风格参照素材**喂给它，两者天然衔接（衔接点见 §1.9）。
+
+### 1.9 awesome-design-md（素材库；**非技能、非第七上游**）
+
+> ⚠️ **它不是上游**：无 SKILL.md、不进宿主技能索引（lock 的 `skills` 列表恒为空）—— 放进本文件只因它是外部技能簇的**配套素材层**，供 §1.8 的 UI 工作流按需取用。
+
+| 项 | 值 |
+| --- | --- |
+| 上游 | VoltAgent/awesome-design-md（**84 个品牌 DESIGN.md 设计规范合集**，源自 Google Stitch 提出的 DESIGN.md 概念：把品牌视觉语言逆向工程为纯 Markdown —— 色板语义 / 字体层级 / 组件样式 / 间距 / 阴影 / Do & Don't / Agent 提示段九节结构；121.7k★，活跃） |
+| 锁定 rev | 3b605329240ce735b510037cca322f1831fdd7f8（2026-10-14T05:46:47Z；上游无 release tag） |
+| 许可 | MIT（Copyright (c) 2026 VoltAgent；仓库根 LICENSE 随库携带） |
+| 规模 | **170 文件 / 约 2.4 MB**（84 品牌目录 × DESIGN.md ＋ README.md ＋ 携带的 LICENSE / README / CONTRIBUTING；84 目录全量对账 DESIGN.md **零缺失**） |
+| 安装形态 | **素材库（复制安装）**：`~/.workbuddy/skills/awesome-design-md`（无 SKILL.md ⇒ `gen_skill_index.py` 不会把它当技能，**这是预期行为**） |
+| 账本 | `.vendor/awesome-design-md.lock.json`（rev ＋ 许可 ＋ 逐文件 sha256 ＋ `content_digest`；**仅作 sha256 漂移对账**，frontmatter 检查不适用） |
+| 宿主侧路由 | **不适用**（非技能）—— 取用方式见 §三 素材库块 |
+
+**⚠️ 两条使用纪律**：① **按需取单文件，不整库加载**（与 KB 纪律同构）：UI 任务需要「按某品牌视觉语言来做」时，只读 `design-md/<brand>/DESIGN.md` 一个文件作风格参照（品牌目录名以 lock 与磁盘为准，如 Linear 是 `linear.app`、Vercel 是 `vercel`）；② **参照 ≠ 官方规范**：这些是社区对真实网站设计语言的逆向描述，**作灵感参照不作真理引用**，且第三方的商标与视觉资产各有其版权，产出物**不得照抄品牌标识**。
+
+**⚠️ 与 §1.8 的衔接点**：impeccable 的 init／craft 流程本就以 DESIGN.md 为视觉档案 —— 素材库里的品牌 DESIGN.md 可作为**起点参照**（抄结构、学九节组织法），**替换内容为本次项目的真实视觉决策**；不得把品牌文件直接当本项目档案用。
+
 ---
 
 ## 二、调用口径（上游两分类 → 宿主语言）
@@ -325,6 +365,25 @@
 
 > ⚠️ **与既有面的分界**：本仓 `references/diagram-mode.md`（P0–P4）是**契约层**，本节这个技能是**引擎层** —— 示意图**先过 P0–P4、再交它绘制**；**数据图不经 P0–P4**（直接用，见 `references/research-mode.md` §7.11）。⚠️ 它的 style-guide 阈值是**它自己的设计系统** ⇒ 承 `diagram-mode` §10 第 4 条**只搬规则、不搬阈值**。
 
+**第七上游（`impeccable`，1 个，按 §二 两分类）**：
+
+| 场景 | 调哪个 | 分类 |
+| --- | --- | --- |
+| **触发词群（命中任一即本行，不要求用户点名技能名）**：做页面 / 建站 / 落地页 / 官网 / 仪表盘 / dashboard / 产品 UI / 组件 / 表单 / 设置页 / onboarding / 空状态 / 前端界面；或「美化 / 改样式 / 调排版 / 配色 / 对齐 / 间距 / 加动效 / 有点丑 / 不够好看 / 没有设计感 / 太花哨 / 太单调」类表达；或任务产物将含 HTML / CSS / 前端组件 —— 以上**任一命中**即调，UX 审查与设计品味归它 | `impeccable` | Model-invoked |
+
+> ⚠️ **与图类通道的分界**（§1.8 第 1 条的运行时口径）：**页面 UI → impeccable；图 → `diagram-mode` ＋ `diagram-design` / `archify`**。两者都命中时（如"做一个带架构图的官网"），页面走 impeccable、图走图示通道，**分别调用**。
+> ⚠️ **本机可用**（context / doctor 实测 rc=0，见 §1.8）；调用经其 scripts launcher（Windows 用 impeccable.cmd），**不改其任何文件**。
+
+**素材库取用（`awesome-design-md`，§1.9，非技能）**：
+
+| 场景 | 取哪个 | 说明 |
+| --- | --- | --- |
+| **触发词群**：「风格像 / 参考 / 照着 / 学 XX 的风格」＋任一品牌名（Vercel / Stripe / Notion / Linear / Supabase / Claude 等 84 家）；或「要个高级感 / 科技感 / 极简风 / 暗色主题」且指定了参照品牌；或要学**DESIGN.md 九节组织法**写本项目设计档案 | 读 `~/.workbuddy/skills/awesome-design-md/design-md/<brand>/DESIGN.md` **单个文件** | ⚠️ 品牌目录名以磁盘为准（Linear 是 `linear.app`；全清单见 design-md/ 一层目录）；按需取单文件、不整库加载（§1.9 纪律 ①）；作参照不作官方规范（§1.9 纪律 ②）。**未指定品牌时**：按任务气质就近推荐 2–3 个候选（如金融感→stripe、极简工程→vercel、文档友好→notion）再让用户挑 |
+
+**路由敏感性总条款（2026-10-16 用户指令「让触发更敏感」，本节全域适用）**：
+
+> ① **命中判据 = 任务实质，不是用户词面**：用户**不需要**说出技能名或「用 impeccable」这类原话——只要任务实质涉及 UI / 网页 / 设计品味 / 品牌风格参照，就按上两表路由（阶段 0 查可用 Skill 时**主动把任务描述与触发词群对照**，含中文口语与同义表达）。② **产物形态触发**（比词面更硬）：交付物将含 HTML / CSS / 前端组件的任务，无论用户怎么措辞，一律先过本节路由再动工。③ **宁可误报、不可漏报**：拿不准是否算 UI 任务时按「算」处理（先路由后判断），误调的代价只是多读一份手册，漏调的代价是产出平庸界面。④ 本条款只放宽**触发**，不放宽**判定**——产物验收仍走本仓既有物理量（§1.8 第 2 条）。
+
 **依赖提示**：`tdd` 正文要求配合 `codebase-design` 使用（后者是 seam、adapter、depth 这些词的唯一定义处）；`grill-with-docs` 依赖 `domain-modeling`。这几个**成组装齐了**，不要单装一个。
 
 ---
@@ -385,7 +444,7 @@
 用法：
 
 ```
-python scripts/external_skill_lint.py                    # 查 .vendor/ 下全部 lock 登记的外部技能（六上游）
+python scripts/external_skill_lint.py                    # 查 .vendor/ 下全部 lock 登记的外部技能（七上游 ＋ 素材库 lock）
 python scripts/external_skill_lint.py --verify-lock      # 加做 lock 与磁盘 sha256 一致性
 python scripts/external_skill_lint.py --skill tdd        # 只查一个
 python scripts/external_skill_lint.py --lock <path>      # 只用一个 lock（排障用）
@@ -454,6 +513,25 @@ python scripts/external_skill_lint.py --lock <path>      # 只用一个 lock（�
 4. 取数时**必须带 rev**（`?ref=<40 位 sha>`），并逐文件校验 **git blob sha1** 与上游 `contents` 接口返回的 `sha` 相等 —— 这是「确实取自该 rev」的机器证据（`--verify-lock` 只比 sha256，证不了来源）。
 5. ⚠️ **不要**改它任何文件；也不要把本仓判据写进它的目录 —— 两边一旦互写，同步时无法区分差异来源。
 6. ⚠️ **重取后可能新报 FAIL**：若上游 references 新增了指向**仓根**的引用（verify-* 等），须补进 lock 的 `reference_mentions`，否则会被「引用完整性」判为**未登记断链**。
+
+### 7.7 impeccable（复制安装，无补丁）
+
+它是**复制安装**（上游 `pbakaus/impeccable` 的 .claude/skills/impeccable/ 子树 ＋ 随库 LICENSE/NOTICE → `~/.workbuddy/skills/impeccable`，**独立真实目录**，59 文件）⇒ **上游更新不会自动生效**（与 7.1 的联接相反、与 7.2–7.4 / 7.6 同法）。同步规程：
+
+1. 取上游新 rev，与 lock 的 `upstream_rev` 比对，确认有更新（⚠️ **不要**用版本号判 —— skill frontmatter 4.6.0 与引擎 scripts/VERSION 0.1.15 是**两层版本号**，见 §1.8）。
+2. **整体重取**（`patched` 恒为 false，无补丁可放）。⚠️ **只取上游 .claude/skills/impeccable/ 子树 ＋ 根 LICENSE/NOTICE**，不要把 .claude/agents/、.claude/settings.json（Claude Code 宿主装配面）与仓库根的 crates/、tests/、cli/（Rust 引擎源码与测试）一并搬进来。
+3. 逐文件 sha256 重算写回 lock，跑 `scripts/external_skill_lint.py --verify-lock`。
+4. 取数时**必须带 rev**（tarball 端点 `api.github.com/repos/<r>/tarball/<sha>` 或 `?ref=<40 位 sha>`），并核对解压文件数与 trees API 记录一致 —— 这是「确实取自该 rev」的核对证据。
+5. ⚠️ **不要**改它任何文件（SKILL.md 内以 .claude/skills/impeccable/ 为前缀的路径由其自身 base-dir 解析规则兜底，**不做改写**）；也不要把本仓判据写进它的目录 —— 两边一旦互写，同步时无法区分差异来源。
+
+### 7.8 awesome-design-md（复制安装，无补丁；素材库）
+
+它是**复制安装**（上游 `VoltAgent/awesome-design-md` 的 design-md/ 全量 ＋ 随库 LICENSE/README/CONTRIBUTING → `~/.workbuddy/skills/awesome-design-md`，**独立真实目录**，170 文件）⇒ **上游更新不会自动生效**（与 7.2–7.4 / 7.6 / 7.7 同法）。同步规程：
+
+1. 取上游新 rev，与 lock 的 `upstream_rev` 比对，确认有更新（上游**无版本号**，以 rev 为唯一坐标）。
+2. **整体重取**（`patched` 恒为 false）。⚠️ **只取 design-md/ 全量 ＋ 根 LICENSE/README/CONTRIBUTING**，不要把 .github/ 一并搬进来。
+3. 逐文件 sha256 重算写回 lock，跑 `scripts/external_skill_lint.py --verify-lock`（⚠️ 该 lock 的 `skills` 列表**恒为空** —— 它无 SKILL.md，lock 只承担 sha256 对账，frontmatter / 引用 / 密钥三类检查不适用）。
+4. ⚠️ **不要**往素材目录里添加本项目自产的 DESIGN.md —— 项目自己的设计档案落在**项目目录**，不回写素材库；两边一旦互写，同步时无法区分差异来源。
 
 ### 7.5 §1.6 的五个本地技能（**不适用本节**）
 
