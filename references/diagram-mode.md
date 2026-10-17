@@ -4,7 +4,7 @@
 > **一句话**：**图示的难点不在“怎么画好看”，而在“该不该画”与“画完谁来验收”** —— 本模块把**上游的产出结构**（该不该画 / 动笔前定什么 / 预算多少 / 几何是否成立）落成可检查的产出结构；**画完之后的机器验收仍归既有的审美判据**（`aesthetic-rubric.yaml` + `check_aesthetics.py`），本模块是它的**上游**，不替换它。该判据集自 **v4.26.0** 起含 **H 层 5 条**（缓动纪律／禁发光式效果／无限循环减动效兜底 三条 `machine` ＋ 静止态构图／命中区稳定 两条人审），提炼自第三方技能 `hairline`（见 `references/external-skills.md` §1.4）—— **图内的动效与发光同吃这三条**。
 > **本模块几乎不新增门禁**：不加主类取值、不加来源分型取值、不改任务分层判据、**不加 plan 字段、不加 judge 判定层**。唯一新增的机器判据是 **F5 几何重叠**（落到既有判据集的渲染层 **R4**，见 §10）；其余七条义务与八项自检**都是纪律项**。
 > **加载口径**：命中「图示识别」（§2）后加载；未命中不加载（勿预读）。
-> **机制来源与坐标**（引用外部资产必须钉坐标，本仓 `references/teardown-mode.md` §6 T1 对此有硬要求）：提炼自 `cathrynlavery/diagram-design@d1376371965f513d99cc9ec388835d255c5c88d5`，读的是它的入口技能文档（skills/diagram-design/SKILL.md）、四份细则（references/semantic-patterns.md、references/layout-budget.md、references/output-spec.md、scripts/self_check.py）与十四份 ADR（docs/adr/0001–0014）。⚠️ **v4.33.0 起该上游已作为外部技能整体接入**（接入钉的 rev 为 7a2e22170ee838e859d8142ba825d83f8b6375e6，见 `references/external-skills.md` §1.7）—— 本页提炼的是**产出结构**（当时钉的 rev 为 d1376371965f513d99cc9ec388835d255c5c88d5），两者**不冲突**：**本页是契约层、技能是引擎层**。⚠️ 上述外部仓文件路径按本仓既有约定**用纯文本提及、不加反引号** —— `checks.py skill` 的「文档引用完整性」把反引号内的 .md / .py 视为**技能内引用**，给外部路径加反引号会产出假断链（与 `references/external-skills.md` 的边界说明同一处置）。
+> **机制来源与坐标**（引用外部资产必须钉坐标，本仓 `references/teardown-mode.md` §6 T1 对此有硬要求）：提炼自 `cathrynlavery/diagram-design@d1376371965f513d99cc9ec388835d255c5c88d5`，读的是它的入口技能文档（skills/diagram-design/SKILL.md）、四份细则（references/semantic-patterns.md、references/layout-budget.md、references/output-spec.md、scripts/self_check.py）与十四份 ADR（docs/adr/0001–0014）。⚠️ **v4.33.0 起该上游已作为外部技能整体接入**（接入钉的 rev 现为 550fd66edff058bc73056c3416b76d69cfe865ba，见 `references/external-skills.md` §1.7）—— 本页提炼的是**产出结构**（当时钉的 rev 为 d1376371965f513d99cc9ec388835d255c5c88d5），两者**不冲突**：**本页是契约层、技能是引擎层**。⚠️ 上述外部仓文件路径按本仓既有约定**用纯文本提及、不加反引号** —— `checks.py skill` 的「文档引用完整性」把反引号内的 .md / .py 视为**技能内引用**，给外部路径加反引号会产出假断链（与 `references/external-skills.md` 的边界说明同一处置）。
 > **落地说明**：本页于 2026-10-07 由任务 `落地-ai-workflow图示设计模式-2026-10-07` 落地。与它同批设计的**「逆向拆解模式」已先一步落地**（v4.19.0），两者是上下游关系（见 §8）。
 
 ---
@@ -140,7 +140,7 @@
 | **`read_me` / `show_widget` 可视化机制** | 不同层 | 那是**会话内即时呈现**，本模式管**交付物形态**。处置：若结论是需要即时呈现而非交付，转即时呈现通道 |
 | **`geo-map-compliance-guard`** | 不重叠 | 那是地图合规；本模式若遇地图类图，须**先过该守卫** |
 | **`outbound-publish-guard`** | 不重叠 | 若图要出站，先过该守卫 |
-| **外部技能 `diagram-design`**（v4.33.0 起已整体接入，见 `references/external-skills.md` §1.7） | **上下游（契约层 ↔ 引擎层）** | 本模块管**该不该画、画成什么、画到什么密度**（P0–P4 契约层）；它是**引擎层**（44 类型 ＋ 单文件 HTML/SVG 产物 ＋ self_check.py）。**分界**：示意图先过本模块 P0–P4、再交它绘制；**数据图不经本模块**（直接用它，见 `references/research-mode.md` §7.11）。⚠️ 它的 style-guide 阈值是**它自己的设计系统** ⇒ 按 §10 第 4 条**只搬规则、不搬阈值** |
+| **外部技能 `diagram-design`**（v4.33.0 起已整体接入，见 `references/external-skills.md` §1.7） | **上下游（契约层 ↔ 引擎层）** | 本模块管**该不该画、画成什么、画到什么密度**（P0–P4 契约层）；它是**引擎层**（45 类型 ＋ 单文件 HTML/SVG 产物 ＋ self_check.py）。**分界**：示意图先过本模块 P0–P4、再交它绘制；**数据图不经本模块**（直接用它，见 `references/research-mode.md` §7.11）。⚠️ 它的 style-guide 阈值是**它自己的设计系统** ⇒ 按 §10 第 4 条**只搬规则、不搬阈值** |
 | **方法原理卡片**（`references/method-card-mode.md`，v4.35.0 增） | **相邻但不相交** | 那是「**一页讲解**」的图文复合版面（含公式、步骤、结论；本仓自建 `methodcard` 引擎），**不是图**。分界：卡片内**子图**仍归本模块与 `diagram-design` 的规则（示意性子图须在图注标明）；卡片**整体**走 method-card-mode 的产出结构（五区）与验收链 |
 
 ---

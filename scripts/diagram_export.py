@@ -7,7 +7,7 @@
 
 | 通道 | 谁实现 | 口径 |
 |---|---|---|
-| `svg` | **上游** `diagram-design/scripts/export_svg.py`（唯一真源） | 只取 `<svg>` 节点；CSS 随行；`<defs>` ID 加 slug 前缀；`rgba()` 归一 |
+| `svg` | **上游** `diagram-design/scripts/export_svg.py`（唯一真源） | 只取 `<svg>` 节点；CSS 随行；`<defs>` ID 加 slug 前缀；`rgba()` 归一。⚠️ 上游自 rev `550fd66e` 起会把 `@import url(fonts.googleapis.com…)` 内联进交付 SVG ⇒ **默认原样保留**（浏览器可正确显示网字体）；投稿 / 离线件加 `--strip-remote-fonts` 剥掉 |
 | `pdf` | **本器**（Chrome 无头打印） | ⚠️ **不是上游能力**（上游只定义 svg/png）。页面尺寸 = viewBox、零边距、矢量输出；写作 PDF 前把字体栈换成**可嵌入的 TrueType**（否则中文会被落成 Type3） |
 | `png` | **本器**（Playwright，按上游 `references/export.md` 的规程） | 透明底、只截 `<svg>` 元素盒、释放祖先裁剪；动效页先取 `?motion=static` 并断言 `data-frame="static"` |
 
@@ -21,6 +21,7 @@
 用法：
     python diagram_export.py out/chart-01-bar.html --formats svg,pdf,png --scale 2
     python diagram_export.py out/*.html --out out/export --formats pdf,svg
+    python diagram_export.py out/*.html --formats svg --strip-remote-fonts   # 投稿件：去远程字体
     python diagram_export.py --selftest
 退出码：0 = 全部成功；1 = 有失败；2 = 用法错；3 = 依赖缺失（未做任何事）
 """
@@ -140,9 +141,24 @@ def embeddable_fonts(text: str) -> str:
 
 
 # 远程字体引用：`@import url('https://…')` 与 `<link rel=stylesheet href="https://…">`。
-# 只作用于本器**自己生成的派生副本**（打印页 / 截图中间件），**不改交付的 .svg**。
+# 派生副本（打印页 / 截图中间件）**一律剥**；**交付的 .svg 默认保留**（上游真源），
+# 只有显式 `--strip-remote-fonts` 才剥（见 deliverable_svg 的两条相反诉求）。
 _REMOTE_IMPORT = re.compile(r"@import\s+url\(\s*['\"]?https?://[^)]*\)\s*;?")
 _REMOTE_LINK = re.compile(r"<link\b[^>]*href=\"https?://[^\"]*\"[^>]*>")
+
+
+def deliverable_svg(text: str, strip_remote: bool) -> str:
+    """交付 `.svg` 的最终形态 —— **默认原样（上游真源），显式开关才剥远程字体**。
+
+    为什么默认不剥：上游自 rev 550fd66e 起把 `@import url(fonts.googleapis.com…)`
+    内联进 SVG，作用是让**单独打开**该 SVG 时也用上网字体（Geist / Instrument Serif）。
+    剥掉不改变字形声明，却会让离线/无网环境的渲染回退到本机同名或替代字体 ⇒ 与
+    作者看到的版式不同。
+    为什么投稿要剥：投稿件与离线件**不得依赖外网**（审稿人 / 排版方离线打开时字体
+    回退不可控，且部分期刊禁止外部资源引用）；这类件同时走 `check_vector_export.py`
+    的「字体全嵌入」验收。两条诉求相反 ⇒ 用**调用面**区分，不做一刀切默认。
+    """
+    return strip_remote_fonts(text) if strip_remote else text
 
 
 def strip_remote_fonts(text: str) -> str:
@@ -188,7 +204,7 @@ def static_url(path: pathlib.Path) -> str:
 # 三条通道
 # ──────────────────────────────────────────────────────────────────────────────
 def export_svg(src: pathlib.Path, out: pathlib.Path, upstream_scripts: pathlib.Path,
-               system_fonts: bool) -> tuple[bool, str]:
+               system_fonts: bool, strip_remote: bool = False) -> tuple[bool, str]:
     helper = upstream_scripts / "export_svg.py"
     if not helper.exists():
         return False, (f"未找到上游导出器 {helper} —— svg 通道的唯一真源。"
@@ -202,6 +218,9 @@ def export_svg(src: pathlib.Path, out: pathlib.Path, upstream_scripts: pathlib.P
     r = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
     if r.returncode != 0 or not out.exists() or out.stat().st_size == 0:
         return False, (r.stdout + r.stderr).strip()[-300:]
+    if strip_remote:                                 # 只在显式开关下改写交付件
+        raw = out.read_text(encoding="utf-8")
+        out.write_text(deliverable_svg(raw, True), encoding="utf-8", newline="")
     return True, ""
 
 
@@ -477,7 +496,8 @@ def run(args) -> int:
             for fmt in formats:
                 out = pathlib.Path(outdir) / (src.stem + "." + fmt)
                 if fmt == "svg":
-                    ok, msg = export_svg(src, out, up, args.system_fonts)
+                    ok, msg = export_svg(src, out, up, args.system_fonts,
+                                         strip_remote=args.strip_remote_fonts)
                 elif fmt == "pdf":
                     ok, msg = export_pdf(src, out, chrome, work, up)
                 else:
@@ -628,6 +648,17 @@ def selftest() -> int:
     ck("幂等（再剥一次不变）", strip_remote_fonts(strip_remote_fonts(_imp)), strip_remote_fonts(_imp))
     ck("不误伤 file: 引用", "file:///x/a.woff2" in strip_remote_fonts("url(file:///x/a.woff2)"), True)
 
+    print("H. 交付 .svg 的远程字体（默认原样 vs 显式剥离 —— 两条相反诉求的调用面分界）")
+    ck("默认保留 @import（不加开关 ⇒ 上游原样）",
+       "fonts.googleapis.com" in deliverable_svg(_imp, False), True)
+    ck("加开关 ⇒ 剥掉 @import",
+       "fonts.googleapis.com" in deliverable_svg(_imp, True), False)
+    ck("加开关不误伤同块本地规则", ".a{fill:red}" in deliverable_svg(_imp, True), True)
+    ck("开关对无远程引用的文本是恒等",
+       deliverable_svg("<svg/>", True), "<svg/>")
+    ck("开关幂等", deliverable_svg(deliverable_svg(_imp, True), True),
+       deliverable_svg(_imp, True))
+
     print("F. Chrome 探测（环境相关，只报不判）")
     print(f"      find_chrome() = {find_chrome()}")
 
@@ -649,6 +680,9 @@ def main() -> int:
     ap.add_argument("--upstream-scripts", default=str(DEFAULT_UPSTREAM / "scripts"))
     ap.add_argument("--chrome", default=None)
     ap.add_argument("--system-fonts", action="store_true", help="透传给上游 export_svg.py")
+    ap.add_argument("--strip-remote-fonts", action="store_true",
+                    help="只对交付的 .svg 生效：剥掉 @import / <link> 远程字体引用（投稿 / 离线件用；"
+                         "缺省保留上游原样）")
     ap.add_argument("--verify", action="store_true", help="导出后跑矢量件检查")
     ap.add_argument("--offline", action="store_true",
                     help="png 通道中止一切非 file: 请求（远程字体等）—— 更快、且联网/断网产出一致")

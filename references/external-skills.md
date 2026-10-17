@@ -177,13 +177,13 @@
 
 | 项 | 值 |
 | --- | --- |
-| 上游 | cathrynlavery/diagram-design（自包含 HTML ＋ 内联 SVG 的**编辑型图表设计**技能：**44 种图表类型**、语义模式、可蒙皮设计系统、导入 draw.io / Mermaid / Excalidraw、可导出 SVG / PNG） |
-| 锁定 rev | 7a2e22170ee838e859d8142ba825d83f8b6375e6（2026-10-10T21:10:13Z；上游**无 release tag**） |
+| 上游 | cathrynlavery/diagram-design（自包含 HTML ＋ 内联 SVG 的**编辑型图表设计**技能：**45 种图表类型**、语义模式、可蒙皮设计系统、导入 draw.io / Mermaid / Excalidraw、可导出 SVG / PNG） |
+| 锁定 rev | 550fd66edff058bc73056c3416b76d69cfe865ba（2026-10-16T19:42:45Z；上游**无 release tag**） |
 | 许可 | MIT（上游根 LICENSE **随库携带**为 diagram-design/LICENSE） |
 | 本机版本 | 2.6（其 SKILL.md frontmatter 的 metadata.version）；⚠️ 插件 manifest 为 **2.6.74** ⇒ **版本号不可作判据**，以 `upstream_rev` 为唯一坐标（与 §1.5 的 archify 同纪律） |
-| 规模 | **280 文件 / 约 4.9 MB**（交付面 = 上游 skills/diagram-design/ 子树的 279 文件 ＋ 随库 LICENSE；其中 references/ 62 ＋ assets/ 211 ＋ scripts/ 5） |
+| 规模 | **288 文件 / 约 5.1 MB**（交付面 = 上游 skills/diagram-design/ 子树的 287 文件 ＋ 随库 LICENSE；其中 references/ 63 ＋ assets/ 217 ＋ scripts/ 6） |
 | 安装形态 | **扁平外挂（复制安装，非联接）**：`~/.workbuddy/skills/diagram-design`（**独立真实目录**） |
-| 账本 | `.vendor/diagram-design.lock.json`（rev ＋ 许可 ＋ 逐文件 sha256 ＋ `content_digest` ＋ **reference_mentions 50 条**） |
+| 账本 | `.vendor/diagram-design.lock.json`（rev ＋ 许可 ＋ 逐文件 sha256 ＋ `content_digest` ＋ **reference_mentions 53 条**） |
 | 宿主侧路由 | **Model-invoked**（frontmatter 无 `disable-model-invocation`）—— 见 §三 第六上游表 |
 
 **⚠️ 资产归属**：第三方 MIT 资产，不是自研 —— 不得登记进 `meta.自研工具`，不得随 ai-workflow 本体仓推送。
@@ -191,8 +191,8 @@
 **⚠️ 五条实测约束（决定它怎么接，都不是设计偏好）**：
 
 1. **交付面自包含、且有「装态降级」**：其 SKILL.md 与 references/ 的自检条分两路 —— 装态走上游的 self_check.py（**本仓已实跑 rc=0**）；仓根门（verify-geometry / verify-motion / lint-skin 等）只在 "From a repository checkout" 时可用。⇒ 那些仓根路径**不属交付面**，其 **50 条**引用已在 lock 的 `reference_mentions` 登记为**豁免**（**豁免 ≠ 已验证**，lint 对该处给 SKIP 并计数）。
-2. **它已被本仓「提炼」过一次，但那是产出结构侧**：`references/diagram-mode.md`（v4.20.0，钉 rev d1376371965f513d99cc9ec388835d255c5c88d5）提炼的是它的 **P0–P4 产出结构**（README / semantic-patterns / layout-budget / output-spec / self_check.py / 14 份 ADR）；本次接入的是**引擎与产物**（44 类型 ＋ 单文件 HTML/SVG ＋ self_check.py）。两者**不冲突**：**契约层 vs 引擎层**（分界见 `references/diagram-mode.md` §8）。
-3. ⚠️ **默认产物形态是 HTML，但 format 拨盘可取 svg / png** ⇒ 科研 / 投稿场景**不与之冲突**：论文配图默认走 `format=svg`（见 `references/research-mode.md` §7.11）。⚠️ 上游明写**导出是 manual、不得未经要求自行产出导出件**。
+2. **它已被本仓「提炼」过一次，但那是产出结构侧**：`references/diagram-mode.md`（v4.20.0，钉 rev d1376371965f513d99cc9ec388835d255c5c88d5）提炼的是它的 **P0–P4 产出结构**（README / semantic-patterns / layout-budget / output-spec / self_check.py / 14 份 ADR）；本次接入的是**引擎与产物**（45 类型 ＋ 单文件 HTML/SVG ＋ self_check.py）。两者**不冲突**：**契约层 vs 引擎层**（分界见 `references/diagram-mode.md` §8）。
+3. ⚠️ **默认产物形态是 HTML，但 format 拨盘可取 svg / png** ⇒ 科研 / 投稿场景**不与之冲突**：论文配图默认走 `format=svg`（见 `references/research-mode.md` §7.11）。⚠️ 上游明写**导出是 manual、不得未经要求自行产出导出件**。⭐ **自 rev 550fd66e 起，上游 export_svg.py 会把 `@import url(fonts.googleapis.com…)` 内联进交付 SVG** —— 本仓处置＝**默认原样保留**（浏览器打开时仍用上网字体），**投稿 / 离线件加 `--strip-remote-fonts`**（`scripts/diagram_export.py` 的开关；口径见 `references/ops.md` 该工具行与 `references/research-mode.md` §7.11.3 RF1）。
 4. ⭐ **导出三条通道：谁实现哪一条必须分清（2026-10-11 实跑划定）**：
    - **`svg` = 上游真源** —— scripts/export_svg.py（本仓导出一律**转调**它，**不另写一份实现**，避免行为分叉）。
    - **`png` = 上游规程 ＋ 本机依赖** —— 上游 references/export.md 给了完整规程（透明底、只截 `<svg>` 元素盒、**释放祖先裁剪**、动效页先取 `?motion=static` 并等 `document.fonts.ready`），但**明令不自动装运行时依赖**。
@@ -203,7 +203,7 @@
 
 > ⭐ **引用上游文件名的记号约定（本文件全域适用，勿「顺手补反引号」）**：上游 `.py` / `.md` 文件名**一律不带反引号**。原因是机器判据的取值口径 —— `checks.py` 的「文档引用完整性」是**扁平检查**：反引号里的 `xxx.py`/`xxx.md` **一律按「本技能目录内」**去四个位置解析，解析不到即判**断链**；而 diagram-design 的文件在**另一个根**（`~/.workbuddy/skills/diagram-design/`）⇒ 补上反引号会立刻制造**假 FAIL**（本轮实测 19 处 / 五文件）。上游的**安装位置与形态**已在 §一 的六张表里逐上游登记，此处不必重复。**不用「让判据放宽」来消这个 FAIL** —— 判据本身没写错，错的是拿「本技能内引用」的记号去指别人的文件。
 
-> **为什么不做成本体内置、也不并进 diagram-mode.md**：① 本仓 `references/diagram-mode.md` 是**契约层**（该不该画 / 画成什么 / 画到什么密度），把 44 类型的绘制细则折进去会把**契约**写成**手册**；② 它是**产物生成器**（与 §1.4 hairline-create、§1.5 archify 同型）⇒ **产物外挂、契约留本仓**；③ 复制安装便于 `--verify-lock` 漂移检测。
+> **为什么不做成本体内置、也不并进 diagram-mode.md**：① 本仓 `references/diagram-mode.md` 是**契约层**（该不该画 / 画成什么 / 画到什么密度），把 45 类型的绘制细则折进去会把**契约**写成**手册**；② 它是**产物生成器**（与 §1.4 hairline-create、§1.5 archify 同型）⇒ **产物外挂、契约留本仓**；③ 复制安装便于 `--verify-lock` 漂移检测。
 
 ### 1.8 impeccable（1 个，扁平外挂；**第七上游**）
 
@@ -505,7 +505,7 @@ python scripts/external_skill_lint.py --lock <path>      # 只用一个 lock（�
 
 ### 7.6 diagram-design（复制安装，无补丁）
 
-它是**复制安装**（上游 `cathrynlavery/diagram-design` 的 skills/diagram-design/ 子树 ＋ 随库 LICENSE → `~/.workbuddy/skills/diagram-design`，**独立真实目录**，280 文件）⇒ **上游更新不会自动生效**（与 7.1 的联接相反、与 7.2–7.4 同法）。同步规程：
+它是**复制安装**（上游 `cathrynlavery/diagram-design` 的 skills/diagram-design/ 子树 ＋ 随库 LICENSE → `~/.workbuddy/skills/diagram-design`，**独立真实目录**，288 文件）⇒ **上游更新不会自动生效**（与 7.1 的联接相反、与 7.2–7.4 同法）。同步规程：
 
 1. 取上游新 rev，与 lock 的 `upstream_rev` 比对，确认有更新（⚠️ **不要**用版本号判 —— frontmatter 2.6 与插件 manifest 2.6.74 本就不一致，见 §1.7）。
 2. **整体重取**（`patched` 恒为 false，无补丁可放）。⚠️ **只取上游 skills/diagram-design/ 子树 ＋ 根 LICENSE**，不要把仓库根的 scripts/（verify-* 一族）、commands/、prompts/、docs/、.github/ 一并搬进来 —— 它们**不属于交付面**。
