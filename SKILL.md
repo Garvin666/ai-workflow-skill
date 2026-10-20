@@ -4,10 +4,10 @@ description: AI 标准化多阶段工作方法论（自研），适用于量化�
 agent_created: true
 selfbuilt: true
 repo: https://github.com/Garvin666/ai-workflow-skill
-version: 4.45.0
+version: 4.46.0
 ---
 
-# AI 工作流 v4.45.0
+# AI 工作流 v4.46.0
 
 > **[自研技能]** 名称：`ai-workflow` ｜ 用途：为多阶段任务提供标准化流程编排（入口分型／任务分层／计划先行／三项核心原则／自主决策层／独立审核抽查制／熔断）＋ 六个产出结构模式（作业 S0–S2／科研 R0–R6（其 R2 即原文献阅读模式 Q1–Q4）／逆向拆解 D0–D5／图示设计 P0–P4／PPT Y0–Y4）＋ 学习模型 K1–K5，并配一套**机器可校验**的工具与门禁 ｜ 适用场景：产出文件或代码或报告、多步且步骤间有依赖、数据分析、跨文件改造、调研查重、方案评审；纯问答／查询／翻译／单文件读取不适用 ｜ 仓库：https://github.com/Garvin666/ai-workflow-skill
 
@@ -184,6 +184,9 @@ version: 4.45.0
 **未完成查重并给出复用决策前，禁止进入实现环节。**
 
 1. **查重分流**：开发类 → 开源项目/数据集查重（产出对比表 + 直接复用/克隆改造/自研三选一）；调研类 → 既有报告与横评盘点 + 数据实测。
+
+> **外部仓库动作前置调研（v4.46.0，与查重并列的前置动作）**：本任务要**读／改／推任何非本机仓库**（给上游提 PR、开 issue、改 fork、往别人仓写 commit）时，先跑 `python scripts/repo_rules_probe.py --repo <owner/name> --json`，把对方的协作文件、治理规则、agent 指令、配额摸清再进方案评审。**纯查资料／查 star／找实现不触发**（那是 `http_fetch.py --github-repo/--github-search` 的事），跑了就是冗余。三条硬约束：① **`未检测` 不得读成「无」**——`branch protection` 的 404 有两种 message（`Branch not protected` = 真没有；`Not Found` = 看不到），脚本已按 message 分态，人工复核**不得用状态码推翻它**；② 摘要出现 `未检测` 时，方案必须写明「该项未确认」及原因，不得静默略过；③ `health_percentage` 是元数据完整度、不是治理严格度（实测 codex 62% 却有 9 条生效规则），**不得当质量指标引用**。契约见 `references/repo-rules-probe.md`。
+
 2. **数据一律实测**：GitHub 指标用 `http_fetch.py --github-repo`（含限流退避、多仓库并发、本地缓存）。**禁止二手 star 数**。
 3. **证据分级标注**：【RCT】/【基准实测】/【大样本自评】/【官方推荐】/【实践观点】/【反例】。**厂商案例、营销倍数、"N× 效率"不得作为证据**。详见 `references/quality-gates.md`。
 4. **并行硬规则**：检索方向 ≥3 个必须并行派子代理（见「子智能体编排」），禁止串行等待。
@@ -679,6 +682,7 @@ version: 4.45.0
 | `references/ppt-mode.md` | PPT 模式 Y0–Y4、映射 `ppt-master` | 演示识别命中 |
 | `references/learning-model.md` | 学习模型 K1–K5 回路 | 阶段 6 收尾 |
 | `references/memory-handoff.md` | 记忆管理与交接（两库分层） | 阶段 6 收尾 |
+| `references/repo-rules-probe.md` | 外部仓库规则前置调研：三态语义、字段、局限 | 涉外部仓库读改推 |
 
 ### B 判据与路由
 
@@ -737,6 +741,7 @@ scripts/checks.py              skill | plan <plan.yaml> --base <根> | status | 
                                selftool | trace | metrics | visibility                 自检与门禁（内部四模块，勿单独跑）
 scripts/cleanup_task.py        clean --plan <plan.yaml> [--apply] | selftest              产物清理（默认 dry-run）
 scripts/http_fetch.py          --github-search | --github-code-search | --github-repo | --check-links
+scripts/repo_rules_probe.py    --repo <owner/name,...> [--json] [--selftest]               外部仓库规则探测（三态：有/无/未检测）
 scripts/data_query.py          files|sql|find|big                                         大数据集直查（DuckDB）
 scripts/gen_skill_index.py     [--check]                                                  技能库索引生成/新鲜度
 scripts/external_skill_lint.py [--root] [--skill] [--verify-lock]                         外部技能放宽判据（限 lock 登记）

@@ -1,0 +1,10 @@
+{"ts": "2026-10-20 22:20", "step": "1", "action": "实测规则端点", "cmd": "gh api repos/openai/codex/{community/profile,rulesets,branches/main/protection}", "result": "community 200；rulesets 9 条；protection 404 Not Found", "elapsed_s": 60.0}
+{"ts": "2026-10-20 22:20", "step": "2", "action": "拆解开源实现", "cmd": "http_fetch.py --github-repo ...；WebFetch agents.md", "result": "6 仓指标实测（github/dco 404 如实记录）；AGENTS.md 就近覆盖语义", "elapsed_s": 90.0}
+{"ts": "2026-10-20 22:20", "step": "4", "action": "实现脚本并自检", "cmd": "py_compile；repo_rules_probe.py --selftest", "result": "COMPILE_OK；16/16", "elapsed_s": 240.0}
+{"ts": "2026-10-20 22:20", "step": "5", "action": "真实网络实跑", "cmd": "repo_rules_probe.py --repo openai/codex,...", "result": "三仓输出与手工 gh api 交叉一致", "elapsed_s": 45.0}
+{"ts": "2026-10-20 22:20", "step": "7", "action": "接入 SKILL.md", "cmd": "Edit 阶段2 + A区 + E区", "result": "grep 3 处命中，编号未重排", "elapsed_s": 120.0}
+{"ts": "2026-10-20 22:20", "step": "10", "action": "回归", "cmd": "checks.py skill；checks.py plan；gen_skill_index", "result": "skill RC=0；plan FAIL=0；索引 120 技能重建", "elapsed_s": 200.0}
+{"ts": "2026-10-20 22:21", "step": "3", "action": "定脚本契约", "cmd": "读 references/interface-contract.md 四码语义", "result": "三态 + 0/2/3 退出码映射；失败语义逐条有端点依据", "elapsed_s": 60.0}
+{"ts": "2026-10-20 22:21", "step": "6", "action": "写契约手册", "cmd": "Write references/repo-rules-probe.md", "result": "八节：触发/命令/三态/字段/决策/局限/边界/自检", "elapsed_s": 180.0}
+{"ts": "2026-10-20 22:21", "step": "8", "action": "ops.md 登记", "cmd": "Edit references/ops.md 脚本表", "result": "新增 1 行，grep 无重复", "elapsed_s": 40.0}
+{"ts": "2026-10-20 22:21", "step": "9", "action": "版本 bump", "cmd": "Edit frontmatter/H1/README + changelog 追加", "result": "三处 4.46.0；changelog 置顶条目", "elapsed_s": 90.0}
