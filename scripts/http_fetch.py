@@ -779,6 +779,80 @@ def _run_check_links(args) -> None:
         print(f"[WARN] {warn_n + bad_n} 条需人工确认（受限≠失效：403 多为反爬；ERR 需重试）", file=sys.stderr)
 
 
+def selftest() -> int:
+    """`--selftest`：只回归**不依赖外部服务**的判据；不发任何请求、不读凭据、不写用户数据。
+
+    覆盖：凭据形态校验、缓存文件路径推导、退避秒数计算、搜索 URL 归一化、403 分类、
+    HTML→文本、slug 格式前置拒绝。真实抓取路径（超时/重试/限流等待/并发探活）**不在覆盖范围**，
+    见末尾显式声明。
+    """
+    import io
+    from contextlib import redirect_stderr, redirect_stdout
+
+    ok = 0
+    total = 0
+
+    def ck(name: str, got, want) -> None:
+        nonlocal ok, total
+        total += 1
+        good = got == want
+        ok += good
+        print("[%s] %s：实际=%r 期望=%r" % ("PASS" if good else "MISS", name, got, want))
+
+    # A. 凭据形态（把 gh 的提示文本当 token 发出去是最坏的一种失败）
+    ck("凭据形态：ghp_ 前缀 40 位 ⇒ 接受", _looks_like_token("ghp_" + "A1b2C3d4" * 5), True)
+    ck("阴性：gh 的提示文本（含空格）⇒ 拒绝",
+       _looks_like_token("fatal: please run gh auth login first"), False)
+    ck("阴性：过短串 ⇒ 拒绝", _looks_like_token("ghp_abc"), False)
+
+    # B. 缓存文件路径推导（同一 URL 必落到同一文件；不同 URL 不得撞 key）
+    u1 = "https://api.github.com/repos/a/b"
+    u2 = "https://api.github.com/repos/a/c"
+    ck("缓存路径 = sha1 前 20 位 + .bin 且落在 CACHE_DIR",
+       (_cache_file(u1).name, _cache_file(u1).parent == CACHE_DIR),
+       (hashlib.sha1(u1.encode("utf-8")).hexdigest()[:20] + ".bin", True))
+    ck("阴性：不同 URL 的缓存键不得相同", _cache_file(u1) == _cache_file(u2), False)
+    ck("阴性：TTL=0 ⇒ 缓存关闭（不读盘直接 None）", cache_get(u1, 0), None)
+
+    # C. 退避秒数（纯计算；限流等待实际睡不睡不在此测）
+    ck("退避：Retry-After=120 ⇒ 被 RATE_LIMIT_MAX_WAIT 封顶",
+       _rate_limit_wait({"Retry-After": "120"}), min(121, RATE_LIMIT_MAX_WAIT))
+    ck("退避：Retry-After=3 ⇒ 3+1 秒", _rate_limit_wait({"Retry-After": "3"}),
+       min(4, RATE_LIMIT_MAX_WAIT))
+    ck("阴性：无法判定的头 ⇒ 保守默认 15s（不得当 0s 立即重试）", _rate_limit_wait({}), 15)
+
+    # D. URL 归一化
+    ck("URL 归一化：空格转 + 且 sort 为空时不出现 sort 参数",
+       _search_url(SEARCH_ENDPOINT, "a b", "", 30), SEARCH_ENDPOINT + "?q=a+b&per_page=30")
+    ck("URL 归一化：限定符编码 + sort/order 追加",
+       _search_url(SEARCH_ENDPOINT, "topic:cli stars:>100", "stars", 100),
+       SEARCH_ENDPOINT + "?q=topic%3Acli+stars%3A%3E100&per_page=100&sort=stars&order=desc")
+
+    # E. 403 分类
+    ck("403 分类：cf-ray ⇒ CDN 反爬（人工可访问，非失效）",
+       _classify_403({"cf-ray": "8x"}), "403-CDN反爬(Cloudflare，人工可访问)")
+    ck("阴性：普通 nginx 403 不得误判成反爬/限流",
+       _classify_403({"Server": "nginx"}), "403-拒绝(需授权或反爬，无法自动区分)")
+
+    # F. HTML→文本
+    ck("HTML→文本：去 script、解实体、压空行",
+       html_to_text(b"<html><script>var x=1</script><p>a &amp; b</p></html>"), "a & b")
+
+    # G. 阴性对照：slug 格式不合必须在**发请求之前**拒绝（此路径不触网）
+    try:
+        with redirect_stderr(io.StringIO()), redirect_stdout(io.StringIO()):
+            github_repo_metrics("a/b/c", use_cache=False)
+        slug_rc = "未拒绝"
+    except SystemExit as e:
+        slug_rc = e.code
+    ck("阴性：slug 含两个 / ⇒ 未发请求即拒（rc=2）", slug_rc, 2)
+
+    print("未覆盖：实际网络抓取路径（fetch() 的 30s 超时 / 2-4-8s 退避重试 / 403 限流等待 / "
+          "--check-links 并发探活 / 真实 GitHub 响应解析）")
+    print("=== selftest：%d/%d ===" % (ok, total))
+    return 0 if ok == total else 1
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="联网抓取 / GitHub 指标取值 / HTML 转文本")
     ap.add_argument("url", nargs="?", help="目标 URL（与 --github-repo 二选一）")
@@ -800,7 +874,11 @@ def main() -> None:
     ap.add_argument("--check-links", help="批量链接存活检查：每行一个 URL（# 开头为注释），不下载正文")
     ap.add_argument("--concurrency", type=int, default=8, help="--check-links 并发数（默认 8）")
     ap.add_argument("--timeout", type=int, default=15, help="--check-links 单条超时秒数（默认 15）")
+    ap.add_argument("--selftest", action="store_true",
+                    help="运行内置自检：只测不依赖网络的判据（参数解析/缓存路径/退避/URL 归一化/403 分类），不发任何请求")
     args = ap.parse_args()
+    if args.selftest:
+        raise SystemExit(selftest())
     use_cache = not args.no_cache
 
     if args.dry_run and not (args.github_search or args.github_code_search):

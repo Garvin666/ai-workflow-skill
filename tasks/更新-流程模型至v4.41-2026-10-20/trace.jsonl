@@ -1,0 +1,5 @@
+{"ts": "2026-10-20 10:26", "step": "s1", "action": "备份 process-model.md 并比 sha256", "cmd": "Copy-Item + Get-FileHash", "result": "identical=True，备份 57918E09"}
+{"ts": "2026-10-20 10:26", "step": "s2", "action": "重写 process-model.md 至 v2（活动图 + 决策表 + 索引节）", "cmd": "Write", "result": "112 行 -> 约 200 行，mermaid 59 行"}
+{"ts": "2026-10-20 10:26", "step": "s3", "action": "校验 mermaid 端点闭合与反引号引用，跑技能门禁", "cmd": "verify_process_model.py + checks.py skill", "result": "FAIL=0；skill 82/82"}
+{"ts": "2026-10-20 10:26", "step": "s4", "action": "写 v2 变更记录，同步 SKILL.md 索引摘要", "cmd": "Write + Edit", "result": "变更记录含未做项与遗留项"}
+{"ts": "2026-10-20 10:29", "step": "s5", "action": "重建技能库索引并以母本路径纠正 roots", "cmd": "gen_skill_index.py --check 与 diff", "result": "check OK，条目零变化，fp 9c73641e->4667d56c"}

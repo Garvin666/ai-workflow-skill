@@ -126,6 +126,168 @@ def load_pins(root: Path, cli_pins: str, pin_file: str) -> tuple[set[str], list[
     return pins, sources
 
 
+# ── --selftest：核心不变量回归（临时目录造最小假任务树，不触碰真实技能库）─────────
+
+def _selftest() -> int:
+    """回归四条不变量：引用门禁 / 只移动不删除（dry-run 默认）/ sha256 自证 / 跳过维度。
+
+    全部在 `tempfile.TemporaryDirectory()` 内造最小假任务树（`tasks/<名>/note.md` + 假
+    `SKILL.md`），不读写真实技能库、不联网、不写用户数据。
+    含阴性对照：被引用目录、目标已存在、缺选择条件、互斥参数 —— 都应被**拒绝**而非静默放过。
+    """
+    import contextlib
+    import io
+    import tempfile
+
+    n_pass = n_all = 0
+
+    def check(case, actual, expect) -> None:
+        nonlocal n_pass, n_all
+        n_all += 1
+        hit = actual == expect
+        n_pass += 1 if hit else 0
+        print(f"[{'PASS' if hit else 'MISS'}] {case}：实际={actual} 期望={expect}")
+
+    def run_main(argv):
+        """以指定 argv 调用 main()（main 只认 sys.argv），返回 (rc, 输出)。"""
+        old, buf = sys.argv, io.StringIO()
+        sys.argv = ["archive_tasks.py", *argv]
+        try:
+            with contextlib.redirect_stdout(buf):
+                rc = main()
+        finally:
+            sys.argv = old
+        return rc, buf.getvalue()
+
+    def mk(root: Path, names, extra=()) -> Path:
+        t = root / "tasks"
+        t.mkdir(parents=True, exist_ok=True)
+        for n in names:
+            d = t / n
+            d.mkdir()
+            (d / "note.md").write_text(f"# {n}\n", encoding="utf-8")
+            for f in extra:
+                (d / f).write_text("x\n", encoding="utf-8")
+        return t
+
+    # ① 纯函数：日期解析 / 引用门禁 / 快照
+    check("month_of 有日期后缀", month_of("任务A-2026-09-10"), "2026-09")
+    check("month_of 无日期后缀", month_of("随手建的目录"), "undated")
+
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        t = mk(root, ["A-2026-09-10", "B-2026-12-01"])
+        (root / "SKILL.md").write_text("见 `tasks/B-2026-12-01/report.md`\n", encoding="utf-8")
+        hits = referenced_dirs(root, ["A-2026-09-10", "B-2026-12-01"])
+        check("引用门禁 命中被引用目录", sorted(hits), ["B-2026-12-01"])
+        check("引用门禁 不误伤未引用目录", "A-2026-09-10" in hits, False)
+        check("阴性 非 md/yaml/py/ps1 后缀不构成引用",
+              REF_PATTERN.findall("`tasks/A-2026-09-10/shot.png`"), [])
+
+        s1 = snapshot(t / "A-2026-09-10")
+        check("快照 同内容两次一致", s1 == snapshot(t / "A-2026-09-10"), True)
+        (t / "A-2026-09-10" / "note.md").write_text("# 改了一字节\n", encoding="utf-8")
+        check("阴性 内容一变快照即不等（sha256 自证有效）",
+              s1 == snapshot(t / "A-2026-09-10"), False)
+
+    # ② dry-run 默认不动盘 + 参数拒绝
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        t = mk(root, ["A-2026-09-10"])
+        rc, out = run_main(["--root", str(root), "--dirs", "A-2026-09-10"])
+        check("dry-run 的 rc", rc, 0)
+        check("dry-run 不移动（目录仍在原位）", (t / "A-2026-09-10").is_dir(), True)
+        check("dry-run 明确标注 DRY-RUN", "DRY-RUN（仅打印计划）" in out, True)
+
+        rc, _ = run_main(["--root", str(root)])
+        check("阴性 缺 --dirs/--older-than → 拒绝 rc 2", rc, 2)
+
+        rc, _ = run_main(["--root", str(root), "--dirs", "A-2026-09-10",
+                          "--older-than", "2026-10-01"])
+        check("阴性 --dirs 与 --older-than 互斥 → rc 2", rc, 2)
+
+        rc, _ = run_main(["--root", str(root), "--dirs", "不存在的目录-2026-09-10"])
+        check("阴性 未知目录 → rc 2", rc, 2)
+
+        rc, _ = run_main(["--root", str(root), "--dirs", "A-2026-09-10",
+                          "--pin", "A-2026-09-10"])
+        check("pinned 不被 --dirs 点名推翻",
+              (rc, (t / "A-2026-09-10").is_dir()), (2, True))
+
+        rc, _ = run_main(["--root", str(root), "--dirs", "A-2026-09-10",
+                          "--keep-recent-days", "7"])
+        check("--keep-recent-days 拦住刚改动的目录", rc, 2)
+
+    with tempfile.TemporaryDirectory() as td:
+        rc, _ = run_main(["--root", td, "--dirs", "x-2026-09-10"])
+        check("阴性 tasks/ 缺失 → 拒绝 rc 2", rc, 2)
+
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        mk(root, ["A-2026-09-10"], extra=("trace.jsonl",))
+        rc, _ = run_main(["--root", str(root), "--dirs", "A-2026-09-10", "--keep-used"])
+        check("--keep-used 见收尾记录则跳过", rc, 2)
+
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        t = mk(root, ["A-2026-09-10"])
+        (t / "_pinned.txt").write_text("# 注释\nA-2026-09-10\n", encoding="utf-8")
+        rc, out = run_main(["--root", str(root), "--dirs", "A-2026-09-10"])
+        check("tasks/_pinned.txt 生效且来源被打印",
+              (rc, "_pinned.txt" in out), (2, True))
+
+    # ③ 阴性：被文档引用的目录必须被剔除（归档会打断引用完整性）
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        t = mk(root, ["B-2026-12-01"])
+        (root / "SKILL.md").write_text("见 `tasks/B-2026-12-01/report.md`\n", encoding="utf-8")
+        rc, out = run_main(["--root", str(root), "--dirs", "B-2026-12-01"])
+        check("阴性 被引用目录剔除后拒绝归档",
+              (rc, (t / "B-2026-12-01").is_dir(), "[门禁]" in out), (2, True, True))
+
+    # ④ --apply：真移 + 逐项 sha256 自证 + 结论 PASS
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        t = mk(root, ["A-2026-09-10", "C-2026-11-05"])
+        before = snapshot(t / "A-2026-09-10")
+        rc, out = run_main(["--root", str(root), "--dirs", "A-2026-09-10", "--apply"])
+        dst = t / "_archive" / "2026-09" / "A-2026-09-10"
+        check("--apply 的 rc", rc, 0)
+        check("--apply 落位 tasks/_archive/<月>/<名>", dst.is_dir(), True)
+        check("--apply 移动后逐文件 sha256 一致",
+              snapshot(dst) if dst.is_dir() else None, before)
+        check("--apply 只移动不删除（原目录已不在原位）",
+              (t / "A-2026-09-10").exists(), False)
+        check("--apply 结论为 PASS", "==== 结论：PASS ====" in out, True)
+        check("--apply 未波及未选中的目录", (t / "C-2026-11-05").is_dir(), True)
+
+    # ⑤ 阴性：目标已存在 → 拒绝覆盖，rc 1，来源目录留在原位
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        t = mk(root, ["D-2026-09-30"])
+        dup = t / "_archive" / "2026-09" / "D-2026-09-30"
+        dup.mkdir(parents=True)
+        (dup / "old.md").write_text("old\n", encoding="utf-8")
+        rc, out = run_main(["--root", str(root), "--dirs", "D-2026-09-30", "--apply"])
+        check("阴性 目标已存在 → rc 1 且不覆盖",
+              (rc, "目标已存在" in out, (t / "D-2026-09-30").is_dir()), (1, True, True))
+
+    # ⑥ --older-than 选择面 + 无操作
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        t = mk(root, ["A-2026-09-10", "B-2026-12-01"])
+        rc, out = run_main(["--root", str(root), "--older-than", "2026-10-01"])
+        check("--older-than 命中更早的 A", "· 待归档  A-2026-09-10" in out, True)
+        check("--older-than 不误选更晚的 B",
+              "· 待归档  B-2026-12-01" in out, False)
+        rc, out = run_main(["--root", str(root), "--older-than", "2020-01-01"])
+        check("--older-than 无匹配 → 无操作 rc 0", (rc, "[无操作]" in out), (0, True))
+        check("--older-than 无匹配时未建 _archive", (t / "_archive").exists(), False)
+
+    print(f"=== selftest：{n_pass}/{n_all} ===")
+    return 0 if n_pass == n_all else 1
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="任务目录归档（只移动不删除，默认 dry-run）")
     ap.add_argument("--root", default=".", help="技能目录（含 tasks/），默认当前目录")
@@ -141,7 +303,12 @@ def main() -> int:
                     help="最近 N 天内有改动的目录跳过（默认 0 = 不启用，与旧行为一致，v4.3.0）")
     ap.add_argument("--keep-used", action="store_true",
                     help="目录内含 _metrics.jsonl/trace.jsonl（已有收尾/使用记录）则跳过（默认关，v4.3.0）")
+    ap.add_argument("--selftest", action="store_true",
+                    help="运行内置自检（含阴性对照；只用临时目录，不触碰真实技能库）")
     args = ap.parse_args()
+
+    if args.selftest:
+        return _selftest()
 
     root = Path(args.root).resolve()
     tasks = root / "tasks"

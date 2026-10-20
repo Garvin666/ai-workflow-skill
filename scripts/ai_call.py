@@ -209,6 +209,95 @@ def run_batch(args, system: str | None) -> None:
     print(f"[ OK ] 结果已写入 {out_path}")
 
 
+def _selftest() -> int:
+    """--selftest：只回归「不联网、不读凭据」的纯逻辑。
+
+    覆盖：model_tiers.json 档位解析、请求体构造、成本估算（账本落盘）、批量文件解析。
+    任何用例都不触发 call_api（无 AI_API_KEY 时由子进程验证其失败路径）。
+    """
+    import io
+    import subprocess
+    import tempfile
+    from contextlib import redirect_stderr
+    from types import SimpleNamespace
+
+    results: list[bool] = []
+
+    def fmt(v):
+        if isinstance(v, (dict, list, tuple)):
+            return json.dumps(v, ensure_ascii=False, sort_keys=True, default=str)
+        return str(v)
+
+    def check(name: str, actual, expected) -> None:
+        ok = actual == expected
+        print(f"[{'PASS' if ok else 'MISS'}] {name}：实际={fmt(actual)} 期望={fmt(expected)}")
+        results.append(ok)
+
+    # 1) 档位解析：strong 必须给出 reasoner 与官方价目
+    cfg = resolve_tier("strong")
+    check("档位 strong 解析(model/price_in/price_out)",
+          (cfg.get("model"), cfg.get("price_in"), cfg.get("price_out")),
+          ("deepseek-reasoner", 4.0, 16.0))
+
+    # 2) 阴性对照：未知档位必须拒绝（返回空且不抛异常），并留下 WARN
+    err_buf = io.StringIO()
+    with redirect_stderr(err_buf):
+        unknown = resolve_tier("no-such-tier")
+    check("阴性：未知档位退化为 {}（且 stderr 报未知档位）",
+          (unknown, "未知档位" in err_buf.getvalue()), ({}, True))
+
+    # 3) 请求体构造：system 段必须落在 messages[0]，可选字段按传参注入
+    body = json.loads(_build_payload("m-1", "hi", "sys", SimpleNamespace(max_tokens=256, temperature=0.0)))
+    check("请求体：system 在首位 + max_tokens/temperature 生效",
+          (body["messages"][0], body["messages"][1]["content"], body["max_tokens"], body["temperature"]),
+          ({"role": "system", "content": "sys"}, "hi", 256, 0.0))
+
+    # 4) 阴性对照：未传 system / 未设上限时不得凭空多出字段
+    body2 = json.loads(_build_payload("m-1", "hi", None, SimpleNamespace(max_tokens=None, temperature=None)))
+    check("阴性：无 system/无上限时不多发字段",
+          (list(body2.keys()), len(body2["messages"]), body2["messages"][0]["role"]),
+          (["model", "messages"], 1, "user"))
+
+    # 5) 成本估算：1M 输入×4 元 + 0.5M 输出×16 元 = 12 元
+    old_in, old_out = os.environ.get("AI_PRICE_IN"), os.environ.get("AI_PRICE_OUT")
+    try:
+        os.environ["AI_PRICE_IN"], os.environ["AI_PRICE_OUT"] = "4.0", "16.0"
+        with tempfile.TemporaryDirectory() as td:
+            ledger = Path(td) / "ledger.jsonl"
+            with redirect_stderr(io.StringIO()):
+                _append_ledger(str(ledger), "strong", "deepseek-reasoner",
+                               {"prompt_tokens": 1_000_000, "completion_tokens": 500_000})
+            rec = json.loads(ledger.read_text(encoding="utf-8").strip())
+        check("成本估算 1M×4 + 0.5M×16（元）", (rec["cost_yuan"], rec["total_tokens"]), (12.0, 1_500_000))
+    finally:
+        for k, v in (("AI_PRICE_IN", old_in), ("AI_PRICE_OUT", old_out)):
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+
+    # 6) 批量解析：BOM/空行/纯空格行都要过滤；缺 key 时按条记 error 且不联网
+    with tempfile.TemporaryDirectory() as td:
+        bf = Path(td) / "prompts.txt"
+        bf.write_text("\ufeff第一条\n\n   \n第二条\n", encoding="utf-8")
+        out_path = Path(td) / "results.jsonl"
+        env = {k: v for k, v in os.environ.items() if k != "AI_API_KEY"}
+        proc = subprocess.run(
+            [sys.executable, os.path.abspath(__file__), "--batch-file", str(bf),
+             "--out", str(out_path), "--concurrency", "2"],
+            capture_output=True, text=True, encoding="utf-8", errors="replace", env=env, timeout=120,
+        )
+        recs = [json.loads(ln) for ln in out_path.read_text(encoding="utf-8").splitlines() if ln.strip()]
+        check("批量解析：BOM/空行过滤为 2 条，缺 key 记 call_failed(2)",
+              (len(recs), sorted(r["prompt"] for r in recs), {r.get("error") for r in recs}),
+              (2, ["第一条", "第二条"], {"call_failed(code=2)"}))
+
+    total = len(results)
+    ok_n = sum(1 for r in results if r)
+    print(f"=== selftest：{ok_n}/{total} ===")
+    return 0 if ok_n == total else 1
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="AI 模型调用封装")
     ap.add_argument("--prompt-file", help="prompt 文件路径（缺省读 stdin）")
@@ -223,7 +312,12 @@ def main() -> None:
     ap.add_argument("--ledger", help="用量账本 JSONL 路径（缺省 ~/.workbuddy/cache/ai-workflow/usage_ledger.jsonl）；--tier 时自动写入")
     ap.add_argument("--batch-file", help="批量模式：每行一个 prompt 的文本文件")
     ap.add_argument("--concurrency", type=int, default=3, help="批量模式并发数（默认 3）")
+    ap.add_argument("--selftest", action="store_true",
+                    help="自检：回归档位解析/请求体构造/成本估算/批量解析（不联网、不读凭据，全过 exit 0）")
     args = ap.parse_args()
+
+    if args.selftest:
+        raise SystemExit(_selftest())
 
     # 阶段感知模型路由：--tier 覆盖 base/key/model/price（见 model_tiers.json）
     if args.tier:

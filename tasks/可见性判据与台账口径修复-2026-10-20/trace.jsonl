@@ -1,0 +1,6 @@
+{"ts": "2026-10-20 11:21", "step": "s1", "action": "备份 5 文件到 证据/backup", "cmd": "", "result": "sha256 逐一对上（台账 37fc4ed5…）"}
+{"ts": "2026-10-20 11:21", "step": "s2", "action": "重写台账头部", "cmd": "", "result": "数据行 103 行逐字节不变；load_usage 102 条 18/84"}
+{"ts": "2026-10-20 11:21", "step": "s3", "action": "去掉 gen_skill_index 时点计数", "cmd": "", "result": "改为无数字表述并指向台账"}
+{"ts": "2026-10-20 11:21", "step": "s4", "action": "新增 checks.py visibility", "cmd": "", "result": "3 行输出：双关 OK／跨家 WARN 51／矩阵三家"}
+{"ts": "2026-10-20 11:21", "step": "s5", "action": "阴性对照 4 例", "cmd": "", "result": "4/4 通过（首版例1 期望写错已按实测改正）"}
+{"ts": "2026-10-20 11:21", "step": "s6", "action": "两处登记＋版本＋changelog", "cmd": "", "result": "checks.py skill 87/87；索引新鲜 4f3216ac"}

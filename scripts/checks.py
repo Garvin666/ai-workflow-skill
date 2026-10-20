@@ -193,6 +193,386 @@ def _check_entry_budget(skill_dir: Path) -> None:
         ok("入口手册体量预算", detail)
 
 
+# ---- 模式接口卡契约（v4.42.0）----
+# 唯一登记表：卡片名 → (手册文件, 须在手册中可追溯的编号)
+# ⚠️ 新增/改名模式时**只改这一处**，不要把清单抄进文档（硬约定第 4 条：同一物理量不写两处）。
+MODE_CARDS = {
+    "作业模式": ("homework-mode.md", ("S0", "S1", "S2")),
+    "科研模式": ("research-mode.md",
+                 ("R0", "R1", "R2", "R3", "R4", "R5", "R6",
+                  "N1", "N2", "N3", "N4", "N5", "N6")),
+    "逆向拆解模式": ("teardown-mode.md",
+                     ("D0", "D1", "D2", "D3", "D4", "D5",
+                      "T1", "T2", "T3", "T4")),
+    "图示设计模式": ("diagram-mode.md",
+                     ("P0", "P1", "P2", "P3", "P4",
+                      "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8")),
+    "PPT 模式": ("ppt-mode.md",
+                 ("Y0", "Y1", "Y2", "Y3", "Y4",
+                  "E1", "E2", "E3", "E4", "E5", "E6")),
+}
+# 有手册但不独立成卡的两份：方法卡片是科研 R5 的第三通道，文献阅读是科研 R2 子阶段。
+MODE_DOC_EXEMPT = {"method-card-mode.md", "literature-reading-mode.md"}
+CARD_REQUIRED_FIELDS = ("触发", "前置路由", "验收")
+
+
+def _check_mode_contracts(skill_dir: Path) -> None:
+    """模式接口卡契约四条（v4.42.0）—— 保证「主干声明 ↔ 手册实现」不脱节。
+
+    **存在意义**：接口卡把模式从 SKILL.md 正文降为「主干声明 + 手册实现」之后，
+    声明侧与实现侧之间**此前没有任何机器约束** —— 卡片可以声明 N1–N6 而手册里删掉 N4，
+    也可以新增一份 `*-mode.md` 却没有对应卡片，两种都不会被既有判据发现。
+
+    **诚实边界**：只判**结构对齐**（清单、字段、指针、编号可追溯），
+    不判内容质量、不判编号语义是否合理、不判卡片写得对不对。
+    """
+    sm = skill_dir / "SKILL.md"
+    text = sm.read_text(encoding="utf-8")
+    m = re.search(r"^## 模式接口卡.*?(?=\n## )", text, re.S | re.M)
+    if not m:
+        fail("模式契约：接口卡章节存在", "未找到 `## 模式接口卡` 章节")
+        return
+    ok("模式契约：接口卡章节存在")
+    sec = m.group(0)
+    refdir = skill_dir / "references"
+
+    # ① 清单双向一致：卡片集合 ↔ 登记表 ↔ 磁盘手册，三方差集为空
+    declared = re.findall(r"^### ([^（\n]+?)（", sec, re.M)
+    on_disk = {p.name for p in refdir.glob("*-mode.md")}
+    expected_docs = {d for d, _ in MODE_CARDS.values()}
+    bad = []
+    if set(declared) != set(MODE_CARDS):
+        bad.append("卡片=%s 登记表=%s" % (sorted(set(MODE_CARDS) - set(declared)) or "-",
+                                          sorted(set(declared) - set(MODE_CARDS)) or "-"))
+    if expected_docs - on_disk:
+        bad.append("手册缺失：" + ",".join(sorted(expected_docs - on_disk)))
+    if on_disk - expected_docs - MODE_DOC_EXEMPT:
+        bad.append("有手册无卡片且未豁免：" + ",".join(sorted(on_disk - expected_docs - MODE_DOC_EXEMPT)))
+    if bad:
+        fail("模式契约：清单双向一致", "；".join(bad))
+    else:
+        ok("模式契约：清单双向一致",
+           "%d 张卡 ↔ %d 份手册，另 %d 份归子阶段（%s）"
+           % (len(declared), len(expected_docs), len(MODE_DOC_EXEMPT),
+              ",".join(sorted(MODE_DOC_EXEMPT))))
+
+    parts = re.split(r"^### ", sec, flags=re.M)[1:]
+
+    # ② 字段完整：每张卡必须自带触发/前置路由/验收，且至少含义务或结构
+    incomplete = []
+    for part in parts:
+        name = part.split("（", 1)[0].strip() or "?"
+        lack = [f for f in CARD_REQUIRED_FIELDS if f not in part]
+        if "义务" not in part and "结构" not in part:
+            lack.append("义务|结构")
+        if lack:
+            incomplete.append("%s 缺 %s" % (name, "/".join(lack)))
+    if incomplete:
+        fail("模式契约：卡片字段完整", "；".join(incomplete))
+    else:
+        ok("模式契约：卡片字段完整",
+           "%d 张卡均含 %s + 义务|结构" % (len(parts), "/".join(CARD_REQUIRED_FIELDS)))
+
+    # ③ 细则指针可达：每张卡必须指向**自己的**手册（防止错挂到别人的手册上）
+    wrong = []
+    for part in parts:
+        name = part.split("（", 1)[0].strip() or "?"
+        want = MODE_CARDS.get(name, (None,))[0]
+        ptrs = re.findall(r"references/([\w\-]+-mode\.md)", part)
+        if not ptrs:
+            wrong.append("%s 无详情指针" % name)
+        elif want not in ptrs:
+            wrong.append("%s 未指向 %s（实为 %s）" % (name, want, ",".join(ptrs)))
+    if wrong:
+        fail("模式契约：细则指针可达", "；".join(wrong))
+    else:
+        ok("模式契约：细则指针可达", "每张卡均指向自己的手册")
+
+    # ④ 编号可追溯：卡片声明的阶段/义务编号必须能在对应手册里检到
+    untraceable = []
+    total_ids = 0
+    for name, (doc, ids) in MODE_CARDS.items():
+        d = refdir / doc
+        if not d.exists():
+            untraceable.append("%s:%s 不存在" % (name, doc))
+            continue
+        dt = d.read_text(encoding="utf-8")
+        miss = [i for i in ids if i not in dt]
+        total_ids += len(ids)
+        if miss:
+            untraceable.append("%s 的 %s 在 %s 中检不到" % (name, ",".join(miss), doc))
+    if untraceable:
+        fail("模式契约：编号可追溯", "；".join(untraceable))
+    else:
+        ok("模式契约：编号可追溯", "%d 组编号共 %d 项，全部在手册中有定义" % (len(MODE_CARDS), total_ids))
+
+
+# ---- 技能可见性双开关（v4.43.0）----
+# 为什么单独成子命令、不并进 `skill`：本项判的是**主机配置漂移**，不是技能本体质量。
+# 并进 `skill` 会把"主机把技能关了"报成技能 FAIL，指错排查方向（且会让技能本体永远红）。
+VIS_CLOSED_VALUE = "user-invocable-only"   # settings.skillOverrides 的关闭态取值
+VIS_FM_KEY = "disable-model-invocation"    # SKILL.md frontmatter 的关闭态字段
+
+
+def _vis_homes(explicit=None):
+    """候选数据家：显式 `--home` > `$CODEBUDDY_CONFIG_DIR` > `~/.workbuddy`，再加同族兄弟。
+
+    ⚠️ 不做 `Path.home()` 单点推断：本机 `~/.workbuddy` 是**母本**，而会话实际跑在
+    `E:\\WBHomes\\{A,B,C}\\.workbuddy` 之一 —— 只认 `~` 会去检查一个"没人用"的家，
+    恒判一致（假绿）。故：以环境变量为准，再把**同父目录下**的 `*/.workbuddy` 一并纳入，
+    用来做"跨家是否一致"的比对。
+    """
+    cands = []
+    for p in (explicit or []):
+        cands.append(Path(p))
+    env = _os.environ.get("CODEBUDDY_CONFIG_DIR")
+    if env:
+        cands.append(Path(env))
+    cands.append(Path.home() / ".workbuddy")
+    seen, out = set(), []
+    for p in cands:
+        try:
+            rp = p.resolve()
+        except OSError:
+            continue
+        if rp in seen or not (rp / "settings.json").is_file():
+            continue
+        seen.add(rp)
+        out.append(rp)
+    # 同族兄弟：只取目录名恰为 `.workbuddy` 的（不含 `.workbuddy-*` 退役家）
+    # ⚠️ 要往上看**两级**：本机 `Path.home()` 就是数据家本身（`E:\WBHomes\B`），
+    # 数据家目录是 `E:\WBHomes\B\.workbuddy`，因此族根在 `home.parent.parent`。
+    roots = []
+    for h in list(out):
+        for r in (h.parent, h.parent.parent):
+            if r.is_dir() and r not in roots:
+                roots.append(r)
+    for container in roots:
+        try:
+            entries = sorted(container.iterdir())
+        except OSError:
+            continue
+        # 两种布局都要：① `<族根>/X/.workbuddy`（本机 E:\WBHomes\{A,B,C}）
+        # ② `<族根>/.workbuddy`（X 直接就是家）
+        cands2 = [c / ".workbuddy" for c in entries if c.is_dir()]
+        cands2 += [c for c in entries if c.name == ".workbuddy"]
+        for s in cands2:
+            if not (s / "settings.json").is_file():
+                continue
+            rp = s.resolve()
+            if rp not in seen:
+                seen.add(rp)
+                out.append(rp)
+    return out
+
+
+def _vis_label(home: Path) -> str:
+    """家的可读标签：`<父目录名>/.workbuddy`（各家目录名都叫 .workbuddy，光看 name 分不清）。"""
+    try:
+        return "%s/%s" % (home.parent.name or str(home.parent), home.name)
+    except (AttributeError, IndexError):
+        return str(home)
+
+
+def _vis_overrides(home: Path) -> dict:
+    """读 `<home>/settings.json` 的 skillOverrides；缺失/坏 JSON 一律返回 {}（不抛）。"""
+    try:
+        data = json.loads((home / "settings.json").read_text(encoding="utf-8-sig"))
+    except (OSError, ValueError):
+        return {}
+    so = data.get("skillOverrides") or {}
+    return so if isinstance(so, dict) else {}
+
+
+def _vis_configured(home: Path) -> bool:
+    """该家是否**做过可见性决策**（settings.json 里出现过 `skillOverrides` 键，哪怕值为空）。
+
+    ⚠️ 为什么必须区分「无键」与「空字典」：本机预建了 D/E/F/G 等从未配置过的空数据家，
+    它们没有这个键 ⇒ 技能全放（110 个双开）。把这种"从没配过"的家纳入跨家比对，
+    会报出上百条**并非漂移**的分歧，把真实漂移（A/B/C 之间的几十条）淹掉。
+    """
+    try:
+        data = json.loads((home / "settings.json").read_text(encoding="utf-8-sig"))
+    except (OSError, ValueError):
+        return False
+    return "skillOverrides" in data
+
+
+def _vis_has_fm_flag(skill_md: Path) -> bool:
+    try:
+        fm = _frontmatter(skill_md.read_text(encoding="utf-8", errors="replace"))
+    except OSError:
+        return False
+    return bool(re.search(r"^%s:\s*true\s*$" % re.escape(VIS_FM_KEY), fm, re.M | re.I))
+
+
+def _vis_states(skills_dir: Path, home: Path):
+    """返回 (state_by_skill, unknown_values, closed_by_settings, closed_by_fm)。
+
+    四态：双关（两处都关）/ 仅覆盖（只 settings 关）/ 仅frontmatter（只 frontmatter 关）/ 双开（可见）。
+    """
+    so = _vis_overrides(home)
+    unknown = {k: v for k, v in so.items() if v != VIS_CLOSED_VALUE}
+    st, by_s, by_f = {}, [], []
+    for d in sorted(skills_dir.iterdir()):
+        if not d.is_dir() or d.name.startswith((".", "_")):
+            continue
+        sm = d / "SKILL.md"
+        if not sm.is_file():
+            continue
+        s_off = so.get(d.name) == VIS_CLOSED_VALUE
+        f_off = _vis_has_fm_flag(sm)
+        st[d.name] = ("双关" if (s_off and f_off) else
+                      "仅覆盖" if s_off else
+                      "仅frontmatter" if f_off else "双开")
+        if s_off:
+            by_s.append(d.name)
+        if f_off:
+            by_f.append(d.name)
+    return st, unknown, by_s, by_f
+
+
+def _check_version_alignment(skill_dir: Path) -> None:
+    """版本三处对齐（v4.44.0）：frontmatter / H1 / README 的版本号必须同源。
+
+    **存在意义**（2026-10-20 实测）：`SKILL.md` 已到 4.43.0，而 `README.md` 仍写着
+    「当前版本 **v4.35.0**」—— 漂移 **8 个版本且无任何信号**。根因是「版本三处对齐」
+    在 `skill-hygiene.md` 里只是**纪律项**，没有机器判据；而本仓同类结论早就写过：
+    无机器判据的纪律项必然漂移（同一形态见 v4.44.0 之前的 `gen_skill_index --check` 口径）。
+
+    **射程**：只判三处**字面版本号相等**。不判版本号该不该 bump、不判 `changelog` 是否
+    有对应条目、不判版本语义（major/minor 该不该动）—— 那三项无客观 oracle。
+    任一处**解析不到**也判 FAIL：声明缺失与声明不一致同样是「无法核对」，不能静默放行。
+    """
+    label = "版本三处对齐"
+    sm = skill_dir / "SKILL.md"
+    rd = skill_dir / "README.md"
+    if not sm.exists():
+        fail(label, "SKILL.md 不存在：%s" % sm)
+        return
+    try:
+        sm_text = sm.read_text(encoding="utf-8")
+    except OSError as exc:
+        fail(label, "SKILL.md 读取失败：%s" % exc)
+        return
+
+    found: dict[str, str] = {}
+    m = re.search(r"^version:\s*v?([0-9]+(?:\.[0-9]+)*)\s*$", sm_text, re.M)
+    if m:
+        found["frontmatter"] = m.group(1)
+    m = re.search(r"^#\s+.*?\bv([0-9]+(?:\.[0-9]+)*)", sm_text, re.M)
+    if m:
+        found["H1"] = m.group(1)
+    if rd.exists():
+        try:
+            m = re.search(r"当前版本\s*\*\*v?([0-9]+(?:\.[0-9]+)*)\*\*",
+                          rd.read_text(encoding="utf-8"))
+        except OSError as exc:
+            fail(label, "README.md 读取失败：%s" % exc)
+            return
+        if m:
+            found["README"] = m.group(1)
+
+    missing = [k for k in ("frontmatter", "H1", "README") if k not in found]
+    if missing:
+        detail = "、".join("%s=%s" % (k, found[k]) for k in ("frontmatter", "H1", "README") if k in found)
+        fail(label, "以下位置版本号解析不到：%s（已解析到：%s）"
+                    % ("、".join(missing), detail or "无"))
+        return
+
+    if len(set(found.values())) == 1:
+        ok(label, "%s（frontmatter / H1 / README 三处一致）" % found["frontmatter"])
+    else:
+        fail(label, "版本号不一致：frontmatter=%s ｜ H1=%s ｜ README=%s"
+                    % (found["frontmatter"], found["H1"], found["README"]))
+
+
+def _check_visibility(skills_dir: Path, homes=None) -> None:
+    """技能可见性双开关比对（v4.43.0）：防「假复位」与「跨家不一致」。
+
+    **存在意义**（2026-10-20 实测）：技能可见性由**两处**独立开关决定 ——
+    `settings.json` 的 `skillOverrides` 与 `SKILL.md` 的 `disable-model-invocation`。
+    两处同时关闭时，只清一处**不会**让技能重新可见，而**没有任何信号**提示；
+    另外本机三个数据家各自一份 settings（覆盖条数互不相同），同一技能在不同家里
+    可见性不同 ⇒ 在 A 家"放开"了、回 B 家发现"不生效"。这两类故障都属
+    「改了没生效」，靠人眼比对两份文件发现不了。
+
+    **射程**：只比对**开关状态**。不判该不该可见、不判可见性是否合理、不判技能质量。
+    **分级**：两条判据均只 WARN（配置漂移是维护性问题，不是正确性问题）。
+    **阴性对照**（人工执行、留档于 tasks/可见性判据与台账口径修复-2026-10-20/fixtures/）：
+    ① 夹具里某技能两处都关 ⇒ 本项必须 WARN；② 只关一处 ⇒ 必须不报；
+    ③ 两家可见集不同 ⇒ 跨家项必须 WARN；④ 两家相同 ⇒ 必须 OK。
+    """
+    if not skills_dir.is_dir():
+        fail("可见性：技能库可读", str(skills_dir))
+        return
+    homes = [h for h in (homes or _vis_homes()) if (h / "settings.json").is_file()]
+    if not homes:
+        skip("可见性：数据家可定位", "未找到任何含 settings.json 的数据家（--home 可显式指定）")
+        return
+    # 只比对**做过可见性决策**的家（见 _vis_configured：预建但从未配置的家会把分歧淹没）
+    homes = [h for h in homes if _vis_configured(h)]
+    if not homes:
+        skip("可见性：数据家可定位", "所有数据家的 settings.json 都无 skillOverrides 键（从未配置过）")
+        return
+
+    per_home = {}
+    for h in homes:
+        st, unknown, by_s, by_f = _vis_states(skills_dir, h)
+        per_home[h] = (st, unknown, by_s, by_f)
+
+    # ① 双关：同一家内两处同时关闭 —— 复位时最容易踩空
+    both = {}
+    for h, (st, unknown, _, _) in per_home.items():
+        names = [n for n, s in st.items() if s == "双关"]
+        if names:
+            both[h] = names
+    unknown_all = {h: u for h, (_, u, _, _) in per_home.items() if u}
+    if both:
+        detail = "；".join("%s：%s" % (_vis_label(h), ",".join(ns[:8]) + ("…" if len(ns) > 8 else ""))
+                          for h, ns in both.items())
+        warn("可见性：单家双关（复位须清两处）", detail)
+    elif unknown_all:
+        warn("可见性：单家双关（复位须清两处）",
+             "未发现双关，但有未知取值未纳入判定：" +
+             "；".join("%s：%s" % (_vis_label(h), u) for h, u in unknown_all.items()))
+    else:
+        ok("可见性：单家双关（复位须清两处）", "%d 家均无两处同时关闭的技能" % len(homes))
+
+    # ② 跨家一致：同一技能在不同数据家的可见性必须相同
+    base_home = homes[0]
+    base_vis = {n for n, s in per_home[base_home][0].items() if s == "双开"}
+    diffs, notes = {}, []
+    for h in homes[1:]:
+        vis = {n for n, s in per_home[h][0].items() if s == "双开"}
+        d = base_vis ^ vis
+        notes.append("%s 可见 %d" % (_vis_label(h), len(vis)))
+        if d:
+            diffs[h] = sorted(d)
+    if len(homes) == 1:
+        skip("可见性：跨家一致", "只定位到 1 家，无从比对")
+    elif diffs:
+        n_all = len(set().union(*diffs.values()))
+        sample = sorted(set().union(*diffs.values()))[:6]
+        warn("可见性：跨家一致",
+             "基准 %s 可见 %d；%s；分歧 %d 个（%s%s）——在分歧家放开/关闭对另一家无效"
+             % (_vis_label(base_home), len(base_vis), "，".join(notes), n_all,
+                ",".join(sample), "…" if n_all > len(sample) else ""))
+    else:
+        ok("可见性：跨家一致", "%d 家可见集完全相同（%d 个）" % (len(homes), len(base_vis)))
+
+    # ③ 矩阵（信息行）
+    cells = []
+    for h in homes:
+        st = per_home[h][0]
+        c = {k: 0 for k in ("双开", "仅覆盖", "仅frontmatter", "双关")}
+        for s in st.values():
+            c[s] += 1
+        cells.append("%s 双开%d/仅覆盖%d/仅fm%d/双关%d"
+                     % (_vis_label(h), c["双开"], c["仅覆盖"], c["仅frontmatter"], c["双关"]))
+    ok("可见性：矩阵（双开=模型可见）", "；".join(cells))
+
+
 def check_skill(skill_dir: Path) -> int:
     skill_md = skill_dir / "SKILL.md"
     if not skill_md.exists():
@@ -302,6 +682,11 @@ def check_skill(skill_dir: Path) -> int:
     _check_metrics_idempotent(skill_dir)
     # v4.19.0：入口手册体量预算（**只报 WARN**，不阻断）—— 补上「入口此前无任何体量约束」这一缺口
     _check_entry_budget(skill_dir)
+    # v4.42.0：模式接口卡契约四条 —— 补上「主干声明 ↔ 手册实现」此前无任何机器约束的缺口
+    _check_mode_contracts(skill_dir)
+    # v4.44.0：版本三处对齐 —— 把「改了内容就 bump version」这条纪律项升格为门禁。
+    #   实测缺口：README 停在 v4.35.0 而 SKILL.md 已 4.43.0，漂移 8 个版本无人发现。
+    _check_version_alignment(skill_dir)
     return 0
 
 def check_plan(plan_path: Path, base: Path) -> int:
@@ -432,6 +817,12 @@ def main() -> None:
     p = sub.add_parser("skill", help="技能自身完整性自检")
     p.add_argument("--skill-dir", default=str(DEFAULT_SKILL_DIR))
 
+    p = sub.add_parser("visibility", help="技能可见性双开关比对（防假复位 / 跨数据家不一致，只 WARN）")
+    p.add_argument("--skills-dir", default=str(Path(__file__).resolve().parent.parent.parent),
+                   help="技能库根目录（默认按本文件位置反推，即 skills/）")
+    p.add_argument("--home", action="append",
+                   help="数据家目录（可重复；默认 $CODEBUDDY_CONFIG_DIR + 同族 */.workbuddy）")
+
     p = sub.add_parser("plan", help="计划校验 + Anti-drop 对账")
     p.add_argument("target", help="plan.yaml 路径或任务目录")
     p.add_argument("--base", default=str(Path.cwd()), help="相对路径解析基准（默认当前目录）")
@@ -491,6 +882,10 @@ def main() -> None:
     if args.cmd == "skill":
         code = check_skill(Path(args.skill_dir))
         name = "技能自检"
+    elif args.cmd == "visibility":
+        _check_visibility(Path(args.skills_dir), [Path(h) for h in args.home] if args.home else None)
+        code = 0
+        name = "可见性比对"
     elif args.cmd == "plan":
         code = check_plan(Path(args.target), Path(args.base))
         name = "计划对账"
@@ -517,7 +912,7 @@ def main() -> None:
         code = cmd_metrics(Path(args.plan), args.finalize)
         name = "指标沉淀"
 
-    if args.cmd in ("skill", "plan"):
+    if args.cmd in ("skill", "plan", "visibility"):
         print(f"=== ai-workflow {name} ===")
         for status, item, note in results:
             print(f"{MARKS[status]} {item}" + (f" — {note}" if note else ""))

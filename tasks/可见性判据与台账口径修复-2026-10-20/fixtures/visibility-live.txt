@@ -1,0 +1,5 @@
+=== ai-workflow 可见性比对 ===
+[ OK ] 可见性：单家双关（复位须清两处） — 3 家均无两处同时关闭的技能
+[WARN] 可见性：跨家一致 — 基准 B/.workbuddy 可见 5；A/.workbuddy 可见 54，C/.workbuddy 可见 3；分歧 51 个（ai-workflow,ai-workflow-l2-closeout,ai-workflow-plan-compliance-backfill,archify,cartesian-doubt-reduction,classic-models-orchestrator…）——在分歧家放开/关闭对另一家无效
+[ OK ] 可见性：矩阵（双开=模型可见） — B/.workbuddy 双开5/仅覆盖105/仅fm10/双关0；A/.workbuddy 双开54/仅覆盖56/仅fm10/双关0；C/.workbuddy 双开3/仅覆盖107/仅fm10/双关0
+=== 结果：通过 2/3，FAIL=0，SKIP=0，WARN=1 ===

@@ -1,0 +1,16 @@
+[1] 代码围栏数：2（应为偶数）
+[2] mermaid 块：第 52-112 行，共 59 行
+[3] 节点定义 34 个；subgraph 1 个；边 39 条
+    OK：所有边端点均有定义
+[4] 未被任何边引用的节点：['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'R']
+[5] 反引号文件引用 14 个：Ledger.md, SKILL.md, checks.py, decision-tables.md, diagram-mode.md, homework-mode.md, ppt-mode.md, quality-gates.md, reflection-retry.md, research-mode.md, self-judge.md, state-model.md, teardown-mode.md, thinking-panel.md
+    OK：全部可解析
+[6] 语义关键项：
+    OK   thinking-judge 四态出口（拒绝/澄清/修正/接受）
+    OK   阶段 4 条件性标注
+    OK   阶段 5 抽查制
+    OK   六模式叠加子图
+    OK   F3-F5 直达熔断
+    OK   复位两步
+    OK   拒绝写审计账本
+=== 结论：FAIL=0 ===

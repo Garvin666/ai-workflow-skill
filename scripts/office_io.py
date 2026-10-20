@@ -221,12 +221,101 @@ def _require(mods: tuple, hint: str) -> None:
         print(f"[ERROR] 缺少依赖：{', '.join(missing)}", file=sys.stderr)
         print(f"[HINT] {hint}", file=sys.stderr)
         print("[HINT] 或用 venv 解释器："
-              r"C:\Users\26717\.workbuddy\binaries\python\envs\ai-workflow\Scripts\python.exe",
+              r"%USERPROFILE%\.workbuddy\binaries\python\envs\ai-workflow\Scripts\python.exe",
               file=sys.stderr)
         raise SystemExit(2)
 
 
+def selftest() -> int:
+    """`--selftest`：回归**判据本身**（不碰用户文件，临时件全在 TemporaryDirectory 内）。
+
+    覆盖：页范围解析（含越界与非法输入）、中文列宽估算、CSV 编码回退与 --max-rows 截断、
+    Excel 写入→回读往返（值/表头加粗/冻结/最小列宽/列宽封顶）、rows 为空的前置拒绝。
+    """
+    import io
+    import tempfile
+    from contextlib import redirect_stderr, redirect_stdout
+    from pathlib import Path
+    from types import SimpleNamespace
+
+    ok = 0
+    total = 0
+
+    def ck(name: str, got, want) -> None:
+        nonlocal ok, total
+        total += 1
+        good = got == want
+        ok += good
+        print("[%s] %s：实际=%r 期望=%r" % ("PASS" if good else "MISS", name, got, want))
+
+    # A. 页范围解析（PDF 提取的唯一入口，错 1 就取错页）
+    ck("页范围 1-3,5 ⇒ 0 基索引 [0,1,2,4]", _parse_pages("1-3,5", 10), [0, 1, 2, 4])
+    ck("缺省 ⇒ 全部页", _parse_pages(None, 3), [0, 1, 2])
+    ck("阴性：越界页被过滤（不得越界读 pages[i]）", _parse_pages("0,99", 5), [])
+    try:
+        _parse_pages("abc", 5)
+        bad = "未拒绝"
+    except ValueError:
+        bad = "ValueError"
+    ck("阴性：非法页规格 ⇒ ValueError", bad, "ValueError")
+
+    # B. 显示宽度（列宽只能靠它，中文按 2 列）
+    ck("中文按 2 列宽：中文ab ⇒ 6", _disp_width("中文ab"), 6)
+
+    with tempfile.TemporaryDirectory() as td:
+        d = Path(td)
+
+        # C. CSV：编码回退 + 行数截断
+        gbk = d / "gbk.csv"
+        gbk.write_bytes("名称,数量\n苹果,3\n".encode("gbk"))
+        ck("CSV 回退 GBK 解码", _read_csv(str(gbk), None), [["名称", "数量"], ["苹果", "3"]])
+        ck("CSV --max-rows=1 截断", _read_csv(str(gbk), 1), [["名称", "数量"]])
+
+        # D. Excel 写入 → 回读往返（格式化三项 + 列宽封顶）
+        payload = [["名称", "说明"], ["甲", "中文" * 20]]
+        rj = d / "rows.json"
+        rj.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+        out = d / "out.xlsx"
+        ns = SimpleNamespace(file=str(out), rows=str(rj), sheet=None,
+                             no_format=False, widths=None)
+        with redirect_stdout(io.StringIO()):
+            cmd_excel_write(ns)
+
+        from openpyxl import load_workbook
+        wb = load_workbook(out)
+        ws = wb.active
+        ck("写入回读：A2 值", ws["A2"].value, "甲")
+        ck("格式化：表头加粗", ws["A1"].font.bold, True)
+        ck("格式化：冻结首行", ws.freeze_panes, "A2")
+        ck("列宽：短列取最小 8", ws.column_dimensions["A"].width, 8)
+        ck("阴性：超长内容也封顶在 MAX_COL_WIDTH", ws.column_dimensions["B"].width, MAX_COL_WIDTH)
+        wb.close()
+
+        # E. 阴性：rows 为空必须前置拒绝，且不得留下半截 xlsx
+        empty = d / "empty.json"
+        empty.write_text("[]", encoding="utf-8")
+        target = d / "should_not_exist.xlsx"
+        ns2 = SimpleNamespace(file=str(target), rows=str(empty), sheet=None,
+                              no_format=False, widths=None)
+        try:
+            with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
+                cmd_excel_write(ns2)
+            rc = "未拒绝"
+        except SystemExit as e:
+            rc = e.code
+        ck("阴性：rows 为空 ⇒ rc=1 且不落盘", (rc, target.exists()), (1, False))
+
+    print("未覆盖：docx / pdf 实际读写（word-read/word-write/pdf-extract/pdf-merge 依赖真实文件与 "
+          "python-docx、pypdf）")
+    print("=== selftest：%d/%d ===" % (ok, total))
+    return 0 if ok == total else 1
+
+
 def main() -> None:
+    # `--selftest` 在 argparse 之前短路：子命令是 required，交给 argparse 会先因缺子命令报错，
+    # 从而改变既有「无参数 ⇒ rc=2 + argparse 原始报错」的语义。
+    if "--selftest" in sys.argv[1:]:
+        raise SystemExit(selftest())
     ap = argparse.ArgumentParser(description="Office 文件读写统一入口")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
@@ -266,6 +355,9 @@ def main() -> None:
     p.add_argument("out")
     p.add_argument("inputs", nargs="+")
     p.set_defaults(func=cmd_pdf_merge)
+
+    ap.add_argument("--selftest", action="store_true",
+                    help="运行内置自检：只回归判据（页范围/列宽/CSV 编码/Excel 往返），不碰用户文件")
 
     args = ap.parse_args()
     _NEED = {

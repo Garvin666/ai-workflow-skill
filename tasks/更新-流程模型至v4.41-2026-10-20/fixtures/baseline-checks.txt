@@ -1,0 +1,23 @@
+# 基线记录（s1）
+
+## 备份（改前 = 改后 逐字节一致）
+
+- 原文件：`references/process-model.md`
+- 备份：`references/process-model.md.bak-20261020`
+- sha256(orig) = 57918E09A0444CE991F5A30AA584BC54E67988A90FB5C8F2E1B7DA982FDE133F
+- sha256(bak)  = 57918E09A0444CE991F5A30AA584BC54E67988A90FB5C8F2E1B7DA982FDE133F
+- identical = True（Get-FileHash -Algorithm SHA256 实测）
+
+## 门禁基线
+
+- **改前**：`checks.py skill` → 通过 82/82，FAIL=0，SKIP=0，WARN=0
+  - ⚠️ 该次为会话内实跑，未即时落盘；本文件为事后转录，不是机器直出。
+- **改后**：`checks.py skill` → 通过 82/82，FAIL=0，SKIP=0，WARN=0
+  - 入口手册体量：SKILL.md 163828 B / 预算 163840 B（100%）
+
+## 索引状态（与本任务的关系）
+
+- `gen_skill_index.py --check` → `[STALE]`，存 9c73641e36a372c8 / 现 73478f368def1fb2，RC=1。
+- 成因判定：该指纹面＝各技能 `SKILL.md` 内容 sha1（`fingerprint()` 实读，第 344-366 行），**不含 `references/`**。
+  本次改动前 `git status` 已显示 ` M SKILL.md`（未提交的既有改动）⇒ STALE 为**既有状态**，非本次引入。
+- 处置：**未重建**。重建会遍历 120 个技能并把他人的未提交改动一并固化进索引，改动面与本任务无关。

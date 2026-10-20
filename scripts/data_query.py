@@ -61,7 +61,7 @@ def _connect():
         import duckdb
     except ModuleNotFoundError:
         print("[ERROR] 缺少 duckdb，请先运行 scripts/setup_env.ps1 安装依赖", file=sys.stderr)
-        print("[HINT ] 或直接用 venv 解释器：C:\\Users\\26717\\.workbuddy\\binaries\\python\\envs\\ai-workflow\\Scripts\\python.exe",
+        print("[HINT ] 或直接用 venv 解释器：%USERPROFILE%\\.workbuddy\\binaries\\python\\envs\\ai-workflow\\Scripts\\python.exe",
               file=sys.stderr)
         raise SystemExit(2)
     con = duckdb.connect()
@@ -329,9 +329,155 @@ def cmd_sql(args) -> int:
     return 0
 
 
+def _selftest() -> int:
+    """--selftest：回归 SQL 构造 / 文件预过滤 / glob→正则 / 数量格式化。
+
+    `_connect` 被打桩替换（FakeCon 只记录 SQL 与参数），因此前 8 条断言**不需要 duckdb**；
+    最后一条真跑 DuckDB read_text，缺 duckdb 时记 SKIP（不计入通过数）。
+    """
+    import io
+    import tempfile
+    from contextlib import redirect_stderr, redirect_stdout
+
+    passed = missed = skipped = 0
+    skip_names: list[str] = []
+
+    def fmt(v):
+        if isinstance(v, (dict, list, tuple, set)):
+            return json.dumps(v, ensure_ascii=False, sort_keys=True, default=str)
+        return str(v)
+
+    def check(name: str, actual, expected) -> None:
+        nonlocal passed, missed
+        ok = actual == expected
+        print(f"[{'PASS' if ok else 'MISS'}] {name}：实际={fmt(actual)} 期望={fmt(expected)}")
+        passed += bool(ok)
+        missed += (not ok)
+
+    def skip(name: str, reason: str) -> None:
+        nonlocal skipped
+        print(f"[SKIP] {name}：{reason}（未覆盖，不计入通过数）")
+        skipped += 1
+        skip_names.append(name)
+
+    class FakeCon:
+        """只记录 SQL/参数，不连 DuckDB。"""
+
+        def __init__(self, rows, exc=None):
+            self.rows, self.exc, self.sql, self.params = rows, exc, "", None
+
+        def execute(self, sql, params=None):
+            self.sql, self.params = sql, params
+            if self.exc:
+                raise self.exc
+            return self
+
+        def fetchall(self):
+            return self.rows
+
+    real_connect = globals()["_connect"]
+
+    def run_find(con, **over):
+        a = argparse.Namespace(path=str(root), pattern="needle", glob=None, ignore_case=False,
+                               max_hits=50, files_only=False, with_line=False,
+                               max_object_size=64, max_files=1_000_000)
+        for k, v in over.items():
+            setattr(a, k, v)
+        globals()["_connect"] = lambda: con
+        out, err = io.StringIO(), io.StringIO()
+        try:
+            with redirect_stdout(out), redirect_stderr(err):
+                rc = cmd_find(a)
+        finally:
+            globals()["_connect"] = real_connect
+        return rc, out.getvalue(), err.getvalue()
+
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        (root / "sub").mkdir()
+        (root / ".git").mkdir()
+        (root / "a.md").write_text("hello needle\nsecond line\n", encoding="utf-8")
+        (root / "sub" / "b.md").write_text("NEEDLE upper\n", encoding="utf-8")
+        (root / "big.md").write_text("needle " + "x" * 400, encoding="utf-8")
+        (root / "c.png").write_bytes(b"needle")
+        (root / ".git" / "e.md").write_text("needle\n", encoding="utf-8")
+
+        # 1) 默认分支：文件级命中（不展开行），LIMIT 用 --max-hits
+        con = FakeCon([("C:/x/a.md",)])
+        run_find(con)
+        check("find 默认 SQL 为文件级命中 + LIMIT 50",
+              ("regexp_matches(content, ?)" in con.sql, "LIMIT 50" in con.sql, "unnest" in con.sql),
+              (True, True, False))
+
+        # 2) 预过滤：扩展名 glob、SKIP_DIRS、>max_object_size 三者都必须生效
+        check("find 预过滤：留文本/跳 .git/跳超限大文件",
+              ("a.md'" in con.sql, "sub/b.md" in con.sql, "big.md" in con.sql,
+               "c.png" in con.sql, ".git" in con.sql),
+              (True, True, False, False, False))
+
+        # 3) 阴性对照：全部候选都被体积闸门挡掉时必须拒绝执行（rc=2），不得把空集当"0 命中"
+        rc_big, _, err_big = run_find(FakeCon([]), max_object_size=1)
+        check("阴性：候选全被体积闸门挡掉 → rc=2 + 报无匹配",
+              (rc_big, "无匹配文件" in err_big), (2, True))
+
+        # 4) 两个 SQL 变体分流 + 正则走参数绑定（不拼进 SQL，防注入）
+        con_f, con_l = FakeCon([]), FakeCon([("C:/x/a.md", 2, "hello needle")])
+        run_find(con_f, files_only=True)
+        run_find(con_l, with_line=True)
+        check("--files-only / --with-line 各走其分支，pattern 走参数绑定",
+              ("GROUP BY filename" in con_f.sql, "len(lines)" in con_l.sql, con_l.params),
+              (True, True, ["needle"]))
+
+        # 5) --ignore-case 必须变成 DuckDB 的 (?i) 前缀
+        con_i = FakeCon([])
+        run_find(con_i, ignore_case=True)
+        check("--ignore-case 加 (?i) 前缀", con_i.params, ["(?i)needle"])
+
+        # 6) 真跑的 DuckDB read_text（缺库则 SKIP）
+        try:
+            import duckdb  # noqa: F401
+            has_duck = True
+        except ModuleNotFoundError:
+            has_duck = False
+        if has_duck:
+            out, err = io.StringIO(), io.StringIO()
+            a = argparse.Namespace(path=str(root), pattern="needle", glob=None, ignore_case=False,
+                                   max_hits=50, files_only=False, with_line=False,
+                                   max_object_size=64, max_files=1_000_000)
+            with redirect_stdout(out), redirect_stderr(err):
+                rc_real = cmd_find(a)
+            text = out.getvalue()
+            check("DuckDB 实跑：命中 a.md、跳过 big.md/.git/png",
+                  (rc_real, "a.md" in text, "big.md" in text, ".git" in text),
+                  (0, True, False, False))
+        else:
+            skip("DuckDB 实跑", "duckdb 未安装")
+
+    # 7) glob→正则：`**/` 需匹配零级与多级目录，且不得放过 .png/.mdx
+    rx = _glob_to_regex("**/*.md")
+    check("_glob_to_regex 多级匹配 + 阴性（.png/.mdx 不匹配）",
+          (bool(rx.match("/r/a.md")), bool(rx.match("/r/x/y/b.md")),
+           bool(rx.match("/r/a.png")), bool(rx.match("/r/a.mdx"))),
+          (True, True, False, False))
+
+    # 8) SQL 字面量转义：单引号必须翻倍，否则就是注入面
+    check("_sql_str 单引号翻倍", _sql_str("it's"), "'it''s'")
+
+    # 9) 体积单位换算（B 取整，其余两位小数）
+    check("_human 单位换算", (_human(1023), _human(1536)), ("1023 B", "1.50 KB"))
+
+    if skipped:
+        print(f"--- SKIP {skipped} 项（{'、'.join(skip_names)}），未计入通过数 ---")
+    total = passed + missed + skipped
+    print(f"=== selftest：{passed}/{total} ===")
+    return 1 if missed else 0
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="大数据集/大目录检索（DuckDB 直查）")
-    sub = ap.add_subparsers(dest="cmd", required=True)
+    ap.add_argument("--selftest", action="store_true",
+                    help="自检：回归 SQL 构造/文件预过滤/glob 转正则（DuckDB 缺失的断言记 SKIP，全过 exit 0）")
+    sub = ap.add_subparsers(dest="cmd")
 
     p = sub.add_parser("files", help="目录概览：文件数/总大小/按扩展名分布/大文件")
     p.add_argument("path")
@@ -366,6 +512,10 @@ def main() -> int:
     p.add_argument("--out")
 
     args = ap.parse_args()
+    if args.selftest:
+        return _selftest()
+    if not args.cmd:
+        ap.error("the following arguments are required: cmd")
     if args.cmd == "files":
         return cmd_files(args)
     if args.cmd == "big":
