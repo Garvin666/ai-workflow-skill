@@ -233,7 +233,7 @@
 
 | 项 | 值 |
 | --- | --- |
-| 上游 | VoltAgent/awesome-design-md（**84 个品牌 DESIGN.md 设计规范合集**，源自 Google Stitch 提出的 DESIGN.md 概念：把品牌视觉语言逆向工程为纯 Markdown —— 色板语义 / 字体层级 / 组件样式 / 间距 / 阴影 / Do & Don't / Agent 提示段九节结构；121.7k★，活跃） |
+| 上游 | VoltAgent/awesome-design-md（**84 个品牌 DESIGN.md 设计规范合集**，源自 Google Stitch 提出的 DESIGN.md 概念：把品牌视觉语言逆向工程为纯 Markdown —— 色板语义 / 字体层级 / 组件样式 / 间距 / 阴影 / Do & Don't / Agent 提示段九节结构（⚠️ 2026-10-20 实测：九节仅覆盖 10/84，见下方注记）；121.7k★（2026-10-20 实测 122,388），活跃） |
 | 锁定 rev | 3b605329240ce735b510037cca322f1831fdd7f8（2026-10-14T05:46:47Z；上游无 release tag） |
 | 许可 | MIT（Copyright (c) 2026 VoltAgent；仓库根 LICENSE 随库携带） |
 | 规模 | **170 文件 / 约 2.4 MB**（84 品牌目录 × DESIGN.md ＋ README.md ＋ 携带的 LICENSE / README / CONTRIBUTING；84 目录全量对账 DESIGN.md **零缺失**） |
@@ -243,7 +243,20 @@
 
 **⚠️ 两条使用纪律**：① **按需取单文件，不整库加载**（与 KB 纪律同构）：UI 任务需要「按某品牌视觉语言来做」时，只读 `design-md/<brand>/DESIGN.md` 一个文件作风格参照（品牌目录名以 lock 与磁盘为准，如 Linear 是 `linear.app`、Vercel 是 `vercel`）；② **参照 ≠ 官方规范**：这些是社区对真实网站设计语言的逆向描述，**作灵感参照不作真理引用**，且第三方的商标与视觉资产各有其版权，产出物**不得照抄品牌标识**。
 
-**⚠️ 与 §1.8 的衔接点**：impeccable 的 init／craft 流程本就以 DESIGN.md 为视觉档案 —— 素材库里的品牌 DESIGN.md 可作为**起点参照**（抄结构、学九节组织法），**替换内容为本次项目的真实视觉决策**；不得把品牌文件直接当本项目档案用。
+**⚠️ 2026-10-20 结构实测注记（上方原文保留，此处更正；勿据旧描述写模板）**
+
+对 84 份 DESIGN.md 逐文件解析（任务 `tasks/拆解-awesome-design-md整合-2026-10-20/`，复算脚本在该任务 scripts/probe_design_md.py，坐标 `@3b605329`）：
+
+| 项 | 上表原文（2026-10-16） | 实测（2026-10-20） |
+| --- | --- | --- |
+| 章节骨架 | 九节结构 | **官方 8 节 73 份**（Overview／Colors／Typography／Layout／Elevation & Depth／Shapes／Components／Do's and Don'ts）；**九节旧版 10 份**（无 frontmatter，恰为 README 九节命名的全部样本）；**离群 1 份**（airbnb 缺 Shapes 与 Do's and Don'ts，且 Elevation 少了 & Depth） |
+| 令牌层 | 未提及 | **74/84 带 YAML frontmatter**，官方 7 键 name／description／colors／typography／rounded／spacing／components；`version: alpha` 是仓库自加的越界键（74 份），`raycast` 另有中文越界键 `属于` |
+| 预览件 | README 称每站含 preview.html ＋ preview-dark.html | **全库 0 个**；83 个品牌目录内只有一份仅含跳转链接的 README，`slack` 连这份都没有、也未进根 README 索引 |
+| 扩展三节 | 未提及 | Responsive Behavior 61／Iteration Guide 50／Known Gaps 43，均追加在八节之后 |
+
+**规范层唯一口径源不在本仓**：官方规格与 linter 在 google-labs-code/design.md（Apache-2.0），npm 包 @google/design.md（可执行名 design.md／designmd）；生产侧实现是 §1.8 的 impeccable（其 reference/document.md 已完整实现该规格）。本仓**不复述规格、不自研校验器**，只写触发与验收：见 `references/design-md-authoring.md`。
+
+**⚠️ 与 §1.8 的衔接点**：impeccable 的 init／craft 流程本就以 DESIGN.md 为视觉档案 —— 素材库里的品牌 DESIGN.md 可作为**起点参照**（抄结构、学官方 8 节组织法；⚠️ 原写「九节组织法」，2026-10-20 更正，见 §1.9 注记），**替换内容为本次项目的真实视觉决策**；不得把品牌文件直接当本项目档案用。
 
 ---
 
@@ -378,7 +391,7 @@
 
 | 场景 | 取哪个 | 说明 |
 | --- | --- | --- |
-| **触发词群**：「风格像 / 参考 / 照着 / 学 XX 的风格」＋任一品牌名（Vercel / Stripe / Notion / Linear / Supabase / Claude 等 84 家）；或「要个高级感 / 科技感 / 极简风 / 暗色主题」且指定了参照品牌；或要学**DESIGN.md 九节组织法**写本项目设计档案 | 读 `~/.workbuddy/skills/awesome-design-md/design-md/<brand>/DESIGN.md` **单个文件** | ⚠️ 品牌目录名以磁盘为准（Linear 是 `linear.app`；全清单见 design-md/ 一层目录）；按需取单文件、不整库加载（§1.9 纪律 ①）；作参照不作官方规范（§1.9 纪律 ②）。**未指定品牌时**：按任务气质就近推荐 2–3 个候选（如金融感→stripe、极简工程→vercel、文档友好→notion）再让用户挑 |
+| **触发词群**：「风格像 / 参考 / 照着 / 学 XX 的风格」＋任一品牌名（Vercel / Stripe / Notion / Linear / Supabase / Claude 等 84 家）；或「要个高级感 / 科技感 / 极简风 / 暗色主题」且指定了参照品牌；或要写/改**本项目 DESIGN.md 设计档案**（⚠️ 原写「学 DESIGN.md 九节组织法」，2026-10-20 更正：官方规格为 8 节，九节仅 10/84，见 §1.9 注记） | 读 `~/.workbuddy/skills/awesome-design-md/design-md/<brand>/DESIGN.md` **单个文件** | ⚠️ 品牌目录名以磁盘为准（Linear 是 `linear.app`；全清单见 design-md/ 一层目录）；按需取单文件、不整库加载（§1.9 纪律 ①）；作参照不作官方规范（§1.9 纪律 ②）。**未指定品牌时**：按任务气质就近推荐 2–3 个候选（如金融感→stripe、极简工程→vercel、文档友好→notion）再让用户挑 |
 
 **路由敏感性总条款（2026-10-16 用户指令「让触发更敏感」，本节全域适用）**：
 
