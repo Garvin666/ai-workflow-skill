@@ -388,9 +388,9 @@
 
 ---
 
-## 四、只取机制（上游有、但**不搬运文件**的 7 个）
+## 四、只取机制（上游有、但**不搬运文件**的 8 个）
 
-这 7 个是为「每仓持久 domain model + issue tracker」设计的编排层，而宿主的编排层是 `plan.yaml` + `tasks/`。硬搬会造成两套留痕体系并存，直接违反宿主「同一任务内无两套口径」的质量原则。故**只取词汇，折进本体手册并注明出处**：
+这些上游多数是为「每仓持久 domain model + issue tracker」设计的编排层，而宿主的编排层是 `plan.yaml` + `tasks/`。硬搬会造成两套留痕体系并存，直接违反宿主「同一任务内无两套口径」的质量原则。故**只取词汇，折进本体手册并注明出处**（末行 `lieflat-less-ai-tone` 属另一类：对照研究 ＋ 改写规则集，同样只取机制、不搬脚本）：
 
 | 上游技能 | 取走的机制 | 折进哪里 |
 | --- | --- | --- |
@@ -401,6 +401,7 @@
 | ask-matt | 「当前情境该用哪个 skill」的路由思路 | 由本手册承担，**不单独造技能** |
 | triage | roles state machine | **暂缓**（宿主无 issue 入口） |
 | setup-matt-pocock-skills | 「每仓一次配置」的一次性前置模式 | 宿主 `assets/templates/` 已有同类 |
+| lieflat-less-ai-tone@27d2923 | **否证清单**（10 条「看着像 AI 味、实测不成立」）＋ 分母按语言单位选 ＋ 算子先抽样 20 条 | 判据集 `references/humanize-rubric.yaml` 的 `exclusions`（`xid`）／改写契约 `references/humanize-judge.md` §5.2／判据工程 `references/artifact-engineering.md` §6.20 |
 
 > 折进时**必须注明出处**（写法：「借自 mattpocock/skills 的 to-tickets」），不要伪装成本体原创。
 

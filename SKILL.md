@@ -4,10 +4,10 @@ description: AI 标准化多阶段工作方法论（自研），适用于量化�
 agent_created: true
 selfbuilt: true
 repo: https://github.com/Garvin666/ai-workflow-skill
-version: 4.44.0
+version: 4.45.0
 ---
 
-# AI 工作流 v4.44.0
+# AI 工作流 v4.45.0
 
 > **[自研技能]** 名称：`ai-workflow` ｜ 用途：为多阶段任务提供标准化流程编排（入口分型／任务分层／计划先行／三项核心原则／自主决策层／独立审核抽查制／熔断）＋ 六个产出结构模式（作业 S0–S2／科研 R0–R6（其 R2 即原文献阅读模式 Q1–Q4）／逆向拆解 D0–D5／图示设计 P0–P4／PPT Y0–Y4）＋ 学习模型 K1–K5，并配一套**机器可校验**的工具与门禁 ｜ 适用场景：产出文件或代码或报告、多步且步骤间有依赖、数据分析、跨文件改造、调研查重、方案评审；纯问答／查询／翻译／单文件读取不适用 ｜ 仓库：https://github.com/Garvin666/ai-workflow-skill
 
@@ -126,7 +126,7 @@ version: 4.44.0
 
 1.5. **文风判别（style-judge，v4.15.0 新增；仅 `content` 类展开）**：`self-judge.category == content` **且**交付物面向人阅读时，跑**第七块 System 1 结构化快判** —— 判「**本次产出要不要去 AI 味改写、命中哪几组模式**」，据此决定阶段 3 是否展开「去味改写 → 事实保真核对」。产出 `{verdict, distribution, confidence, dimensions(S1–S5), ambiguity, route_hint, needs_humanize, 适用范围[, 产物, 判据集, 改写前, 改写后, 豁免]}`。
    - **不新增前向**：它**挂在 `self-judge` 的 `content` 分支下**，复用其 `category` 做闸门（与 KB-First 同轮）；`code` / `chat` 判 **`不适用`**，**不喊一遍** —— 对代码/JSON/YAML/数据表/公式跑去味是纯浪费，正是「效率」原则要罚的冗余步骤。
-   - **契约**：`references/humanize-judge.md`（**取值表与阈值只以该文件为准**，本处不复述）；判据集 `references/humanize-rubric.yaml`（31 条模式 A–F，来自 `op7418/Humanizer-zh`）；校验器 `scripts/humanize_scan.py`。
+   - **契约**：`references/humanize-judge.md`（**取值表与阈值只以该文件为准**，本处不复述）；判据集 `references/humanize-rubric.yaml`（35 条模式：31 条来自 `op7418/Humanizer-zh` ＋ 4 条结构层，另附 10 条否证清单）；校验器 `scripts/humanize_scan.py`。
    - **四态**：`走去味`（阶段 3 展开改写＋保真核对）／`只登记`（有信号但误伤正当用法的风险高于收益，**不改写**、登记为人审点）／`已达标`（校验器 FAIL = 0）／`不适用`（非散文正文）。`confidence < 0.70` 或 `ambiguity=true` 时 **fail-closed：不改写**（不改写的代价远低于改坏的代价）。
    - **落盘**：判定写入 `plan.yaml` 的 `meta.文风判定`。⚠️ **L2／层级不明 ⇒ 整段缺省判 FAIL**（`checks.py plan` 检查项 26）；**L1 出口**：显式声明 `meta.任务层级: L1` ⇒ 汇总为**一条 SKIP**（「不算缺口」）。一旦填写须结构合法（含 `needs_humanize` =（`verdict` == 走去味）这条**确定性判据**），非法即 FAIL。
    - **它是家族里唯一带机器验收层的判别块**：登记了 `产物` 就把校验器**实跑一遍**（跑出 FAIL 即 FAIL —— **登记里的数字一概不采信**）；登记 `改写前`/`改写后` 就跑 `--diff-fidelity` 验**事实保真零丢失**。其余六块快判只校结构，本块**另有一层实跑**。
@@ -259,11 +259,11 @@ version: 4.44.0
 ### 文风质检：去味改写 → 事实保真核对（v4.15.0 新增）
 
 > **触发面收敛**：只对**面向人阅读的散文正文**（阶段 0 第 1.5 步的 `meta.文风判定.verdict == 走去味`）展开。**不是入口级必跑** —— 对代码、JSON、YAML、数据表、公式跑一遍是纯浪费。
-> **线索而非黑名单**：以 `references/humanize-rubric.yaml` 的 31 条为**检查线索**，不是词语替换表；**没有问题的段落可以原样保留**。
+> **线索而非黑名单**：以 `references/humanize-rubric.yaml` 的 35 条（31 条原有 ＋ 4 条结构层）为**检查线索**，不是词语替换表；**没有问题的段落可以原样保留**。该判据集另有 `exclusions`（`xid` X01–X10）**否证清单** —— 命中者不得据此改写，理由写「该特征经对照研究不成立」（**决策规则，不是第五种状态**）。
 
 **三步，缺一不可**：
 
-1. **改写**：按 rubric 的 FAIL 档与每条自带的「保留」示例改写。**四条编辑优先级**（依次遵守）：保留信息和确定程度 → 遵守用户编辑范围 → 匹配作者声音 → 处理具体表达问题。**保护原样**：代码块、行内代码、命令、路径、URL、链接目标、显式 ID、YAML front matter、表格数据；默认保留标题文字、层级与数量。
+1. **改写**：按 rubric 的 FAIL 档与每条自带的「保留」示例改写。**四条编辑优先级**（依次遵守）：保留信息和确定程度 → 遵守用户编辑范围 → 匹配作者声音 → 处理具体表达问题。**保护原样**：代码块、行内代码、命令、路径、URL、链接目标、显式 ID、YAML front matter、表格数据；默认保留标题文字、层级与数量。改写同时受 `references/humanize-judge.md` §5.2 **改写执行契约**约束（结构冻结／最小范围／改动可追溯／实词溯源）。
 2. **实跑校验**：`python scripts/humanize_scan.py --text <定稿> --gate` —— **有 FAIL 即 exit 1**；输出含 `id + 行号 + 片段`，**逐条可复算**。
 3. **保真核对**：`python scripts/humanize_scan.py --diff-fidelity <改写前> <改写后>` —— 数字（含量词/单位/百分比）、否定、情态限定（可能/据称/计划/正在/尚未/仅/超过）、归因标记（认为/表示/根据）**零丢失、零新增**。
 
@@ -724,7 +724,7 @@ version: 4.44.0
 | 文件 | 用途 |
 | --- | --- |
 | `references/aesthetic-rubric.yaml` | 审美判据集 36 条（**数据文件**，改阈值须留痕） |
-| `references/humanize-rubric.yaml` | 去 AI 味判据集 31 条（**数据文件**） |
+| `references/humanize-rubric.yaml` | 去 AI 味判据集 35 条 ＋ 否证清单 10 条（**数据文件**） |
 | `assets/plan-template.yaml` ／ `report-template.md` ／ `templates/README.md` | 计划、报告、确认表规范 |
 | `assets/ledger-template.md` | 交付履历台账格式 |
 | `assets/熔断报告模板.md` | 熔断报告格式与必填五节 |
@@ -754,7 +754,7 @@ scripts/laya_record.py         run|append|stats|review|export|selftest          
 scripts/homework_model.py      aggregate|agree|selftest                                   模式选用聚合模型（未拟合）
 scripts/thinking_model.py      aggregate|gold|agree|selftest                              思考聚合模型（未拟合）
 scripts/kb_learn.py            judge|note|commit|retire|stats|selftest                    学习引擎（默认 dry-run）
-scripts/humanize_scan.py       --text [--gate] | --diff-fidelity | --audit | --selftest   去 AI 味校验（31 条）
+scripts/humanize_scan.py       --text [--gate] | --diff-fidelity | --audit | --selftest   去 AI 味校验（35 条）
 scripts/check_aesthetics.py    --rubric --css [--geom] [--scale-from] | --batch | --audit 审美校验（36 条）
 scripts/geom-probe.js          [作用域选择器]                                              渲染色取数（页面侧）
 scripts/diagram_export.py      <html> --formats svg,pdf,png [--verify] [--selftest]       三通道导出；svg 转调上游

@@ -38,11 +38,11 @@
 #   D. ⚠️ **本文档不是检测器**：模式命中 ≠ AI 生成。诚实边界见 references/humanize-judge.md §7。
 #   ⚠️ 与 aesthetic-rubric 同一条禁令：**不得为消 FAIL 改阈值** —— 改阈值即改判据，须留痕并配阴性对照。
 
-version: "1.0"
-updated: "2026-09-30"
+version: "1.1"
+updated: "2026-10-20"
 
 meta:
-  version: "1.0.0"
+  version: "1.1.0"
   source_skill: op7418/Humanizer-zh
   source_skill_url: https://github.com/op7418/Humanizer-zh
   upstream: https://github.com/blader/humanizer
@@ -62,6 +62,65 @@ judgeability:
   machine: "可从文本直接量出（正则/计数），校验器自动判定"
   spec: "需从声明文档解析（如作者样本），校验器半自动判定"
   manual: "机器无法判定，登记为人审点（是「未检测」，不是「通过」）"
+
+# ── 否证清单（v1.1 新增）────────────────────────────────────────────
+# 用途：阶段 0「只登记」分支的**举证依据** —— 命中本表者，理由写「该特征经对照研究不成立」，
+#       **不得据此改写**。它不是检测器，也**不是第四种判定状态**（PASS/FAIL/SKIP 三分不变）。
+# 主键用 `xid`（刻意不用 `id`）：humanize_scan.py 的 audit_parity() 以行正则 `-\s*id:` 朴素解析，
+#   用 `id` 会被计入 machine 规则集，造出「判据集有、实现无」的假 FAIL。
+# ⚠️ 证据档 C（上游自报，语料不入库、第三方不可核验）—— 只当线索，不写成我的实测结论。
+# ⚠️ 措辞是「不作为改写理由」，**不是「一律保留」**：本表只覆盖 10 类特征，覆盖不了整体。
+exclusions:
+  - xid: X01
+    name: 句长、段落长度不够参差
+    action: 不改
+    reason: 实测与人类写作无差别；不要为了制造节奏去调句长或拆段落
+    source: lieflat-less-ai-tone@27d2923 SKILL.md §不作为改写理由
+  - xid: X02
+    name: 单字虚词偏少（就／很／了）
+    action: 不改
+    reason: 方向是补不是删；补虚词无法验收，容易把正式文章改成口语
+    source: 同上
+  - xid: X03
+    name: 反复写全称、少用代词
+    action: 不改
+    reason: 实测人类比 AI 更常重复同一名词
+    source: 同上
+  - xid: X04
+    name: 被动句
+    action: 不改
+    reason: 抽象被动（被认为／被视为）远低于收录门槛；与本仓 S08／S16 的 SKIP 处置一致
+    source: 同上
+  - xid: X05
+    name: 名词化、长句本身
+    action: 不改
+    reason: 现代汉语书面语的正常写法，人类同样这么用
+    source: 同上
+  - xid: X06
+    name: 正文里的「首先……其次」
+    action: 不改
+    reason: 与人类写作无差别；只处理标题编号（H17），不处理正文句首序数词
+    source: 同上
+  - xid: X07
+    name: 句内同构排比
+    action: 不改
+    reason: 这类人类用得不比 AI 少；只处理句间结构重复
+    source: 同上
+  - xid: X08
+    name: 问句、设问、问句小标题
+    action: 不改
+    reason: 正文问句人类远多于 AI，删掉更不像人写
+    source: 同上
+  - xid: X09
+    name: 比喻本身、比喻独立成段
+    action: 不改
+    reason: 人类用得比 AI 多；只处理理想化拟人喻体
+    source: 同上
+  - xid: X10
+    name: 抽象名词配具体动词
+    action: 不改
+    reason: 两边都几乎不写，不构成可判别的文风信号
+    source: 同上
 
 # ── 事实保真（独立硬门禁，不是 WARN）────────────────────────────────
 fidelity:
@@ -187,6 +246,46 @@ rules:
     detector: regex
     params: {pats: ["(带来了|实现了|开启了)[^。]{0,40}、[^。]{0,20}、"]}
     source: humanizer-zh §B.6
+
+  # ===== v1.1 新增：篇章层与结构层（软启动：首版一律 WARN）=====
+  # 来源：lieflat-less-ai-tone@27d2923（C 档证据）。只取形态，不搬脚本；
+  #       **不与本仓 H10 阈值对齐、不据此改 H10**（分母不同：上游「段」= 一行）。
+  - id: H14
+    group: G
+    name: 空转句引出列表
+    judgeability: machine
+    level: WARN
+    detector: structural
+    params: {form: "行尾为全/半角冒号，且下一非空行以列表标记开头"}
+    source: lieflat-less-ai-tone@27d2923 SKILL.md 规则 5b
+    note: 「该行删掉后信息不减」机器判不了；正当用法（如下／步骤如下）不排除，故只 WARN
+  - id: H15
+    group: G
+    name: 提示语后接冒号
+    judgeability: machine
+    level: WARN
+    detector: regex
+    params: {pats: ["(一句话总结|简单说|总结一下|核心是|核心在于|关键在于|问题在于|原因如下|结论是|本质上|说白了)[：:]"]}
+    source: lieflat-less-ai-tone@27d2923 SKILL.md 规则 5a
+    note: 与 H05 不重复 —— H05 管句首空转开头，本条管冒号前的提示语；可同时命中，各记一次
+  - id: H16
+    group: G
+    name: 段首零主语评论
+    judgeability: machine
+    level: WARN
+    detector: structural
+    params: {starters: ["听起来", "看起来", "说白了", "值得注意的是", "更重要的是", "关键在于", "问题在于", "意味着", "不难看出"], anaphora: ["这", "那", "其", "此", "上面", "上述", "前述", "该"]}
+    source: lieflat-less-ai-tone@27d2923 SKILL.md 规则 11
+    note: 词表只取上游正文列出的 9 个（**不含上游脚本私加的「真正的」**，它会命中规则 1 的修正输出）；排除首段、标题、列表、引用、表格；⚠️ 已知漏报边界：回指是**字面**判断，「其实」「其他」「这个」会把无回指的句子误判成有回指（宁漏不误，WARN 档可接受）
+  - id: H17
+    group: G
+    name: 序数词当小标题
+    judgeability: machine
+    level: WARN
+    detector: structural
+    params: {heads: ["# 标题", "独立加粗行"], ordinal: "一、二、三／第一、第二／其一、其二", min_run: 3}
+    source: lieflat-less-ai-tone@27d2923 SKILL.md 规则 6
+    note: 只认标题行；正文句首序数词（首先……其次）按 X06 明确不改，与上游算子方向相反故重写
 
   # ===== manual 档（机器判不了，显式登记为人审点）=====
   - id: S01

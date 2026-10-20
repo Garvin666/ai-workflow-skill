@@ -105,6 +105,24 @@ RULES = [
     dict(id="H13", group="B", name="强凑三段式", level="WARN",
          pats=[r"(带来了|实现了|开启了)[^。\n]{0,40}、[^。\n]{0,20}、"],
          source="humanizer-zh §B.6"),
+    # v1.1 新增（来源 lieflat-less-ai-tone@27d2923，C 档证据，软启动只 WARN）
+    dict(id="H15", group="G", name="提示语后接冒号", level="WARN",
+         pats=[r"(一句话总结|简单说|总结一下|核心是|核心在于|关键在于|问题在于|原因如下|结论是|本质上|说白了)[：:]"],
+         source="lieflat-less-ai-tone@27d2923 规则 5a"),
+]
+
+# ---- 结构层（需跨行上下文，逐行遍历以保留行号；v1.1 新增）----
+# ⚠️ 不用 split("\n\n") 切段：那会丢掉行号，证据无法定位（本仓 v1.0.1 已踩过一次）。
+STRUCT = [
+    dict(id="H14", group="G", name="空转句引出列表", level="WARN", kind="list_lead",
+         source="lieflat-less-ai-tone@27d2923 规则 5b"),
+    dict(id="H16", group="G", name="段首零主语评论", level="WARN", kind="zero_subject",
+         starters=["听起来", "看起来", "说白了", "值得注意的是", "更重要的是",
+                   "关键在于", "问题在于", "意味着", "不难看出"],
+         anaphora=["这", "那", "其", "此", "上面"],
+         source="lieflat-less-ai-tone@27d2923 规则 11"),
+    dict(id="H17", group="G", name="序数词当小标题", level="WARN", kind="ordinal_heads",
+         min_run=3, source="lieflat-less-ai-tone@27d2923 规则 6"),
 ]
 
 # ---- 密度类（需全文统计，单独实现）----
@@ -171,6 +189,100 @@ def diff_fidelity(before: str, after: str):
     return report
 
 
+# ---------------------------------------------------------------- 结构层扫描（v1.1）
+LIST_MARK = re.compile(r"^\s*(?:[-*+]|\d+[.、)])\s+")
+HEAD_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
+BOLD_LINE = re.compile(r"^\*\*([^*\n]+)\*\*\s*$")
+# 只认标题里的序数编号：一、／第一、／其一、；正文「首先……其次」不在内（见否证清单 X06）
+ORDINAL_HEAD = re.compile(r"^(?:[一二三四五六七八九十]+[、.]|第[一二三四五六七八九十]+[、.\s章节部分]|其[一二三四五六七八九十]+[、.])")
+NON_BODY_PREFIX = ("#", "-", "*", "+", ">", "|", "`")
+
+
+def _para_bounds(lines, i):
+    """返回含第 i 行（0-based）的段落 [start, end)。空行分隔，**行号即原文行号**。"""
+    s = i
+    while s > 0 and lines[s - 1].strip():
+        s -= 1
+    e = i
+    while e + 1 < len(lines) and lines[e + 1].strip():
+        e += 1
+    return s, e + 1
+
+
+def scan_struct(lines):
+    """H14／H16／H17 —— 需跨行上下文的结构判据。全部 WARN，不参与退出码。"""
+    hits = []
+
+    # H14 空转句引出列表：行尾冒号 + 下一非空行为列表项
+    for i, line in enumerate(lines):
+        s = line.rstrip()
+        if not s.endswith(("：", ":")):
+            continue
+        if s.lstrip().startswith(NON_BODY_PREFIX):
+            continue
+        j = i + 1
+        while j < len(lines) and not lines[j].strip():
+            j += 1
+        if j < len(lines) and LIST_MARK.match(lines[j]):
+            hits.append(dict(id="H14", name="空转句引出列表", level="WARN", line=i + 1,
+                             snippet=s.strip()[:80], source="lieflat-less-ai-tone@27d2923 规则 5b"))
+
+    # H16 段首零主语评论：非首段 + 段首评论语 + 整段无回指
+    seen_starts, body_para = set(), 0
+    for i, line in enumerate(lines):
+        if not line.strip() or (i > 0 and lines[i - 1].strip()):
+            continue
+        st, en = _para_bounds(lines, i)
+        if st in seen_starts:
+            continue
+        seen_starts.add(st)
+        head = line.lstrip()
+        if head.startswith(NON_BODY_PREFIX):
+            continue
+        body_para += 1
+        if body_para == 1:      # 上游：首段没有上文可指，不改
+            continue
+        block = "\n".join(lines[st:en])
+        starter = next((x for x in H16_STARTERS if head.startswith(x)), None)
+        if not starter:
+            continue
+        probe = block.replace("尤其", "").replace("其他", "")
+        if any(a in probe for a in H16_ANAPHORA):
+            continue
+        hits.append(dict(id="H16", name="段首零主语评论", level="WARN", line=i + 1,
+                         snippet=head.strip()[:80], source="lieflat-less-ai-tone@27d2923 规则 11"))
+
+    # H17 序数词当小标题：标题序列里连续 >= min_run 条
+    heads = []
+    for i, line in enumerate(lines):
+        t = line.strip()
+        m = HEAD_RE.match(t)
+        if m:
+            heads.append((i + 1, m.group(2).strip()))
+            continue
+        m2 = BOLD_LINE.match(t)
+        if m2:
+            heads.append((i + 1, m2.group(1).strip()))
+    run, run_start = 0, 0
+    for ln, text in heads:
+        if ORDINAL_HEAD.match(text):
+            if run == 0:
+                run, run_start = 1, ln
+            else:
+                run += 1
+            if run == 3:
+                hits.append(dict(id="H17", name="序数词当小标题", level="WARN", line=ln,
+                                 snippet=f"连续 {run} 条序数标题（起 L{run_start}）：{text[:60]}",
+                                 source="lieflat-less-ai-tone@27d2923 规则 6"))
+        else:
+            run, run_start = 0, 0
+    return hits
+
+
+H16_STARTERS = next(r["starters"] for r in STRUCT if r["kind"] == "zero_subject")
+H16_ANAPHORA = next(r["anaphora"] for r in STRUCT if r["kind"] == "zero_subject")
+
+
 # ---------------------------------------------------------------- 扫描
 def scan(text: str):
     body, orig_lines = strip_protected(text)
@@ -208,6 +320,8 @@ def scan(text: str):
                 hits.append(dict(id=rule["id"], name=rule["name"], level=rule["level"], line=0,
                                  snippet=f"粗体 {n} 处 / {len(paras)} 段 = {n/len(paras):.2f} 处每段",
                                  source=rule["source"]))
+    # 结构层（v1.1）：复用同一次行切分，行号与 RULES 完全同源
+    hits.extend(scan_struct(lines))
     return hits
 
 
@@ -249,7 +363,7 @@ def audit_parity(rubric_path):
             m2 = re.match(r"\s*judgeability:\s*(\w+)", line)
             if m2 and cur:
                 decl[cur] = m2.group(1)
-    impl = {r["id"] for r in RULES} | {r["id"] for r in DENSITY}
+    impl = {r["id"] for r in RULES} | {r["id"] for r in DENSITY} | {r["id"] for r in STRUCT}
     rubric_machine = {k for k, v in decl.items() if v == "machine"}
     problems = []
     for i in sorted(impl - rubric_machine):
@@ -283,6 +397,18 @@ def selftest(rubric_path):
     # 反向：未篡改 → 必须零差异（防恒红）
     rep2 = diff_fidelity(load("fidelity-before.md"), load("fidelity-before.md"))
     cases.append(("C' fidelity 同文零差异", len(rep2) == 0, f"差异类目={sorted(rep2)}"))
+    # E: 结构层正例 —— 四条 WARN 判据都必须有牙齿（空集恒真，故断「四条全中」而非「≥0」）
+    need = {"H14", "H15", "H16", "H17"}
+    pos_hits = scan(load("struct-positive.md"))
+    missing = sorted(need - {h["id"] for h in pos_hits})
+    cases.append(("E struct-positive 四条全中", not missing,
+                  "全中" if not missing else f"未命中={missing}"))
+    # F: 结构层反例 —— 正当用法零命中，且 FAIL 必须为 0
+    neg_hits = scan(load("struct-negative.md"))
+    neg_fails = summarize(neg_hits)[0]
+    bad = sorted(need & {h["id"] for h in neg_hits})
+    cases.append(("F struct-negative 四条零中", not bad and not neg_fails,
+                  f"误报={bad or '无'} FAIL={len(neg_fails)}"))
     # 同源
     prob = audit_parity(rubric_path)
     cases.append(("P 判据集↔实现同源", not prob, "一致" if not prob else "; ".join(prob)))
@@ -304,6 +430,12 @@ def selftest(rubric_path):
     lines.append("--- 夹具 C 保真差异明细 ---")
     lines.append(json.dumps(diff_fidelity(load("fidelity-before.md"), load("fidelity-after.md")),
                             ensure_ascii=False, indent=2))
+    lines.append("")
+    lines.append("--- 夹具 E 结构层命中明细（证明四条有牙齿）---")
+    lines.append(render(scan(load("struct-positive.md")), "struct-positive.md"))
+    lines.append("")
+    lines.append("--- 夹具 F 结构层反例（四条应零命中，FAIL 应为 0）---")
+    lines.append(render(scan(load("struct-negative.md")), "struct-negative.md"))
     print("\n".join(lines))
     return 0 if ok else 1
 
