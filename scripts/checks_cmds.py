@@ -11,6 +11,7 @@ if _HERE not in _sys.path:
 
 import argparse
 import ast
+import hashlib
 import json
 import py_compile
 import re
@@ -26,6 +27,7 @@ from checks_core import (  # noqa: F401
     VALID_CAPABILITY,
     VALID_FUSE,
     VALID_STATUS,
+    VALID_TRACE_OUTCOMES,
     VALID_TRIGGER,
     _append_meta_list,
     _capability_ok,
@@ -34,12 +36,15 @@ from checks_core import (  # noqa: F401
     _pad,
     _require_yaml,
     _set_meta_fuse,
+    _sha256_file,
+    _step_input_paths,
     _task_dir,
     _yaml_scalar,
     audit_step,
     fail,
     load_plan,
     ok,
+    warn,
 )
 
 def cmd_status(workspace: Path, archive_days: int, max_tasks: int, light: bool = False) -> int:
@@ -113,7 +118,8 @@ def cmd_status(workspace: Path, archive_days: int, max_tasks: int, light: bool =
     return 0
 
 def cmd_mark(plan_path: Path, step_id: str | None, status: str | None,
-             fuse: str | None = None, batch: str | None = None) -> int:
+             fuse: str | None = None, batch: str | None = None,
+             no_trace: bool = False) -> int:
     if status is not None and status not in VALID_STATUS:
         fail("状态合法", f"『{status}』不在 {VALID_STATUS}")
         return 1
@@ -143,6 +149,15 @@ def cmd_mark(plan_path: Path, step_id: str | None, status: str | None,
             fail("meta.熔断状态 写入", "未找到 `meta:` 块，请手工添加该键")
             return 1
         ok("meta.熔断状态已更新", f"→ {fuse}")
+        # 建议 5（2026-11-25）：熔断是**事件**，不是终态。复位后 meta 会变回「正常」，
+        # 而 `_metrics.fused` 只读终态 ⇒ 中途熔断过的任务看不出来。这里留一条事件行，
+        # 让 metrics 的 fuse_events 有据可查（历史无记录的任务仍记 null，不写成 0）。
+        if fuse == "已熔断" and not no_trace:
+            wrote, why = _append_mark_trace(
+                plan_path, [(str(step_id) if step_id else "-", "熔断")],
+                action="熔断：meta 置为已熔断")
+            (ok if wrote else warn)("熔断事件留痕",
+                                    why or "已写入 trace（fuse_events 可据此累计）")
         if not pairs:
             return 0
 
@@ -172,7 +187,79 @@ def cmd_mark(plan_path: Path, step_id: str | None, status: str | None,
         changes.append(f"{sid}: {old} → 状态: {st}")
     plan_path.write_text("".join(lines), encoding="utf-8")
     ok("步骤状态已更新", f"{len(pairs)} 个：" + "; ".join(changes))
+    # 建议 1（2026-11-25）：状态一落盘就把时刻记下来，不依赖执行者事后补 elapsed_s
+    if pairs and not no_trace:
+        wrote, why = _append_mark_trace(plan_path, pairs)
+        (ok if wrote else warn)("mark 自动留痕",
+                                why if not wrote else
+                                f"{len(pairs)} 个步骤的时刻与步间间隔已写入 trace.jsonl")
     return 0
+
+
+def _last_trace_epoch(tf: Path) -> tuple[float | None, str]:
+    """读 trace 最后一行的时刻，返回 (epoch 秒, 精度)。
+
+    新行带 `ts_epoch`（秒级）；旧行只有 `ts`（分钟级），按分钟解析并标注精度 ——
+    分钟级算出的 gap_ms 只能当量级用，如实带 `gap_精度` 供下游判别。
+    """
+    if not tf.exists():
+        return None, "none"
+    last = None
+    for ln in tf.read_text(encoding="utf-8", errors="replace").splitlines():
+        if ln.strip():
+            last = ln
+    if not last:
+        return None, "none"
+    try:
+        row = json.loads(last)
+    except json.JSONDecodeError:
+        return None, "none"
+    v = row.get("ts_epoch")
+    if isinstance(v, (int, float)) and not isinstance(v, bool):
+        return float(v), "second"
+    ts = str(row.get("ts", "") or "").strip()
+    for fmt, prec in (("%Y-%m-%d %H:%M:%S", "second"), ("%Y-%m-%d %H:%M", "minute")):
+        try:
+            return datetime.strptime(ts, fmt).timestamp(), prec
+        except ValueError:
+            continue
+    return None, "none"
+
+
+def _append_mark_trace(plan_path: Path, pairs: list[tuple[str, str]],
+                       action: str = "mark 自动留痕：状态更新") -> tuple[bool, str]:
+    """mark 落盘后自动追加一行 trace（2026-11-25 / 效率改进建议 1）。
+
+    解决的问题：`elapsed_s` 由执行者自填，实测只覆盖 32% 的 trace 行，且 46/51 份
+    trace 的时间戳少于步骤数（事后补记）。把「mark 发生的真实时刻」交给工具写，
+    相邻行相减即可得步间间隔，不再取决于谁记得填。
+
+    ⚠️ 射程：本项只记**时刻**，不测「这一步干了多久」—— 那仍要靠 `--duration-ms`。
+    两者不重复：gap_ms 是相邻事件的间隔（含人的思考时间），duration_ms 是单次操作耗时。
+    """
+    try:
+        tf = _task_dir(plan_path) / "trace.jsonl"
+        prev, prec = _last_trace_epoch(tf)
+        now = datetime.now()
+        epoch = now.timestamp()
+        row = {
+            "ts": now.strftime("%Y-%m-%d %H:%M"),
+            "ts_epoch": round(epoch, 3),
+            "step": ",".join(str(sid) for sid, _ in pairs),
+            "action": action,
+            "result": "；".join(f"{sid}→{st}" for sid, st in pairs),
+            "outcome": "ok",
+            "source": "mark-auto",
+        }
+        if prev is not None:
+            row["gap_ms"] = int(round((epoch - prev) * 1000))
+            row["gap_精度"] = prec
+        tf.parent.mkdir(parents=True, exist_ok=True)
+        with open(tf, "a", encoding="utf-8") as f:
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
+        return True, ""
+    except OSError as e:  # 留痕失败不得让状态更新失败（状态已落盘，回滚更糟）
+        return False, f"自动留痕写入失败（状态已更新，不影响结果）：{e}"
 
 def cmd_decide(plan_path: Path, point: str, basis: str,
                capability: str | None, choice: str | None,
@@ -314,7 +401,9 @@ def cmd_selftool(plan_path: Path, name: str, purpose: str, scenario: str, repo: 
 
 def cmd_trace(plan_path: Path, step: str | None, action: str, command: str,
               result: str, elapsed: float | None, replay: bool,
-              note: str = "", attempt: int | None = None) -> int:
+              note: str = "", attempt: int | None = None,
+              duration_ms: int | None = None, outcome: str | None = None,
+              retries: int | None = None, tokens: int | None = None) -> int:
     """U3：执行 trace —— `plan.yaml` 记的是**离散状态点**（做到哪/为什么引入/为什么变了），
     不含时序；trace 补上时序，让阶段 6 的复盘四问从"回忆"变"查账"。
 
@@ -323,6 +412,15 @@ def cmd_trace(plan_path: Path, step: str | None, action: str, command: str,
 
     v4.1.0：新增 `--note` / `--attempt` —— 用于结构化记录「反思重试」（action=retry 时
     填根因·调整摘要与第几轮重试），与其它 trace 行同构、可 `--replay` 回放。
+
+    v4.47.0 / P2：新增四个**可选**计量字段，把「协同健康度」从"数事件条数"变成可算：
+      · `duration_ms` —— 规范字段。给了 `--elapsed`（秒）也自动折算，避免同一物理量两套单位；
+      · `outcome`     —— 四态枚举 `ok|fail|blocked|skip`（`result` 仍是自由文字，人读）；
+      · `retries`     —— 本步已重试次数（≥0），与 `attempt` 不重复：`attempt` 是"第几次尝试"，
+                        `retries` 是"累计重试了几回"，聚合时用后者免去按 attempt 求差；
+      · `tokens`      —— 本步 token 用量（≥0）。**量不到就留空，不许估** ——
+                        留空在统计里是"未采集"，填错是"假数据"，后者更贵。
+    ⚠️ 四个字段一律**可选**：旧 trace 行不带它们仍然合法（向后兼容），统计侧按"未采集"处理。
     """
     tf = _task_dir(plan_path) / "trace.jsonl"
     if replay:
@@ -339,16 +437,168 @@ def cmd_trace(plan_path: Path, step: str | None, action: str, command: str,
     if not step:
         print("[ERROR] --step 必填（--replay 时不需要）", file=sys.stderr)
         return 2
+    if outcome is not None and outcome not in VALID_TRACE_OUTCOMES:
+        print("[ERROR] --outcome 须在 %s 内，实际 %r" % ("/".join(VALID_TRACE_OUTCOMES), outcome),
+              file=sys.stderr)
+        return 2
+    for name, v in (("duration_ms", duration_ms), ("retries", retries), ("tokens", tokens)):
+        if v is not None and v < 0:
+            print("[ERROR] --%s 不得为负（实际 %s）" % (name.replace("_", "-"), v), file=sys.stderr)
+            return 2
+
     rec = {"ts": time.strftime("%Y-%m-%d %H:%M"), "step": str(step),
            "action": action or "", "cmd": command or "", "result": result or ""}
+    if duration_ms is None and elapsed is not None:
+        duration_ms = int(round(elapsed * 1000))
+    if duration_ms is not None:
+        rec["duration_ms"] = int(duration_ms)
     if elapsed is not None:
+        # 兼容旧读者：v4.47.0 前只认 elapsed_s。新写入方优先看 duration_ms。
         rec["elapsed_s"] = elapsed
+    if outcome:
+        rec["outcome"] = outcome
+    if retries is not None:
+        rec["retries"] = int(retries)
+    if tokens is not None:
+        rec["tokens"] = int(tokens)
     if note:
         rec["note"] = note
     if attempt is not None:
         rec["attempt"] = attempt
     _jsonl_append(tf, rec)
     print("[OK] trace 已追加 —— %s（step=%s）" % (tf, step))
+    return 0
+
+
+# --------------------------------------------------------------------------- checkpoint
+# `_step_input_paths` / `_sha256_file` 已下沉到 checks_core（依赖方向 core←parity←judges←cmds，
+# 判据侧 `_check_checkpoint` 也要用同一份解析口径 —— 两处各写一份就会"工具算的指纹与判据
+# 复算的指纹不是同一个东西"，那种漂移最难查）。
+
+
+def cmd_checkpoint(plan_path: Path, step_id: str, note: str, no_resume: bool,
+                   base: Path) -> int:
+    """P2：给某一步落「输入指纹 + 检查点」，让熔断 / 中断后能**从断点续跑**而不是重跑全链。
+
+    为什么不是手工填：`输入指纹` 与产物 `sha256` 都是 64 位 hex，手抄必错且无法复核；
+    而检查点的全部价值就在"它记录的是当时的真实字节"。所以由工具现算。
+
+    写入面（步骤级两项，皆为可选字段，旧 plan 不加也合法）：
+      · `输入指纹` —— 本步输入文件的 sha256 取前 16 位（16 位够区分，又不至于把 plan 撑爆）；
+      · `检查点`   —— `{时间, 产物[{路径,sha256,字节}], 可续跑, 说明}`。
+
+    ⚠️ `可续跑` 默认 true，`--no-resume` 置 false。它的语义是"从这一步之后接着跑不会
+    破坏已完成的因果"，不是"这一步跑成功了"——后者由 `状态` 字段管。
+    ⚠️ 解析不到任何输入文件 ⇒ **退出码 2 不落盘**。宁可让人补 `输入`，也不写一个假的指纹
+    （假指纹会让续跑判据永远显示"输入没变"，比没有指纹更危险）。
+    """
+    yaml = _require_yaml()
+    if plan_path.is_dir():
+        plan_path = plan_path / "plan.yaml"
+    if not plan_path.exists():
+        fail("plan.yaml 存在", str(plan_path))
+        return 1
+    try:
+        data = yaml.safe_load(plan_path.read_text(encoding="utf-8")) or {}
+    except Exception as e:                                  # noqa: BLE001
+        fail("plan.yaml 可解析", f"{type(e).__name__}: {e}")
+        return 1
+    steps = data.get("steps") or []
+    target = None
+    for s in steps:
+        if isinstance(s, dict) and str(s.get("id")) == str(step_id):
+            target = s
+            break
+    if target is None:
+        fail("找到该步骤", f"id={step_id}；现有 id：{', '.join(str(x.get('id')) for x in steps if isinstance(x, dict))}")
+        return 1
+
+    inputs = _step_input_paths(target, base)
+    if not inputs:
+        fail("本步输入可解析",
+             f"id={step_id} 的「输入」里找不到真实存在的文件（base={base}）—— "
+             f"请先把输入写成实际路径再落检查点（不写假指纹）")
+        return 2
+    fp_src = "\n".join(f"{p.as_posix()}:{_sha256_file(p)}" for p in sorted(inputs, key=lambda x: x.as_posix()))
+    fingerprint = hashlib.sha256(fp_src.encode("utf-8")).hexdigest()[:16]
+
+    arts = []
+    deliv = target.get("交付物")
+    raw_deliv = [str(x) for x in deliv] if isinstance(deliv, list) else ([str(deliv)] if deliv else [])
+    for tok in raw_deliv:
+        p = Path(tok.strip().strip("`'\""))
+        if not p.is_absolute():
+            p = base / p
+        try:
+            if p.is_file():
+                arts.append({"路径": tok.strip(), "sha256": _sha256_file(p), "字节": p.stat().st_size})
+        except OSError:
+            continue
+
+    # ---- 文本级插入（不用 yaml.dump：那会重排整份 plan、抹掉注释）
+    lines = plan_path.read_text(encoding="utf-8").splitlines(keepends=True)
+    start = None
+    cur = None
+    for i, ln in enumerate(lines):
+        m = re.match(r"^(\s*)-\s*id:\s*(\S+)\s*$", ln)
+        if m:
+            if cur == str(step_id) and start is not None:
+                break
+            cur = m.group(2)
+            if cur == str(step_id):
+                start = i
+                body_indent = len(m.group(1)) + 2
+    if start is None:
+        fail("定位步骤块", f"id={step_id}")
+        return 1
+    end = len(lines)
+    for j in range(start + 1, len(lines)):
+        if re.match(r"^(\s*)-\s*id:\s*\S+\s*$", lines[j]) and len(re.match(r"^(\s*)", lines[j]).group(1)) <= body_indent - 2:
+            end = j
+            break
+        if re.match(r"^[^\s#]", lines[j]):     # 顶层键（steps 之后的兄弟）
+            end = j
+            break
+
+    # 先摘掉旧的 `输入指纹` 行与 `检查点` 子块（幂等：重复执行只留一份）
+    keep: list[str] = []
+    k = start + 1
+    while k < end:
+        ln = lines[k]
+        if re.match(r"^\s*输入指纹\s*:", ln):
+            k += 1
+            continue
+        m = re.match(r"^(\s*)检查点\s*:", ln)
+        if m:
+            ck_indent = len(m.group(1))
+            k += 1
+            while k < end:
+                nxt = lines[k]
+                if nxt.strip() and not nxt.startswith(" " * (ck_indent + 1)):
+                    break
+                k += 1
+            continue
+        keep.append(ln)
+        k += 1
+    tail = lines[end:]
+    pad = " " * body_indent
+    new_block = [f"{pad}输入指纹: {fingerprint}\n", f"{pad}检查点:\n",
+                 f"{pad}  时间: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n"]
+    if arts:
+        new_block.append(f"{pad}  产物:\n")
+        for a in arts:
+            new_block.append(f"{pad}    - 路径: {_yaml_scalar(a['路径'])}\n")
+            new_block.append(f"{pad}      sha256: {a['sha256']}\n")
+            new_block.append(f"{pad}      字节: {a['字节']}\n")
+    else:
+        new_block.append(f"{pad}  产物: []\n")
+    new_block.append(f"{pad}  可续跑: {'false' if no_resume else 'true'}\n")
+    new_block.append(f"{pad}  说明: {_yaml_scalar(note)}\n")
+
+    plan_path.write_text("".join(lines[: start + 1] + keep + new_block + tail), encoding="utf-8")
+    ok("检查点已落盘",
+       f"step={step_id} 指纹={fingerprint}（{len(inputs)} 个输入）产物 {len(arts)} 项"
+       f"{'，标记为不可续跑' if no_resume else ''}")
     return 0
 
 def _metrics_upsert(path: Path, rec: dict) -> "tuple[int, dict]":
@@ -384,6 +634,50 @@ def _metrics_upsert(path: Path, rec: dict) -> "tuple[int, dict]":
     _os.replace(tmp, path)
     return prev_n, out
 
+def _count_fuse_events(meta: dict, steps: list, trace_path: Path) -> tuple[int | None, str]:
+    """熔断发生次数（建议 5／2026-11-25）。
+
+    背景：`_metrics.fused` 读的是 `meta.熔断状态 == "已熔断"` —— 那是**终态声明**。
+    中途熔断、后来复位，meta 变回「正常」，`fused` 就是 false，事件整个消失。
+    效率调研实测 51 个任务全 false，而台账里确有「三轮送审均不通过」的记录。
+
+    三级来源，按可信度取：
+
+    - `trace`：逐条数 `action` 以「熔断：」开头的行。本版起 `mark --fuse 已熔断` 会自动写，
+      所以**从今天起可累计**。⚠️ 只要 trace 里**有可解析的行**就归到这一级，哪怕熔断行数为 0 ——
+      「有观测面、观测到 0 次」与「没有观测面、不知道」是两件事（2026-11-25 修正：首版只要
+      数不到熔断行就返回 `none`，把「完整的 trace + 确实零熔断」写成了未知，与本函数自己的
+      「`none` = 没有任何痕迹」自相矛盾）；
+    - `status-only`：无 trace 时的**可证下界** —— meta 已熔断记 1、处于熔断态的步骤各记 1。
+      这是下界不是真值，故单独标注来源；
+    - `none`：**trace 缺失、为空、或一行都解析不出来** ⇒ 返回 **None 而非 0**。
+      「没记录」与「没发生」是两件事，写成 0 就是替历史编数（效率调研 §7 已把这条列为方法论局限）。
+    """
+    n_trace = 0
+    n_rows = 0
+    if trace_path.exists():
+        for ln in trace_path.read_text(encoding="utf-8", errors="replace").splitlines():
+            ln = ln.strip()
+            if not ln:
+                continue
+            try:
+                row = json.loads(ln)
+            except json.JSONDecodeError:
+                continue
+            n_rows += 1
+            if str(row.get("action", "")).startswith("熔断："):
+                n_trace += 1
+    if n_rows:
+        return n_trace, "trace"
+    lower = 0
+    if str(meta.get("熔断状态", "") or "").strip() == "已熔断":
+        lower += 1
+    lower += sum(1 for s in steps if str(s.get("状态", "") or "").strip() == "熔断")
+    if lower:
+        return lower, "status-only"
+    return None, "none"
+
+
 def cmd_metrics(plan_path: Path, finalize: bool) -> int:
     """U8：任务级指标沉淀 —— 收尾时把本任务指标写入**本任务目录**的 `_metrics.jsonl`
     （即 `tasks/<任务>/_metrics.jsonl`）。
@@ -406,9 +700,10 @@ def cmd_metrics(plan_path: Path, finalize: bool) -> int:
     if not finalize:
         print("[ERROR] 目前只支持 --finalize（收尾时汇总一次，避免中途写入半成品）", file=sys.stderr)
         return 2
-    pp = plan_path if plan_path.is_dir() else plan_path.parent
-    if pp.is_dir():
-        pp = pp / "plan.yaml"
+    # 2026-11-25 修：原写法 `plan_path if is_dir() else plan_path.parent` 会把
+    # 「传进来的具体文件名」改写成同目录的固定 `plan.yaml`，导致传 `xxx.yaml` 时报找不到。
+    # 现改为：目录 → 拼 plan.yaml；文件 → 原样使用。
+    pp = (plan_path / "plan.yaml") if plan_path.is_dir() else plan_path
     if not pp.exists():
         print("[ERROR] 找不到 plan.yaml —— %s" % pp, file=sys.stderr)
         return 2
@@ -417,12 +712,16 @@ def cmd_metrics(plan_path: Path, finalize: bool) -> int:
     meta = data.get("meta") or {}
     steps = data.get("steps") or []
     st = [str(s.get("状态", "") or "") for s in steps]
+    tpath = _task_dir(pp) / "trace.jsonl"
+    fuse_ev, fuse_src = _count_fuse_events(meta, steps, tpath)
     rec = {
         "task": str(meta.get("任务", "") or "")[:80],
         "level": str(meta.get("任务层级", "") or "") or "?",
         "date": time.strftime("%Y-%m-%d"),
         "revisions": len(meta.get("计划修订") or []),
         "fused": str(meta.get("熔断状态", "") or "").strip() == "已熔断",
+        "fuse_events": fuse_ev,
+        "fuse_events_source": fuse_src,
         "steps": len(steps),
         "done": sum(1 for x in st if x == "完成"),
         "irreversible": len(meta.get("不可逆副作用") or []),

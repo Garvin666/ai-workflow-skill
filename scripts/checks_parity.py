@@ -28,6 +28,7 @@ from checks_core import (  # noqa: F401
     VALID_STATUS,
     VALID_TERMINATION,
     VALID_COMMIT_TYPES,
+    VALID_TRACE_OUTCOMES,
     VALID_TRIGGER,
     HOMEWORK_MODES,
     HUMANIZE_RUBRIC_DEFAULT,
@@ -703,8 +704,39 @@ def _p_cram_states(text: str) -> set:
                 vals.add(c)
     return vals
 
-PARITY_ITEMS = (
-    # v4.4.0+（P0-1，2026-09-21）：每项源规格**追加 `references/data-model.md`** ——
+def _p_trace_outcomes(text: str) -> set:
+    """执行结果（v4.47.0 / P2）—— **一个物理量、两种载体**：
+
+      · **手册侧**（`references/ops.md`）：`执行结果取值：ok / fail / blocked / skip`
+        —— 这是**可执行副本**（执行者照着它填 `--outcome`）；
+      · **受守卫镜像**（`references/data-model.md` §2.2）：`| 执行结果 | 含义 |` 表。
+
+    ⚠️ 锚点唯一性：本项**不复用** `status 取值`（步骤状态）与 `清理状态`/`恶补状态` 的锚点 ——
+      `re.search` 取首个匹配，同锚点会互相吃掉（撞锚 → 假 FAIL）。故手册侧锚唯一串
+      `执行结果取值`，镜像侧锚表头 `| 执行结果 | 含义 |`（本文件已有七张 `| X | 含义 |` 表）。
+    """
+    vals: set = set()
+    # ⚠️ 必须锚行首（`^…$`, re.M）：`references/data-model.md` §2.1 的索引行里也会出现
+    #   「`执行结果取值：` 行」这种**引用式**写法，不锚行首会被它先吃掉（实测撞锚 → 假 FAIL）。
+    m = re.search(r"^执行结果取值\s*[:：]\s*(.+)$", text, re.M)
+    if m:
+        vals |= {x.strip() for x in re.split(r"[/／]", m.group(1)) if x.strip()}
+    m2 = re.search(r"^\|\s*执行结果\s*\|\s*含义\s*\|\s*$", text, re.M)
+    if m2:
+        block: list[str] = []
+        for ln in text[m2.end():].splitlines():
+            if ln.strip().startswith("|"):
+                block.append(ln)
+            elif block:
+                break
+        for cell in re.findall(r"^\|\s*([^|]+?)\s*\|", "\n".join(block), re.M):
+            c = cell.strip().strip("`*")
+            if c and not re.fullmatch(r"[-:\s]+", c):
+                vals.add(c)
+    return vals
+
+
+PARITY_ITEMS = (    # v4.4.0+（P0-1，2026-09-21）：每项源规格**追加 `references/data-model.md`** ——
     # 把该文件作为各枚举的**受守卫镜像**（中心注册表）。多源取并集比对，故 data-model.md
     # 里多写/写错一个取值 → 并集变大 → FAIL；这是「枚举集中 + 可机检」的落地。
     # ⚠️ 多源（tuple）时 is_single=False，单个文件缺失不单独 FAIL（只由"全部缺失"分支兜底），
@@ -759,6 +791,15 @@ PARITY_ITEMS = (
     #      本项锁「四态取值」跨手册/镜像/json 同源，那道锁「判据集 machine 档 id ↔ 实现集合」。
     ("文风判定", ("references/humanize-judge.md", "references/data-model.md", "scripts/judges.json"),
      _p_humanize_verdicts, HUMANIZE_VERDICTS),
+    # v4.47.0 新增「执行结果」：**两源**（手册行 + 受守卫镜像）—— 与「清理状态」同型。
+    #   ⚠️ 它答的是"这一次执行的结果"，与「步骤状态」答的"计划里的步骤停在哪儿"是**不同物理量**
+    #      （`blocked` 不是 `受阻` 的同义改写）—— 不得合并、不得互推。
+    #   ⚠️ 手册侧锚唯一串 `执行结果取值`（不复用 `status 取值`）；镜像侧锚 `| 执行结果 | 含义 |`。
+    #   ⚠️ **并集模型的已知边界**（本项与其余 15 项同）：只抓「多写/写错」，抓不到「某一源漏写一个取值」
+    #      —— 另一源补齐后并集不变。实测：删掉 ops.md 的 `skip` 仍 91/91 全绿，改成 `skip / done`
+    #      则 90/91 红。所以「漏写」只能靠人审，别把它当成这道守卫能管的事。
+    ("执行结果", ("references/ops.md", "references/data-model.md"),
+     _p_trace_outcomes, VALID_TRACE_OUTCOMES),
     # ⚠️「入口判定主类」**不在本表内**（v4.2.0 第五轮换口径后由 `_check_category_decl` 单独判）：
     # 本表的模型是「若干源 → 一个解析器 → 一个集合」，多源时取并集比对；而主类那项需要
     # **跨文件的唯一性判定（源规格面内）**（声明块须恰一处），并集模型表达不了它 ——

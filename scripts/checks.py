@@ -32,6 +32,7 @@ from checks_judges import (  # noqa: F401
     _check_aesthetic,
     _check_autonomy,
     _check_category_decl,
+    _check_checkpoint,
     _check_cleanup,
     _check_closure,
     _check_cram,
@@ -63,6 +64,7 @@ from checks_judges import (  # noqa: F401
     set_exempt_context,
 )
 from checks_cmds import (  # noqa: F401
+    cmd_checkpoint,
     cmd_decide,
     cmd_mark,
     cmd_metrics,
@@ -83,6 +85,7 @@ from checks_core import (  # noqa: F401
     TEMPLATE_FIELDS,
     VALID_FUSE,
     VALID_STATUS,
+    VALID_TRACE_OUTCOMES,
     VALID_TRIGGER,
     _frontmatter,
     _require_yaml,
@@ -163,7 +166,7 @@ def _check_metrics_idempotent(skill_dir: Path) -> None:
 
 
 def _check_entry_budget(skill_dir: Path) -> None:
-    """入口手册体量预算（v4.19.0）：**只报 WARN，永不 FAIL**。
+    """入口手册体量预算（v4.19.0；v4.48.0 改为两级：软预算 WARN / 硬上限 FAIL）。
 
     为什么做：`SKILL.md` 是本技能的入口，它的体量直接决定每次加载的固定成本，而它此前
     **没有任何约束**（落地实测 2026-10-07 为 125 086 B）。参照外部技能 diagram-design 的
@@ -172,7 +175,10 @@ def _check_entry_budget(skill_dir: Path) -> None:
     报出，便于判断「细则是否已在往 references 外迁」。
 
     ⚠️ 射程：本项**只量体量**。不判内容质量，不判该不该外迁，不判引用是否合理。
-    ⚠️ 分级：永不 FAIL（理由与阈值取值见 `checks_core.SKILL_MD_BUDGET_BYTES` 的注释）。
+    ⚠️ 分级（2026-11-25 改）：两级 —— 超**软预算**只 WARN（可维护性提示，不阻断），
+    超**硬上限**判 FAIL。改前为单级「永不 FAIL」，阈值 160 KiB 高于历史峰值 155 347 B，
+    自 v4.19.0 起从未触发过一次（效率调研实测量出的「存在但恒 OK」判据）。
+    硬上限取历史峰值 + 3%：只有回到无约束时代的体量才阻断。
     阴性对照（人工执行、留档）：把 `SKILL_MD_BUDGET_BYTES` 临时改为小于实测值的数 ⇒ 本项
     必须转 WARN；改回 ⇒ 必须复原为 OK。无此对照的判据不许上线。
     """
@@ -183,12 +189,17 @@ def _check_entry_budget(skill_dir: Path) -> None:
     refs = sorted((skill_dir / "references").glob("*.md"))
     ref_bytes = sum(p.stat().st_size for p in refs)
     budget = SKILL_MD_BUDGET_BYTES
-    detail = ("SKILL.md %d B / 预算 %d B（%.0f%%）；references/ %d 个文件共 %d B"
-              % (n, budget, 100.0 * n / budget, len(refs), ref_bytes))
-    if n > budget:
+    hard = SKILL_MD_HARD_BYTES
+    detail = ("SKILL.md %d B / 软预算 %d B（%.0f%%）/ 硬上限 %d B；references/ %d 个文件共 %d B"
+              % (n, budget, 100.0 * n / budget, hard, len(refs), ref_bytes))
+    if n > hard:
+        fail("入口手册体量预算",
+             "%s —— 超出硬上限 %d B：必须先外迁 references 再交付，不接受「先合入再瘦身」"
+             "（口径见 checks_core.SKILL_MD_HARD_BYTES 注释）" % (detail, n - hard))
+    elif n > budget:
         warn("入口手册体量预算",
-             "%s —— 超出 %d B：优先把细则外迁 references 并更新手册索引表，不要继续往入口堆"
-             "（本项只 WARN，不阻断交付）" % (detail, n - budget))
+             "%s —— 超出软预算 %d B：优先把细则外迁 references 并更新手册索引表，不要继续往入口堆"
+             "（软预算只 WARN，不阻断交付）" % (detail, n - budget))
     else:
         ok("入口手册体量预算", detail)
 
@@ -803,6 +814,9 @@ def check_plan(plan_path: Path, base: Path) -> int:
     flush_absent(meta)
     _check_stage_gates(steps)
     _check_model_tiers(steps)
+    # v4.47.0 / P2：检查项 28 = 输入指纹 + 检查点（断点续跑登记）。**可选字段** ——
+    #   缺省 SKIP；填了结构非法即 FAIL；输入/产物与磁盘不一致只 WARN（事实变了，不是格式错）。
+    _check_checkpoint(steps, base)
     _check_reflection_retry(meta, steps)
     _check_fuse(meta, steps, plan_path)
     # v4.3.0 / 批次 B：E′ 步骤闭环不变量（trace 自证 + 零沉淀须显式登记）。放最后，
@@ -840,6 +854,9 @@ def main() -> None:
     p.add_argument("--fuse", choices=VALID_FUSE,
                    help="设置 meta.熔断状态；复位填『正常』（须与步骤状态一并复位，见 _check_fuse）")
     p.add_argument("--batch", help="批量文件：每行 `<step_id> <status>`（空行/# 忽略）；一次性落盘，避免 N 步 N 次重写（N7）")
+    p.add_argument("--no-trace", action="store_true",
+                   help="不自动追加 trace（缺省会自动写一行，含 ts_epoch 与 gap_ms；"
+                        "建议 1／2026-11-25：耗时不再靠自报）")
 
     p = sub.add_parser("decide", help="追加一条能力决策记录到 meta.决策记录（自主决策层留痕，v3.0.0）")
     p.add_argument("plan", help="plan.yaml 路径或任务目录")
@@ -872,7 +889,24 @@ def main() -> None:
     p.add_argument("--elapsed", type=float, help="耗时（秒）")
     p.add_argument("--note", default="", help="执行备注（v4.1.0：反思重试时填根因·调整摘要）")
     p.add_argument("--attempt", type=int, help="重试轮次（v4.1.0：action=retry 时填第几轮）")
+    # v4.47.0 / P2：四个可选计量字段（供月度协同健康度聚合）
+    p.add_argument("--duration-ms", type=int, dest="duration_ms",
+                   help="本步耗时（毫秒）；给了 --elapsed 也会自动折算，二者不必同时给")
+    p.add_argument("--outcome", choices=list(VALID_TRACE_OUTCOMES),
+                   help="执行结果四态（ok/fail/blocked/skip）—— `--result` 仍是人读文字，本项是机器口径")
+    p.add_argument("--retries", type=int, help="本步累计重试次数（≥0）")
+    p.add_argument("--tokens", type=int, help="本步 token 用量（≥0）；量不到就留空，不要估")
     p.add_argument("--replay", action="store_true", help="回放该任务的完整时序")
+
+    p = sub.add_parser("checkpoint",
+                       help="给某一步落「输入指纹 + 检查点」（v4.47.0 / P2：断点续跑的依据）")
+    p.add_argument("plan", help="plan.yaml 路径或任务目录")
+    p.add_argument("step_id", help="步骤 id")
+    p.add_argument("--base", default=str(Path.cwd()),
+                   help="相对路径解析基准（默认当前目录；与 plan 子命令同口径）")
+    p.add_argument("--note", default="", help="检查点说明（写清楚「从这里接着跑」的前提）")
+    p.add_argument("--no-resume", action="store_true",
+                   help="标记该点不可续跑（默认 true；有不可逆副作用时务必置此开关）")
 
     p = sub.add_parser("metrics", help="任务级指标沉淀（v4.0.0 / U8：写入 <任务目录>/_metrics.jsonl，v4.10.1 起幂等）")
     p.add_argument("plan", help="plan.yaml 路径或任务目录")
@@ -893,7 +927,8 @@ def main() -> None:
         code = cmd_status(Path(args.workspace), args.archive_days, args.max_tasks, args.light)
         name = "任务总览"
     elif args.cmd == "mark":
-        code = cmd_mark(Path(args.plan), args.step_id, args.status, args.fuse, args.batch)
+        code = cmd_mark(Path(args.plan), args.step_id, args.status, args.fuse,
+                        args.batch, args.no_trace)
         name = "状态更新"
     elif args.cmd == "decide":
         code = cmd_decide(Path(args.plan), args.point, args.basis, args.capability, args.choice, args.from_method_select)
@@ -906,8 +941,13 @@ def main() -> None:
         name = "自研工具登记"
     elif args.cmd == "trace":
         code = cmd_trace(Path(args.plan), args.step, args.action, args.command,
-                         args.result, args.elapsed, args.replay, args.note, args.attempt)
+                         args.result, args.elapsed, args.replay, args.note, args.attempt,
+                         args.duration_ms, args.outcome, args.retries, args.tokens)
         name = "执行 trace"
+    elif args.cmd == "checkpoint":
+        code = cmd_checkpoint(Path(args.plan), args.step_id, args.note,
+                              args.no_resume, Path(args.base))
+        name = "检查点"
     else:  # metrics
         code = cmd_metrics(Path(args.plan), args.finalize)
         name = "指标沉淀"

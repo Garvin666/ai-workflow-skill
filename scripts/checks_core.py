@@ -11,6 +11,7 @@ if _HERE not in _sys.path:
 
 import argparse
 import ast
+import hashlib
 import json
 import py_compile
 import re
@@ -49,6 +50,15 @@ VALID_CATEGORY = ("chat", "code", "content")
 #   守卫项三源并集比对兜住）。
 #   ⚠️ 扩展类型（chore/perf/test 等）须先经用户确认，再同步上述三处（见 git-conventions.md §3.2）。
 VALID_COMMIT_TYPES = ("feat", "fix", "refactor", "docs")
+# trace 事件行的「执行结果」（v4.47.0 / P2）：源规格 = `references/ops.md` 的
+#   `执行结果取值：…` 行 + `references/data-model.md` 的 `| 执行结果 | 含义 |` 表
+#   （两源并集比对由 checks_parity 的「执行结果」项兜住）。
+#   ⚠️ 四态是**机器口径**：`result` 仍是自由文字（人读），本枚举只用于聚合统计
+#   —— 把「月度协同健康度」从"数事件条数"变成"算成功率与重试率"。
+#   ⚠️ 与「步骤状态」（待办/进行中/完成/受阻/熔断）**是不同物理量**：那个描述计划里的
+#   位置，这个描述一次执行的结果；不得合并、不得互推（`blocked` ≠ `受阻` 的同义改写，
+#   前者是一次事件被挡住，后者是计划里的一个步骤停在原地）。
+VALID_TRACE_OUTCOMES = ("ok", "fail", "blocked", "skip")
 DECISION_KEYS = ("决策点", "能力类", "依据", "选择")
 REVISION_KEYS = ("触发", "变化", "时间")
 MAX_REVISIONS = 3  # 超上限说明初始拆解有问题，应停下与用户重新对齐目标（非熔断）
@@ -92,9 +102,14 @@ CATEGORY_SOURCES = ("SKILL.md", "references/*.md", "assets/*.md", "assets/*.yaml
 #   判据的分级理由，以及 v3.5.0「噪音的结局是判据被整体绕过」的教训）。
 #   ⚠️ 本常量是该阈值的**唯一口径源**：`references/skill-hygiene.md` 第 6 条只引用它、不复制数值
 #   （本仓硬约定第 4 条：同一物理量的判据出现两处即为不符合）。
-#   取值依据：落地实测基线 SKILL.md = 125 086 B（2026-10-07），预算取 160 KiB 留约 31% 余量 ——
-#   既要能在真正膨胀时报警，又不能因小幅正常增量就常亮（常亮的 WARN 会被无视）。
-SKILL_MD_BUDGET_BYTES = 160 * 1024   # 163 840 B
+#   取值依据（2026-11-25 重定）：实测轨迹 125 086 B（2026-10-07）→ 155 347 B（2026-10-11 峰值）
+#   → 127 606 B（2026-10-20 主干瘦身）→ 129 882 B（2026-11-25）。
+#   ⚠️ 原阈值 160 KiB（163 840 B）**高于历史峰值 155 347 B**，自 v4.19.0 起从未触发过一次 ——
+#   这是一条「存在但恒 OK」的判据（效率调研 2026-11-25 实测结论）。本次改为两级：
+#     · 软预算 140 KiB：留约 10% 正常增量余量，超出只 WARN（仍是可维护性提示，不阻断）
+#     · 硬上限 160 KiB：超过即 FAIL。取历史峰值 + 3%，意味着「回到无约束时代的水平」才阻断
+SKILL_MD_BUDGET_BYTES = 140 * 1024   # 143 360 B  软预算 → WARN
+SKILL_MD_HARD_BYTES = 160 * 1024     # 163 840 B  硬上限 → FAIL
 STAGE2_STEP_RE = re.compile(r"方案评审|候选方案|方案对比|对比表|备选方案")
 STAGE2_SIGNAL_RE = re.compile(r"(≥|>=|不少于|至少)\s*2|2\s*个\s*(候选|方案|备选)|方案\s*[AB一二]|候选\s*[AB]|横向对比|双跑")
 STAGE4_EXT = (".docx", ".xlsx", ".pdf", ".pptx")
@@ -881,6 +896,48 @@ def _norm_abs(p) -> str:
 
 def _under(child: str, parent: str) -> bool:
     return bool(parent) and (child == parent or child.startswith(parent + "/"))
+
+def _sha256_file(p: Path) -> str:
+    """整文件 sha256（1 MiB 分块，避免大产物吃满内存）。"""
+    h = hashlib.sha256()
+    with open(p, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _step_input_paths(s: dict, base: Path) -> list[Path]:
+    """从步骤的 `输入` 里解析出**真实存在的文件**；解析不到就返回空（不猜、不造）。
+
+    口径与判据侧共用同一份实现：`cmd_checkpoint` 用它算指纹，`_check_checkpoint` 用它复算
+    —— 两处各写一份解析就会"工具算的指纹 ≠ 判据复算的指纹"，这种漂移最难查。
+    `输入` 常见写法两种都认：裸路径，或「标签：路径」。相对路径以 `base` 为基准。
+    """
+    raw = s.get("输入")
+    if isinstance(raw, list):
+        items = [str(x) for x in raw]
+    elif raw:
+        items = [str(raw)]
+    else:
+        items = []
+    out: list[Path] = []
+    for it in items:
+        cand = it.split("：", 1)[-1].split(":", 1)[-1] if ("：" in it or ": " in it) else it
+        for tok in (cand, it):
+            tok = tok.strip().strip("`'\"")
+            if not tok:
+                continue
+            p = Path(tok)
+            if not p.is_absolute():
+                p = base / p
+            try:
+                if p.is_file() and p not in out:
+                    out.append(p)
+                    break
+            except OSError:
+                continue
+    return out
+
 
 def _step_tokens(s: dict) -> list[str]:
     """与 audit_step 同一套切分口径（花括号展开 → 分隔符切分 → 剥括号注释）。"""

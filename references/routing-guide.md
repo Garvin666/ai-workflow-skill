@@ -31,8 +31,8 @@
 ## 三、怎么调用
 
 ```bash
-PY="C:/Users/26717/.workbuddy/binaries/python/envs/ai-workflow/Scripts/python.exe"
-SK="C:/Users/26717/.workbuddy/skills/ai-workflow"
+PY="$HOME/.workbuddy/binaries/python/envs/ai-workflow/Scripts/python.exe"
+SK="$HOME/.workbuddy/skills/ai-workflow"
 
 # 探索/文档档：走本地 Ollama，0 成本
 "$PY" "$SK/scripts/ai_call.py" --tier cheap --prompt-file 调研笔记.txt --out 总结.md

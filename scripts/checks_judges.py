@@ -11,6 +11,7 @@ if _HERE not in _sys.path:
 
 import argparse
 import ast
+import hashlib
 import json
 import py_compile
 import re
@@ -145,6 +146,8 @@ from checks_core import (  # noqa: F401
     _selftool_marker_in,
     _selftool_registered,
     _selftool_scan_candidates,
+    _sha256_file,
+    _step_input_paths,
     _step_tokens,
     _task_dir,
     _under,
@@ -1563,6 +1566,115 @@ def _check_model_tiers(steps: list) -> None:
         fail("模型档位合法", "非法取值：" + "；".join(bad) + f"（合法：{'/'.join(VALID_MODEL_TIERS)}；留空=跳过）")
     else:
         ok("模型档位合法", f"{len(seen)} 步已标注，取值均在 enum 内" if seen else "步骤均未标注（字段可选）")
+
+CHECKPOINT_KEYS = ("时间", "产物", "可续跑")
+CHECKPOINT_FP = re.compile(r"^(?:sha256:)?(?:[0-9a-f]{16}|[0-9a-f]{64})$")
+CHECKPOINT_TIME = re.compile(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$")
+
+
+def _check_checkpoint(steps: list, base: Path) -> None:
+    """P2：`输入指纹` / `检查点` —— 断点续跑的登记面。**可选字段，填了就不能糊弄**。
+
+    口径沿用 `_check_model_tiers` / `_check_cleanup`：不强制写（旧 plan 一律合法，只 SKIP），
+    但一旦写了：
+      · `输入指纹` 须为 16 位或 64 位小写 hex（可带 `sha256:` 前缀）—— 其它写法多半是手抄错；
+      · `检查点` 须含 `时间`(YYYY-MM-DD HH:mm) / `产物`(列表，每项 路径+sha256+字节) / `可续跑`(bool)；
+      · 只写指纹不写检查点 → FAIL（指纹离开检查点没有任何用处，等于写了个装饰品）。
+
+    三条**只 WARN** 的情形（机器看得出可疑，但无权替人拍板）：
+      · `可续跑: true` 却 `产物: []` —— 没有产物快照的"续跑点"约等于没有断点；
+      · `输入指纹` 与**现算**值不一致 —— 输入已改，续跑前必须重跑该步（这不是格式错，是事实变了）；
+      · 产物 sha256 与实际文件不符 —— 交付物被改过，该检查点已过期。
+
+    ⚠️ 漂移只 WARN 而不 FAIL 是刻意的：改输入再重跑是**合法**动作，判 FAIL 等于禁止改需求。
+    判据只负责把「你现在续跑会拿到一个因果断裂的结果」这句话说出来。
+    ⚠️ 复算口径与 `cmd_checkpoint` **共用同一份实现**（`_step_input_paths` / `_sha256_file`）——
+    两处各写一份，就会出现"工具算的指纹判据不认"的假 FAIL。
+    """
+    bad: list[str] = []
+    stale: list[str] = []
+    seen: list[str] = []
+
+    for i, s in enumerate(steps, 1):
+        if not isinstance(s, dict):
+            continue
+        sid = s.get("id", i)
+        fp = str(s.get("输入指纹", "") or "").strip()
+        ck = s.get("检查点")
+        has_ck = ck not in (None, "", {}, [])
+        if not fp and not has_ck:
+            continue
+        seen.append(str(sid))
+
+        if fp and not CHECKPOINT_FP.match(fp):
+            bad.append(f"步骤 {sid} 输入指纹=`{fp[:20]}`（须 16 或 64 位小写 hex，可带 sha256: 前缀）")
+        if fp and not has_ck:
+            bad.append(f"步骤 {sid} 只有输入指纹、没有检查点（指纹离开检查点只是装饰）")
+
+        if has_ck:
+            if not isinstance(ck, dict):
+                bad.append(f"步骤 {sid} 检查点应为映射，实际 {type(ck).__name__}")
+                continue
+            miss = [k for k in CHECKPOINT_KEYS if k not in ck]
+            if miss:
+                bad.append(f"步骤 {sid} 检查点缺 { '、'.join(miss) }")
+            t = str(ck.get("时间", "") or "").strip()
+            if t and not CHECKPOINT_TIME.match(t):
+                bad.append(f"步骤 {sid} 检查点.时间=`{t[:20]}`（须 YYYY-MM-DD HH:mm）")
+            rr = ck.get("可续跑")
+            if "可续跑" in ck and not isinstance(rr, bool):
+                bad.append(f"步骤 {sid} 检查点.可续跑 须为 true/false，实际 {rr!r}")
+            arts = ck.get("产物")
+            if not isinstance(arts, list):
+                bad.append(f"步骤 {sid} 检查点.产物 须为列表")
+            else:
+                for k, a in enumerate(arts, 1):
+                    if not isinstance(a, dict):
+                        bad.append(f"步骤 {sid} 检查点.产物[{k}] 须为映射（路径/sha256/字节）")
+                        continue
+                    miss_a = [x for x in ("路径", "sha256", "字节") if x not in a]
+                    if miss_a:
+                        bad.append(f"步骤 {sid} 检查点.产物[{k}] 缺 { '、'.join(miss_a) }")
+                        continue
+                    if not re.fullmatch(r"[0-9a-f]{64}", str(a.get("sha256", ""))):
+                        bad.append(f"步骤 {sid} 检查点.产物[{k}] sha256 非 64 位小写 hex")
+                    p = Path(str(a.get("路径", "")).strip())
+                    if not p.is_absolute():
+                        p = base / p
+                    try:
+                        if p.is_file():
+                            if _sha256_file(p) != str(a.get("sha256", "")):
+                                stale.append(f"步骤 {sid} 产物 `{a.get('路径')}` 已与检查点记录不同（文件被改过）")
+                        else:
+                            stale.append(f"步骤 {sid} 产物 `{a.get('路径')}` 已不存在于磁盘")
+                    except OSError:
+                        stale.append(f"步骤 {sid} 产物 `{a.get('路径')}` 读不到（权限/占用）")
+                if rr is True and not arts:
+                    stale.append(f"步骤 {sid} 声明可续跑但产物为空 —— 没有快照的续跑点约等于没有断点")
+
+        # ---- 输入指纹漂移（现算 vs 登记）
+        if fp and CHECKPOINT_FP.match(fp):
+            paths = _step_input_paths(s, base)
+            if paths:
+                src = "\n".join(f"{p.as_posix()}:{_sha256_file(p)}"
+                                for p in sorted(paths, key=lambda x: x.as_posix()))
+                now = hashlib.sha256(src.encode("utf-8")).hexdigest()
+                want = fp.split(":", 1)[-1]
+                if not now.startswith(want[:16]):
+                    stale.append(f"步骤 {sid} 输入已变（登记 {want[:16]} / 现算 {now[:16]}）—— 续跑前须重跑该步")
+
+    if not seen:
+        skip("检查点/输入指纹", "全部步骤未登记（字段可选；用 `checks.py checkpoint` 落一个）")
+        return
+    if bad:
+        fail("检查点结构合法", "；".join(bad))
+    else:
+        ok("检查点结构合法", f"{len(seen)} 步已登记：{ '、'.join(seen) }")
+    if stale:
+        warn("检查点时效", "；".join(stale) + " —— 这是事实变化，不是格式错：重跑该步或重落检查点")
+    else:
+        ok("检查点时效", "已登记检查点的产物与输入均与磁盘一致")
+
 
 def _check_irreversible(meta: dict, steps: list) -> None:
     """U5：不可逆副作用登记 —— **可选字段，填了就必须合法**。

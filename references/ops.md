@@ -64,9 +64,37 @@ PY="$HOME/.workbuddy/binaries/python/envs/ai-workflow/Scripts/python.exe"
 | **methodcard_build.py**（v4.35.0 自研；随技能发行） | **卡片装配与导出**（五区骨架 → 自包含 HTML → PNG/PDF）。⚠️ **模块式 API，没有「喂卡脚本出图」的命令行**（CLI 只有 `--selftest`）：`card_html(card)` 吃 CARD 字典（页眉／核心思想条／4 步步骤区／双图示意区／总结条）产出**单文件 HTML**（内联 CSS ＋内联 SVG、零外部资源）；`write_html(card, out)` 落盘；`export_png(html, png, scale=2)` 走 **Chrome 无头原生 `--screenshot`**（`--force-device-scale-factor` = `scale`、`--window-size` = 卡面 ⇒ 默认 1200×1600 出 **2400×3200**）；`export_pdf(html, pdf)` 走 **`--print-to-pdf`**（内建 `@page{size:1200px 1600px;margin:0}` ⇒ 页面尺寸正确、矢量输出）。⚠️ **刻意不用 Playwright**：本机 `browser.close()` 会 SIGTERM／挂死（`diagram_export.py` 那条通道为此付过批量化改造的代价），而本通道只需各一次截图/打印，原生 Chrome 路径更短且无此问题。⚠️ **字体纪律（真缺陷换来的）**：`font_faces()` 读 `assets/fonts/playfair-display-{600,700}.woff2` 并 **base64 内联 `@font-face`** —— 系统展示字体（如 Windows 的 Sitka）是**可变字体**，Chrome 打印 PDF 时无法子集嵌入 ⇒ **整段标题落成 Type3**（肉眼完全看不出、期刊与印厂拒收）；woff2 缺失时**只警不退**（回退 `'Cambria','Georgia',serif`），但**回退即可能复发 Type3** ⇒ 交付前必须过 `check_vector_export.py`。`_find_chrome()` 三级候选探测（Chrome→Edge→POSIX 名），全无 ⇒ `FileNotFoundError`（**不静默降级**）。`--selftest` 断言 `card_html` 出 **6 个 svg**（4 步 + 主图 + 灯泡）＋无远程引用（白名单 `http://www.w3.org/2000/svg` 命名空间）＋ `font_faces()` 出 2 个 `@font-face` 且含 `base64,`。**纯标准库** | `import methodcard_build as B`<br>`B.write_html(CARD, out / "card-x.html")`<br>`B.export_png(out/"card-x.html", out/"card-x.png", scale=2)`<br>`B.export_pdf(out/"card-x.html", out/"card-x.pdf")`<br>`methodcard_build.py --selftest` |
 | **methodcard_check.py**（v4.35.0 自研；随技能发行） | **卡片几何自检**（治「图看着没问题、元素却出框／版面压出卡外」这类**肉眼阈值以下**的缺陷）。**三体分开报** —— ① **SVG 体**：逐元素算包围盒（`rect`／`circle`／**带旋转的 `ellipse` 用旋转外接框**／`line`／`polyline`）与 `viewBox` 比对，越界即 **FAIL**（容差 `TOL=2.0`）；**`path` 只计数不判边界**（路径点解析不出可靠极值 —— 如实登记为诚实边界）；文本只判锚点且仅 **WARN**（锚点 ≠ 墨迹范围，判 FAIL 会造假信号）② **版式体**：Chrome 渲一张**加长截图**（卡片下方多留容差区），查卡片下沿以外有无非白像素，有则 **FAIL**（溢出）③ **尺寸体**：传 `--png` 时断言 PNG 宽高 == 卡面 × 倍率。⚠️ **两处「未检测」不判 PASS**：`--no-render` ⇒ 溢出项标未检测；未传 `--png` ⇒ 尺寸项标未检测（**未检测不是通过**）。退出码 **0=无 FAIL／1=有 FAIL／2=用法错**。`--selftest` **1 正 4 负** SVG 例（circle／rect／旋转 ellipse／polyline 各撞一个分支）＋ 白区/脏区像素对照。⚠️ **诚实边界**：不判路径内部几何；文本不判墨迹；溢出检测依赖「卡片下方是白底」这一前提；**只判「元素有没有出框」，不判「图画得好不好看」**（后者归审美判据集与人工过目） | `methodcard_check.py out/card-x.html --png out/card-x.png --card-size 1200x1600`<br>`methodcard_check.py out/card-x.html --no-render`<br>`methodcard_check.py --selftest` |
 | **memory_handoff.py**（v4.37.0 自研，v4.38.0 增读取轨 `pull`；随技能发行） | **记忆写入、交接与共享导出引擎**（阶段 6 第 9 条的算术半边；**语义归模型、路径/校验/计数归本脚本**）：`place --kind {handoff\|memory} --project <项目名> --task <短名> --src <md>` 先**结构校验**（交接＝三段「内容／结果／后续」、会话记忆＝五段式，按序各 ≥1 次；不过即 rc=1 **不落位**）→ 占位符 WARN（不阻断）→ 备份 → 写入知识库 40-记忆 区的「交接／会话记忆/<项目>/」（**项目名＝任务工作区名**；**写入逐字节保真** —— `newline=""`、不注入 CRLF；`--dry-run` 可预演）。**改名/更新语义**：**同名重放＝更新**（旧版自动 `.bak`）—— 更新既有篇目须显式传 `--date/--time` 与首版一致（缺省取当前时刻 ⇒ 新增）；**同日同任务异时间打印防重复 WARN**（防「想更新却静默新增」）。`index` 重建 40-记忆 根下的记忆索引（按项目分组、**幂等**——内容相同不重写）；`stats` 输出统计 JSON 与**自升级建议**（阈值：单项目 ≥10 篇 ⇒ 归档/归属回顾提案；合计 ≥20 篇无索引 ⇒ 提示重建）；**`pull --root <40-记忆> --out <宿主快照>`（v4.38.0 读取轨）**＝**只读导出**共享快照 —— `--out` 落 `--root` **区内即 rc=2**（写回永远只走 `place`）、**内容指纹幂等**（sha256 前 16 位、不含时间戳 ⇒ 同输入复跑不重写不留 `.bak`）、缺省导 画像＋索引＋交接 且流水层 `会话记忆` 只取最近 `--recent`（缺省 2）篇、超 `--max-bytes`（缺省 200000）**显式列省略清单**、零源**拒绝写空快照**、原子写恒 LF、头部标 `⛔ 不得推入任何 git 仓`（细则见 `memory-handoff.md` §2.1）；`backup --file <路径>`；`selftest`（**13 组** fixture：合法×3 ／**阴性对照**：缺节必须 rc=1 且不落位、快照翻 1 字节必须重写 ／幂等×3／JSON×1／**行尾保真**×1／**防重复 WARN**×1／**写面守卫**：`--out` 落区内必须 rc=2 ／**空源与非法 `--kinds`** 必须 rc=2）。⚠️ **写入面仅 `--root`（缺省 E:\\ChatGPT\\知识库\\40-记忆）以内**、不碰索引外区域；`pull` 只读，其 `--out` 必须落在 `--root` **之外**；纯标准库 | `"$PY" scripts/memory_handoff.py place --kind handoff --project 工作流 --task 记忆机制 --src tasks/x/交接.md`<br>`"$PY" scripts/memory_handoff.py index`<br>`"$PY" scripts/memory_handoff.py stats`<br>`"$PY" scripts/memory_handoff.py pull --out ~/.qoder/memory/kb-shared-40记忆.md`<br>`"$PY" scripts/memory_handoff.py selftest` |
+| **checkpoint_selftest.py**（v4.47.0 自研；随技能发行） | **「输入指纹 / 检查点」判据的可复跑用例**（`checks.py plan` 检查项 28 的回归面）：把 v4.47.0 首版那份**手跑一次性矩阵**固化下来 —— 28 条，覆盖未登记→SKIP／落盘→OK／幂等不叠加／改输入→WARN／改产物→WARN（**用例先重落检查点再改产物**，否则输入漂移的 WARN 会把产物那条掩盖掉）／缺 `可续跑`·指纹格式错·只有指纹没检查点·`可续跑` 非 bool → **均 FAIL**／`--no-resume`／输入解析不到→**退出码 2 且不落盘**（干净夹具前后各数一次）／`trace` 四字段与非法枚举·负值的 **rc=2**。**纯标准库**，沙盒建在系统临时目录、跑完删除（不污染技能树、不进 `tasks/`）；直接调判据与命令函数不起子进程。⚠️ **它自己也守「SKIP ≠ 通过」**：断言的是具体判定字符串，不是"没报错"。⚠️ 本脚本已做**变异自证**：关掉「只有指纹没检查点」「可续跑 bool」「指纹漂移」「产物 sha256 比对」「指纹格式」五条判据 → **5/5 全部 KILLED**（SURVIVED 即说明对应用例没约束住实现） | `"$PY" scripts/checkpoint_selftest.py` |
 | **checks_core.py / checks_parity.py / checks_judges.py / checks_cmds.py**（v4.4.2 拆分） | `checks.py` 的**内部模块**（**不由用户直接调用**，勿单独运行）：`core`＝import + 模块级常量 + 通用工具（不依赖其余模块）；`parity`＝枚举解析与跨文件同源校验（含 `PARITY_ITEMS`）；`judges`＝**26 个** `_check_*` 判据（v4.11.0 实测；计数口径＝模块级 `def _check_*`，v4.10.0 时 24 个〔⚠️ **该版漏更新本计数，本轮实测补记**〕、v4.8.0 时 22 个、v4.7.0 时 20 个、v4.4.2 时 16 个）；`cmds`＝7 个子命令实现。**常量计数口径**：模块级大写赋值（v4.8.0 实测 `core` 为 **69** 个 `Assign` + **2** 个 `AnnAssign`；v4.7.0 记 64 + 1 —— 其中 Assign 差的 5 个即本轮新增的学习模块常量，**AnnAssign 的 1 与本次实测 2 不符，属旧记录偏差，如实登记**）—— ⚠️ 该口径由实测给出，与文档早前写的"56 个"**不同口径**，**不可直接相减/比对**。依赖方向 **core ← parity ← judges ← cmds ← `checks.py`（入口）**，严格单向无循环。`checks.py` 保留为入口并 **re-export 全部常量** —— `gate.py`（按文件路径加载该模块、读**模块属性** `INFRA_EXCEPTIONS`）依赖它，**改动时不得破坏**。⚠️ 但 `guard_constants.py` **不**走这条路径：它按 **AST** 取模块级 `Assign` 节点，而星号导入不产生 `Assign` ⇒ 其 `GROUPS.members` **必须登记常量的定义处**（`checks_core.py`），登记入口 `checks.py` 会恒报 MISSING、守卫对那几组**静默失能**（2026-09-22 修复，见 CHANGELOG v4.6.0） | `python scripts/checks.py skill`（入口用法与拆分前完全一致） |
 
 各脚本详细参数：加 `--help`。
+
+### 2.1 trace 事件行与检查点（v4.47.0 / P2）
+
+`checks.py trace --outcome` 的取值域（**机器口径**；`--result` 仍是人读自由文字）：
+
+执行结果取值：ok / fail / blocked / skip
+
+- 四个计量字段 `--duration-ms` / `--outcome` / `--retries` / `--tokens` **全部可选** ——
+  旧 trace 行不带它们仍然合法；聚合时按「未采集」处理，**不并入分母**
+  （否则"记得少"会被算成"很健康"）。行 schema 见 `references/data-model.md` §1.3。
+- `--elapsed <秒>` 仍可用，会自动折算成 `duration_ms`，同时保留 `elapsed_s` 供旧读者。
+- ⚠️ **`tokens` 量不到就留空，不要估** —— 留空是「未采集」，估错是「假数据」，后者更贵。
+- 口径守卫：本行与 `references/data-model.md` §2.2 的 `| 执行结果 | 含义 |` 表由「执行结果」项并集比对。
+
+`checks.py checkpoint <plan> <step_id> [--base …] [--note …] [--no-resume]`（v4.47.0 / P2）：
+给某一步落「输入指纹 + 检查点」——现算输入文件的 sha256 取前 16 位，加交付物快照
+（路径 / sha256 / 字节），供熔断或中断后**从断点续跑**而不是重跑全链。
+
+- **为什么不做成手工填**：指纹与 sha256 都是 64 位 hex，手抄必错且无法复核；
+  而检查点的全部价值就在"它记录的是当时的真实字节"。
+- **解析不到任何输入文件 ⇒ 退出码 2 不落盘** —— 宁可让人补 `输入`，也不写一个假指纹
+  （假指纹会让续跑判据永远显示"输入没变"，比没有指纹更危险）。
+- `--no-resume` 把 `可续跑` 置 false：**有不可逆副作用时务必带上**（语义是"从这里接着跑不会
+  破坏已完成的因果"，不是"这一步成功了"——后者由 `状态` 管）。
+- 幂等：重复执行只保留一份 `输入指纹` / `检查点`，不叠加。
+- `checks.py plan` **检查项 28** 校验其结构（缺 `可续跑`、指纹格式错、只有指纹没检查点 → FAIL）；
+  输入或产物与磁盘不一致只 **WARN** —— 那是事实变了，不是格式错（改输入再重跑是合法动作）。
 
 ## 三、环境变量
 

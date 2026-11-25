@@ -7,7 +7,7 @@ param(
 )
 $ErrorActionPreference = "Stop"
 
-$venvPython = "C:\Users\26717\.workbuddy\binaries\python\envs\ai-workflow\Scripts\python.exe"
+$venvPython = Join-Path $env:USERPROFILE ".workbuddy\binaries\python\envs\ai-workflow\Scripts\python.exe"
 $skillDir   = Split-Path -Parent $PSScriptRoot
 $target     = if (Test-Path $Script) { (Resolve-Path $Script).Path } else { Join-Path $skillDir "scripts\$Script" }
 
