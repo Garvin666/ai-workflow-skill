@@ -4,10 +4,10 @@ description: AI 标准化多阶段工作方法论（自研），适用于量化�
 agent_created: true
 selfbuilt: true
 repo: https://github.com/Garvin666/ai-workflow-skill
-version: 4.48.0
+version: 4.49.0
 ---
 
-# AI 工作流 v4.48.0
+# AI 工作流 v4.49.0
 
 > **[自研技能]** 名称：`ai-workflow` ｜ 用途：为多阶段任务提供标准化流程编排（入口分型／任务分层／计划先行／三项核心原则／自主决策层／独立审核抽查制／熔断）＋ 六个产出结构模式（作业 S0–S2／科研 R0–R6（其 R2 即原文献阅读模式 Q1–Q4）／逆向拆解 D0–D5／图示设计 P0–P4／PPT Y0–Y4）＋ 学习模型 K1–K5，并配一套**机器可校验**的工具与门禁 ｜ 适用场景：产出文件或代码或报告、多步且步骤间有依赖、数据分析、跨文件改造、调研查重、方案评审；纯问答／查询／翻译／单文件读取不适用 ｜ 仓库：https://github.com/Garvin666/ai-workflow-skill
 
@@ -751,6 +751,8 @@ scripts/outbound_scan.py       <路径…> [--list] [--json]                    
 scripts/push_router.py         push --base --head [--apply] | classify                    两仓分流（默认 dry-run）
 scripts/push_ontology.py       --base --head [--apply]                                    本体通道（Git Data API）
 scripts/verify_push.py         --rev <rev> --prev-remote <sha>                            推送后验收（7 类判据）
+scripts/sync_copies.py         [--apply] [--root <根>] [--selftest]                      副本分发（默认 dry-run，覆盖前备份）
+scripts/verify_copies.py       [--root <根>] [--selftest]                                副本一致性全量验收（逐文件 sha256+版本）
 scripts/publish_tools.py       push --file <路径> [--apply] | verify                      工具入 public 仓
 scripts/guard_constants.py     [--selftest]                                               跨模块常量同源守卫
 scripts/laya_client.py         --judge <k> | --selfcheck                                  Laya 客户端；不可达 exit 3
